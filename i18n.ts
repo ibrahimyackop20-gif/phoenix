@@ -29,6 +29,7 @@ const resources = {
       my_purchases: "مشترياتي",
       administration: "الإدارة",
       settings: "الإعدادات",
+      privacy_security: "الخصوصية والأمان",
       logout: "تسجيل الخروج",
       contact_us: "تواصل معنا",
       soon: "قريباً",

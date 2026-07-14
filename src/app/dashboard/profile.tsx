@@ -633,6 +633,31 @@ export default function ProfileScreen() {
               <Text style={[styles.prefDesc, { color: themeColors.textMuted }]}>{t("theme_desc")}</Text>
             </View>
           </View>
+
+          {/* Privacy & Security Link */}
+          <View style={[styles.preferenceRow, styles.prefRowBorder, { borderTopColor: themeColors.cardBorder }]}>
+            <TouchableOpacity
+              onPress={() => router.push("/dashboard/privacy" as any)}
+              style={{
+                flexDirection: "row-reverse",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: "rgba(234, 88, 12, 0.08)",
+                borderColor: "rgba(234, 88, 12, 0.15)",
+                borderWidth: 1,
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+              }}
+            >
+              <Feather name="shield" size={14} color="#ea580c" />
+              <Text style={{ fontSize: 10, color: "#ea580c", fontWeight: "bold" }}>عرض المركز</Text>
+            </TouchableOpacity>
+            <View style={styles.prefLabels}>
+              <Text style={[styles.prefTitle, { color: themeColors.text }]}>الخصوصية والأمان</Text>
+              <Text style={[styles.prefDesc, { color: themeColors.textMuted }]}>إدارة سياسة الخصوصية وتراخيص الجهاز وتصدير وحذف الحساب</Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

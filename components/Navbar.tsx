@@ -133,6 +133,12 @@ export default function Navbar({ role }: NavbarProps) {
         visible: true,
       },
       {
+        href: "/dashboard/privacy",
+        label: "privacy_security",
+        icon: "shield",
+        visible: true,
+      },
+      {
         href: "/coming-soon",
         label: "contact_us",
         icon: "mail",
