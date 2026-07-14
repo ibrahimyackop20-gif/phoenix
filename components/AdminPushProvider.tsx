@@ -9,11 +9,13 @@ import { supabase } from "../lib/supabaseClient";
  * - Shows native system alerts for new orders
  */
 export default function AdminPushProvider() {
+  console.log("Entering AdminPushProvider");
   const initialized = useRef(false);
 
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
+    console.log("Provider initialized: AdminPushProvider");
 
     const setup = async () => {
       try {
@@ -98,5 +100,6 @@ export default function AdminPushProvider() {
     };
   }, []);
 
+  console.log("Leaving AdminPushProvider");
   return null; // Headless provider
 }

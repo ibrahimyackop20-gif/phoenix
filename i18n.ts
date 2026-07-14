@@ -1,3 +1,5 @@
+console.log("i18n.ts file loading...");
+
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -259,16 +261,23 @@ const resources = {
 // Default to Arabic. Device locale is intentionally ignored.
 // The user picks their language in Settings, which is persisted
 // in AsyncStorage and applied by ThemeProvider on startup.
-i18n
-  .use(initReactI18next)
-  .init({
-    resources,
-    lng: 'ar',
-    fallbackLng: 'ar',
-    compatibilityJSON: 'v4',
-    interpolation: {
-      escapeValue: false
-    }
-  });
+console.log("i18n.init() - Starting initialization...");
+try {
+  i18n
+    .use(initReactI18next)
+    .init({
+      resources,
+      lng: 'ar',
+      fallbackLng: 'ar',
+      compatibilityJSON: 'v4',
+      interpolation: {
+        escapeValue: false
+      }
+    });
+  console.log("i18n.init() - Initialization completed successfully.");
+} catch (error) {
+  console.error("Startup Error:", error);
+  throw error;
+}
 
 export default i18n;

@@ -29,18 +29,26 @@ export default function AuthCallback() {
           
           if (!error) {
             console.log("✅ Session exchange successful. Redirecting to:", next);
+            console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: ${next}, Auth State: Authenticated. Executing replace...`);
             router.replace(next as any);
+            console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: ${next}, Done.`);
           } else {
             console.error("❌ Session exchange error:", error.message);
+            console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: /auth/login, Auth State: Error. Executing replace...`);
             router.replace("/auth/login" as any);
+            console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: /auth/login, Done.`);
           }
         } catch (err) {
           console.error("❌ AuthCallback exception:", err);
+          console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: /auth/login, Auth State: Exception. Executing replace...`);
           router.replace("/auth/login" as any);
+          console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: /auth/login, Done.`);
         }
       } else {
         console.warn("⚠️ AuthCallback: No code found in parameters. Redirecting to login...");
+        console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: /auth/login, Auth State: No Code. Executing replace...`);
         router.replace("/auth/login" as any);
+        console.log(`[Navigation] Component: AuthCallback, Current Route: /auth/callback, Target Route: /auth/login, Done.`);
       }
     };
 

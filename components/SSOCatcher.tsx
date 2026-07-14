@@ -13,6 +13,8 @@ import { supabase, centralSupabase } from "../lib/supabaseClient";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
 
+let initialUrlProcessed = false;
+
 /**
  * SSOCatcher (React Native)
  * - Listens for incoming deep links containing Supabase auth tokens (access_token & refresh_token)
@@ -58,7 +60,9 @@ export default function SSOCatcher() {
 
         if (localSession) {
           console.log("🔑 SSOCatcher: Local session already exists, redirecting to dashboard...");
+          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Auth State: Authenticated (Local Session). Executing replace...");
           router.replace("/dashboard" as any);
+          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Done.");
           return;
         }
 
@@ -143,7 +147,9 @@ export default function SSOCatcher() {
           }
 
           console.log("✅ SSO Flow Complete. Redirecting to dashboard...");
+          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Auth State: Authenticated (SSO Complete). Executing replace...");
           router.replace("/dashboard" as any);
+          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Done.");
         } catch (err) {
           console.error("❌ SSO catching failed:", err);
           const message = err instanceof Error ? err.message : String(err);
@@ -159,7 +165,9 @@ export default function SSOCatcher() {
             console.log(
               "🔑 SSOCatcher: Link expired error ignored as local session already exists. Redirecting..."
             );
+            console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Auth State: Authenticated (Graceful Fallback). Executing replace...");
             router.replace("/dashboard" as any);
+            console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Done.");
           } else {
             setError(message || "حدث خطأ أثناء تسجيل الدخول الموحد");
           }
@@ -172,7 +180,8 @@ export default function SSOCatcher() {
 
     // Get initial deep link URL if application was opened from an external trigger
     Linking.getInitialURL().then((url) => {
-      if (url) {
+      if (url && !initialUrlProcessed) {
+        initialUrlProcessed = true;
         handleUrl(url);
       }
     });
@@ -206,7 +215,9 @@ export default function SSOCatcher() {
                 <TouchableOpacity
                   onPress={() => {
                     setError(null);
+                    console.log("[Navigation] Component: SSOCatcher (Retry), Current Route: Error Modal, Target Route: /auth/login, Auth State: Guest. Executing replace...");
                     router.replace("/auth/login" as any);
+                    console.log("[Navigation] Component: SSOCatcher (Retry), Current Route: Error Modal, Target Route: /auth/login, Done.");
                   }}
                   style={styles.retryButton}
                 >

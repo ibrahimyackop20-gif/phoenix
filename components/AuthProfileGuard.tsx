@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -27,120 +27,176 @@ export default function AuthProfileGuard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const isSyncing = useRef(false);
 
+  const isMountedRef = useRef(true);
+  const pathnameRef = useRef(pathname);
+
+  // Sync refs and manage mount/unmount tracking
   useEffect(() => {
-    let active = true;
+    pathnameRef.current = pathname;
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [pathname]);
 
-    const checkAuth = async (path: string) => {
-      try {
-        // 1. Get Central session
-        const {
-          data: { session: centralSession },
-          error: centralError,
-        } = await centralSupabase.auth.getSession();
+  const checkAuth = useCallback(async (path: string) => {
+    try {
+      // 1. Get Central session
+      const {
+        data: { session: centralSession },
+        error: centralError,
+      } = await centralSupabase.auth.getSession();
 
-        // 2. Get Local session
-        const {
-          data: { session: localSession },
-          error: localError,
-        } = await supabase.auth.getSession();
+      // 2. Get Local session
+      const {
+        data: { session: localSession },
+        error: localError,
+      } = await supabase.auth.getSession();
 
-        if (!active) return;
+      if (!isMountedRef.current) return;
 
-        if (centralError || localError) {
-          console.error("🔑 AuthProfileGuard session check error:", centralError || localError);
-        }
+      if (centralError || localError) {
+        console.error("🔑 AuthProfileGuard session check error:", centralError || localError);
+      }
 
-        const centralUser = centralSession?.user;
-        const localUser = localSession?.user;
-        const hasSession = !!(centralUser || localUser);
+      const centralUser = centralSession?.user;
+      const localUser = localSession?.user;
+      const hasSession = !!(centralUser || localUser);
 
-        setIsAuthenticated(hasSession);
+      setIsAuthenticated(hasSession);
 
-        const isProtected =
-          checkPath(path, "/dashboard") ||
-          checkPath(path, "/admin") ||
-          checkPath(path, "/library");
+      const isProtected =
+        checkPath(path, "/dashboard") ||
+        checkPath(path, "/admin") ||
+        checkPath(path, "/library");
 
-        const isAuthPage = checkPath(path, "/auth");
+      const isAuthPage = checkPath(path, "/auth");
 
-        if (centralSession) {
-          if (!localSession) {
-            // Sync session
-            if (isProtected || isAuthPage) {
-              setLoading(true);
-            }
+      if (centralSession) {
+        if (!localSession) {
+          // Sync session
+          if (isProtected || isAuthPage) {
+            setLoading(true);
+          }
 
-            if (isSyncing.current) {
-              console.log("🔑 AuthProfileGuard: Sync already in progress, skipping...");
-              return;
-            }
-            isSyncing.current = true;
+          if (isSyncing.current) {
+            console.log("🔑 AuthProfileGuard: Sync already in progress, skipping...");
+            return;
+          }
+          isSyncing.current = true;
 
-            console.log("🔑 AuthProfileGuard: Central session exists but no local session. Syncing...");
-            
-            const email = centralSession.user.email;
-            const fullName =
-              centralSession.user.user_metadata?.full_name ||
-              centralSession.user.user_metadata?.name ||
-              email ||
-              "";
+          console.log("🔑 AuthProfileGuard: Central session exists but no local session. Syncing...");
+          
+          const email = centralSession.user.email;
+          const fullName =
+            centralSession.user.user_metadata?.full_name ||
+            centralSession.user.user_metadata?.name ||
+            email ||
+            "";
 
-            const webUrl = process.env.EXPO_PUBLIC_WEB_URL || "";
-            if (!webUrl) {
-              console.warn("⚠️ EXPO_PUBLIC_WEB_URL is not configured in .env. Skipping profile sync fetch.");
-              isSyncing.current = false;
-              setLoading(false);
-              return;
-            }
+          const webUrl = process.env.EXPO_PUBLIC_WEB_URL || "";
+          if (!webUrl) {
+            console.warn("⚠️ EXPO_PUBLIC_WEB_URL is not configured in .env. Skipping profile sync fetch.");
+            isSyncing.current = false;
+            setLoading(false);
+            return;
+          }
 
-            const response = await fetch(`${webUrl}/api/auth/register-profile`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email,
-                fullName,
-                centralId: centralSession.user.id,
-              }),
-            });
+          const response = await fetch(`${webUrl}/api/auth/register-profile`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email,
+              fullName,
+              centralId: centralSession.user.id,
+            }),
+          });
 
-            if (response.ok && active) {
-              const result = await response.json();
-              const { token_hash } = result;
+          if (response.ok && isMountedRef.current) {
+            const result = await response.json();
+            const { token_hash } = result;
 
-              if (token_hash) {
-                const { error: verifyError } = await supabase.auth.verifyOtp({
-                  token_hash,
-                  type: "magiclink",
-                });
+            if (token_hash) {
+              const { error: verifyError } = await supabase.auth.verifyOtp({
+                token_hash,
+                type: "magiclink",
+              });
 
-                if (!verifyError) {
-                  console.log("✅ AuthProfileGuard: Local session sync completed successfully.");
-                  if (isAuthPage) {
-                    router.replace("/dashboard" as any);
-                  }
-                } else {
-                  console.error("❌ AuthProfileGuard local verifyOtp failed:", verifyError.message);
-                  
-                  // Check if local session actually exists now
-                  const { data: { session: currentSession } } = await supabase.auth.getSession();
-                  if (currentSession) {
-                    console.log("🔑 AuthProfileGuard: Local session already exists. Proceeding...");
-                    if (isAuthPage) {
-                      router.replace("/dashboard" as any);
-                    }
-                  } else {
-                    isSyncing.current = false;
-                  }
+              if (!isMountedRef.current) return;
+
+              if (!verifyError) {
+                console.log("✅ AuthProfileGuard: Local session sync completed successfully.");
+                if (isAuthPage) {
+                  console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Auth State: Authenticated (Local Sync). Executing replace...`);
+                  router.replace("/dashboard" as any);
+                  console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Done.`);
                 }
               } else {
-                isSyncing.current = false;
+                console.error("❌ AuthProfileGuard local verifyOtp failed:", verifyError.message);
+                
+                // Check if local session actually exists now
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
+                if (!isMountedRef.current) return;
+
+                if (currentSession) {
+                  console.log("🔑 AuthProfileGuard: Local session already exists. Proceeding...");
+                  if (isAuthPage) {
+                    console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Auth State: Authenticated (Local Session Exists). Executing replace...`);
+                    router.replace("/dashboard" as any);
+                    console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Done.`);
+                  }
+                } else {
+                  isSyncing.current = false;
+                }
               }
             } else {
-              console.error("❌ AuthProfileGuard register-profile sync failed:", response.statusText);
               isSyncing.current = false;
             }
           } else {
-            // Both Central and Local sessions exist
+            if (isMountedRef.current) {
+              console.error("❌ AuthProfileGuard register-profile sync failed:", response.statusText);
+              isSyncing.current = false;
+            }
+          }
+        } else {
+          // Both Central and Local sessions exist
+          const user = localSession.user;
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (!isMountedRef.current) return;
+
+          if (!profile) {
+            const meta = user.user_metadata || {};
+            await supabase.from("profiles").upsert(
+              {
+                id: user.id,
+                full_name: meta.full_name || meta.name || user.email || "",
+                phone_number: meta.phone_number || meta.phone || "",
+              },
+              { onConflict: "id" }
+            );
+          }
+
+          if (isAuthPage) {
+            console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Auth State: Authenticated (Session exists). Executing replace...`);
+            router.replace("/dashboard" as any);
+            console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Done.`);
+          }
+        }
+      } else {
+        // No Central session exists
+        if (isProtected) {
+          if (!localSession) {
+            console.log("🔒 AuthProfileGuard: No active session. Redirecting to login...");
+            console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /auth/login, Auth State: Guest. Executing replace...`);
+            router.replace("/auth/login" as any);
+            console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /auth/login, Done.`);
+          } else {
+            // Ensure profile exists for local session
             const user = localSession.user;
             const { data: profile } = await supabase
               .from("profiles")
@@ -148,7 +204,9 @@ export default function AuthProfileGuard() {
               .eq("id", user.id)
               .maybeSingle();
 
-            if (!profile && active) {
+            if (!isMountedRef.current) return;
+
+            if (!profile) {
               const meta = user.user_metadata || {};
               await supabase.from("profiles").upsert(
                 {
@@ -159,71 +217,48 @@ export default function AuthProfileGuard() {
                 { onConflict: "id" }
               );
             }
-
-            if (isAuthPage && active) {
-              router.replace("/dashboard" as any);
-            }
           }
-        } else {
-          // No Central session exists
-          if (isProtected) {
-            if (!localSession) {
-              console.log("🔒 AuthProfileGuard: No active session. Redirecting to login...");
-              router.replace("/auth/login" as any);
-            } else {
-              // Ensure profile exists for local session
-              const user = localSession.user;
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("id")
-                .eq("id", user.id)
-                .maybeSingle();
-
-              if (!profile && active) {
-                const meta = user.user_metadata || {};
-                await supabase.from("profiles").upsert(
-                  {
-                    id: user.id,
-                    full_name: meta.full_name || meta.name || user.email || "",
-                    phone_number: meta.phone_number || meta.phone || "",
-                  },
-                  { onConflict: "id" }
-                );
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error("❌ AuthProfileGuard error:", err);
-      } finally {
-        if (active) {
-          setLoading(false);
         }
       }
-    };
+    } catch (err) {
+      console.error("❌ AuthProfileGuard error:", err);
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [router]);
 
+  // Run route check on pathname change
+  useEffect(() => {
     checkAuth(pathname);
+  }, [pathname, checkAuth]);
 
+  // Setup event listeners exactly once on mount
+  useEffect(() => {
     // Listen for Central session updates
     const {
       data: { subscription: centralSub },
-    } = centralSupabase.auth.onAuthStateChange(() => {
-      checkAuth(pathname);
+    } = centralSupabase.auth.onAuthStateChange((event: any) => {
+      // Ignore initial synchronous callback
+      if (event === "INITIAL_SESSION") return;
+      checkAuth(pathnameRef.current);
     });
 
     // Listen for Local session updates
     const {
       data: { subscription: localSub },
-    } = supabase.auth.onAuthStateChange(() => {
-      checkAuth(pathname);
+    } = supabase.auth.onAuthStateChange((event: any) => {
+      // Ignore initial synchronous callback
+      if (event === "INITIAL_SESSION") return;
+      checkAuth(pathnameRef.current);
     });
 
     return () => {
-      active = false;
       centralSub.unsubscribe();
       localSub.unsubscribe();
     };
-  }, [pathname, router]);
+  }, [checkAuth]);
 
   const isProtected =
     checkPath(pathname, "/dashboard") ||

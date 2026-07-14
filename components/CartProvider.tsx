@@ -28,6 +28,7 @@ export default function CartProvider({
 }: {
   children: React.ReactNode;
 }) {
+  console.log("Entering CartProvider");
   const [cartCount, setCartCount] = useState(0);
 
   const refreshCart = useCallback(async () => {
@@ -92,9 +93,11 @@ export default function CartProvider({
   }, []);
 
   useEffect(() => {
+    console.log("Provider initialized: CartProvider");
     refreshCart();
   }, [refreshCart]);
 
+  console.log("Leaving CartProvider");
   return (
     <CartContext.Provider
       value={{ cartCount, addToCart, refreshCart, decrementCart }}

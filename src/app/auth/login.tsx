@@ -60,7 +60,9 @@ export default function LoginPage() {
         ? "/admin"
         : "/dashboard";
 
+      console.log(`[Navigation] Component: Login, Current Route: /auth/login, Target Route: ${destination}, Auth State: Authenticated (${data.user?.email}). Executing replace...`);
       router.replace(destination as any);
+      console.log(`[Navigation] Component: Login, Current Route: /auth/login, Target Route: ${destination}, Done.`);
     } catch (err) {
       console.error(err);
       setError("حدث خطأ ما أثناء تسجيل الدخول");

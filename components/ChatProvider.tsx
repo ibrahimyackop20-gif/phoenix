@@ -26,6 +26,7 @@ export default function ChatProvider({
 }: {
   children: React.ReactNode;
 }) {
+  console.log("Entering ChatProvider");
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const refreshUnread = useCallback(async () => {
@@ -100,6 +101,7 @@ export default function ChatProvider({
   );
 
   useEffect(() => {
+    console.log("Provider initialized: ChatProvider");
     refreshUnread();
 
     // Real-time: listen for new and updated messages
@@ -126,6 +128,7 @@ export default function ChatProvider({
     };
   }, [refreshUnread]);
 
+  console.log("Leaving ChatProvider");
   return (
     <ChatContext.Provider
       value={{ unreadChatCount, refreshUnread, markChatAsRead }}

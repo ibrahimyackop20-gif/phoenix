@@ -1,3 +1,5 @@
+console.log("ThemeProvider.tsx file loading...");
+
 import React, { useEffect, useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,14 +37,18 @@ const darkColors = {
  * It renders nothing until both are loaded to avoid flicker.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  console.log("Entering ThemeProvider");
   const { setColorScheme } = useColorScheme();
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
+      console.log("ThemeProvider: Starting loadSettings...");
       try {
         // Restore theme
+        console.log("AsyncStorage.getItem('theme') - Accessing...");
         const savedTheme = await AsyncStorage.getItem('theme');
+        console.log("AsyncStorage.getItem('theme') - Result:", savedTheme);
         if (savedTheme === 'dark' || savedTheme === 'light') {
           setColorScheme(savedTheme);
         } else {
@@ -50,14 +56,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Restore language
+        console.log("AsyncStorage.getItem('language') - Accessing...");
         const savedLang = await AsyncStorage.getItem('language');
+        console.log("AsyncStorage.getItem('language') - Result:", savedLang);
         if (savedLang === 'ar' || savedLang === 'en') {
+          console.log("i18n.changeLanguage() - Starting conversion to:", savedLang);
           await i18n.changeLanguage(savedLang);
+          console.log("i18n.changeLanguage() - Finished conversion.");
         }
-        // If no saved language, i18n defaults to 'ar' from init config
       } catch (error) {
-        console.log('Error loading settings:', error);
+        console.error("Startup Error:", error);
       } finally {
+        console.log("ThemeProvider: loadSettings completed.");
         setIsLoaded(true);
       }
     };
@@ -65,8 +75,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     loadSettings();
   }, []);
 
-  if (!isLoaded) return null;
+  useEffect(() => {
+    if (isLoaded) {
+      console.log("Provider initialized: ThemeProvider");
+    }
+  }, [isLoaded]);
 
+  if (!isLoaded) {
+    console.log("Leaving ThemeProvider (not loaded state)");
+    return null;
+  }
+
+  console.log("Leaving ThemeProvider (loaded state)");
   return <>{children}</>;
 }
 
@@ -77,24 +97,34 @@ export default ThemeProvider;
  * Uses NativeWind's useColorScheme under the hood.
  */
 export function useAppTheme() {
-  const { colorScheme, setColorScheme } = useColorScheme();
+  console.log("useAppTheme() hook executed");
+  try {
+    const { colorScheme, setColorScheme } = useColorScheme();
+    console.log("useColorScheme colorScheme:", colorScheme);
 
-  const setTheme = async (newTheme: 'light' | 'dark') => {
-    setColorScheme(newTheme);
-    try {
-      await AsyncStorage.setItem('theme', newTheme);
-    } catch (error) {
-      console.log('Error saving theme:', error);
-    }
-  };
+    const setTheme = async (newTheme: 'light' | 'dark') => {
+      console.log("setTheme called with:", newTheme);
+      setColorScheme(newTheme);
+      try {
+        console.log("setTheme: Saving theme to AsyncStorage...");
+        await AsyncStorage.setItem('theme', newTheme);
+        console.log("setTheme: Theme saved successfully.");
+      } catch (error) {
+        console.error("Startup Error:", error);
+      }
+    };
 
-  const isDark = colorScheme === 'dark';
-  const themeColors = isDark ? darkColors : lightColors;
+    const isDark = colorScheme === 'dark';
+    const themeColors = isDark ? darkColors : lightColors;
 
-  return {
-    theme: (isDark ? 'dark' : 'light') as 'dark' | 'light',
-    isDark,
-    setTheme,
-    themeColors,
-  };
+    return {
+      theme: (isDark ? 'dark' : 'light') as 'dark' | 'light',
+      isDark,
+      setTheme,
+      themeColors,
+    };
+  } catch (error) {
+    console.error("Startup Error:", error);
+    throw error;
+  }
 }

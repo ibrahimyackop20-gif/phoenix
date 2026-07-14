@@ -123,7 +123,9 @@ export default function SignupPage() {
           : "/dashboard";
 
         setTimeout(() => {
+          console.log(`[Navigation] Component: Signup, Current Route: /auth/signup, Target Route: ${destination}, Auth State: Authenticated (${email}). Executing replace...`);
           router.replace(destination as any);
+          console.log(`[Navigation] Component: Signup, Current Route: /auth/signup, Target Route: ${destination}, Done.`);
         }, 1800);
       } catch (err) {
         console.error(err);

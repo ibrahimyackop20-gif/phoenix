@@ -43,10 +43,15 @@ export default function ProfileProvider({
   initialRole,
   initialBalance = 0,
 }: ProfileProviderProps) {
+  console.log("Entering ProfileProvider");
   const [fullName, setFullName] = useState(initialName);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatar);
   const [role] = useState(initialRole);
   const [balance, setBalance] = useState(initialBalance);
+
+  useEffect(() => {
+    console.log("Provider initialized: ProfileProvider");
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     try {
@@ -132,6 +137,7 @@ export default function ProfileProvider({
     [fullName, avatarUrl, role, balance, refreshProfile]
   );
 
+  console.log("Leaving ProfileProvider");
   return (
     <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>
   );

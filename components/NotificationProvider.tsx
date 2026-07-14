@@ -45,6 +45,7 @@ export default function NotificationProvider({
 }: {
   children: React.ReactNode;
 }) {
+  console.log("Entering NotificationProvider");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [latestToast, setLatestToast] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -128,6 +129,7 @@ export default function NotificationProvider({
 
   // Initial load + real-time subscription
   useEffect(() => {
+    console.log("Provider initialized: NotificationProvider");
     refreshNotifications();
 
     if (!userId) return;
@@ -159,6 +161,7 @@ export default function NotificationProvider({
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
+  console.log("Leaving NotificationProvider");
   return (
     <NotificationContext.Provider
       value={{

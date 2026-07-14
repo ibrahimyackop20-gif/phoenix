@@ -21,9 +21,14 @@ export default function HomeScreen() {
   useEffect(() => {
     const checkUser = async () => {
       try {
+        console.log("[HomeScreen Navigation] Checking user session on mount...");
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          console.log(`[Navigation] Component: HomeScreen, Current Route: /, Target Route: /dashboard, Auth State: Authenticated (${user.email || 'active session'}). Executing replace...`);
           router.replace("/dashboard" as any);
+          console.log(`[Navigation] Component: HomeScreen, Current Route: /, Target Route: /dashboard, Done.`);
+        } else {
+          console.log("[HomeScreen Navigation] No authenticated session found. User is guest. Staying on /");
         }
       } catch (err) {
         console.error("Auth check failed:", err);
