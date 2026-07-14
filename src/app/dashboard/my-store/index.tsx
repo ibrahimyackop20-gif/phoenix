@@ -134,7 +134,7 @@ export default function MyStoreIndexScreen() {
           .select("items, total");
 
         if (salesData && prods) {
-          const productIds = new Set(prods.map((p) => p.id));
+          const productIds = new Set(prods.map((p: Product) => p.id));
           let itemsSold = 0;
           let totalRevenue = 0;
           for (const order of salesData) {

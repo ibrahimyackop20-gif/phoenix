@@ -33,40 +33,6 @@ export default function DeleteAccount() {
     fetchUser();
   }, []);
 
-  const deleteUserFiles = async (userId: string) => {
-    try {
-      console.log("🧹 Deleting avatars bucket files...");
-      const { data: avatarFiles } = await supabase.storage.from("avatars").list(userId);
-      if (avatarFiles && avatarFiles.length > 0) {
-        const paths = avatarFiles.map((f: any) => `${userId}/${f.name}`);
-        await supabase.storage.from("avatars").remove(paths);
-      }
-      await supabase.storage.from("avatars").remove([userId]);
-
-      console.log("🧹 Deleting products bucket files...");
-      const { data: productFiles } = await supabase.storage.from("products").list(userId);
-      if (productFiles && productFiles.length > 0) {
-        const paths = productFiles.map((f: any) => `${userId}/${f.name}`);
-        await supabase.storage.from("products").remove(paths);
-      }
-      
-      const { data: printFiles } = await supabase.storage.from("products").list(`${userId}/prints`);
-      if (printFiles && printFiles.length > 0) {
-        const paths = printFiles.map((f: any) => `${userId}/prints/${f.name}`);
-        await supabase.storage.from("products").remove(paths);
-      }
-
-      console.log("🧹 Deleting receipts bucket files...");
-      const { data: receiptFiles } = await supabase.storage.from("receipts").list(userId);
-      if (receiptFiles && receiptFiles.length > 0) {
-        const paths = receiptFiles.map((f: any) => `${userId}/${f.name}`);
-        await supabase.storage.from("receipts").remove(paths);
-      }
-    } catch (e) {
-      console.warn("Storage cleanup warning:", e);
-    }
-  };
-
   const handleDeleteAccount = async () => {
     if (!currentUser) return;
 
@@ -79,92 +45,44 @@ export default function DeleteAccount() {
     setLoading(true);
 
     try {
-      const userId = currentUser.id;
-
-      // 1. Attempt to invoke the secure backend Edge Function for complete account deletion
-      console.log("⚡ Invoking delete-user Edge Function...");
-      const { data: edgeData, error: edgeErr } = await supabase.functions.invoke("delete-user");
+      // 1. Invoke the secure backend Edge Function 'delete-account'
+      console.log("⚡ Invoking delete-account Edge Function...");
+      const { data: edgeData, error: edgeErr } = await supabase.functions.invoke("delete-account");
 
       if (edgeErr) {
-        console.warn("Edge Function invocation failed, fallback to client-side cleanup:", edgeErr.message);
-
-        // 2. Client-side storage bucket cleanup fallback
-        await deleteUserFiles(userId);
-
-        // 3. Client-side DB table cleanup fallback
-        console.log("🧹 Deleting client-side database rows...");
-        await supabase.from("cart_items").delete().eq("user_id", userId);
-        await supabase.from("chat_messages").delete().eq("sender_id", userId);
-        await supabase.from("delivery_addresses").delete().eq("user_id", userId);
-        await supabase.from("notifications").delete().eq("user_id", userId);
-        await supabase.from("orders").delete().eq("user_id", userId);
-        await supabase.from("sales_orders").delete().eq("user_id", userId);
-        await supabase.from("profiles").delete().eq("id", userId);
-
-        // 4. Try calling DB RPC delete function (super-user fallback)
-        const { error: rpcErr } = await supabase.rpc("delete_user_account");
-
-        // Clear local storage and sign out client-side
-        await AsyncStorage.clear();
-        await supabase.auth.signOut();
-
-        if (rpcErr) {
-          Alert.alert(
-            "تم حذف البيانات وطلب إزالة الحساب",
-            "تم بنجاح حذف مستنداتك المرفوعة، صورك، وعناوينك المحفوظة من قاعدة البيانات.\n\nلحذف سجل البريد الإلكتروني بالكامل من خوادم المصادقة (Auth)، يرجى إبلاغ المسؤول التقني لتأكيد الحذف نهائياً.",
-            [
-              {
-                text: "موافق",
-                onPress: () => {
-                  console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Auth State: Guest. Executing replace...");
-                  router.replace("/auth/login" as any);
-                  console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Done.");
-                }
-              }
-            ]
-          );
-        } else {
-          Alert.alert(
-            "تم حذف الحساب بالكامل",
-            "تم حذف حسابك وبياناتك وملفاتك نهائياً وبنجاح من التطبيق.",
-            [
-              {
-                text: "موافق",
-                onPress: () => {
-                  console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Auth State: Guest. Executing replace...");
-                  router.replace("/auth/login" as any);
-                  console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Done.");
-                }
-              }
-            ]
-          );
-        }
-      } else {
-        // Success via Edge Function
-        console.log("✅ Edge Function deletion success:", edgeData);
-
-        // Clear local storage, sign out and route to login
-        await AsyncStorage.clear();
-        await supabase.auth.signOut();
-
-        Alert.alert(
-          "تم حذف الحساب نهائياً",
-          "تم حذف حسابك بالكامل وكافة بياناتك ومستنداتك بنجاح من التطبيق.",
-          [
-            {
-              text: "موافق",
-              onPress: () => {
-                console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Auth State: Guest. Executing replace......");
-                router.replace("/auth/login" as any);
-                console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Done.");
-              }
-            }
-          ]
-        );
+        throw new Error(edgeErr.message || "حدث خطأ غير متوقع في خادم المصادقة.");
       }
+
+      if (edgeData?.error) {
+        throw new Error(edgeData.error);
+      }
+
+      // 2. Success! Account and DB data deleted completely
+      console.log("✅ Account deletion completed successfully via Edge Function!");
+
+      // 3. Clear local preferences and sign out client-side
+      await AsyncStorage.clear();
+      await supabase.auth.signOut();
+
+      // 4. Show success message and reset navigation
+      Alert.alert(
+        "تم حذف الحساب نهائياً",
+        "تم حذف حسابك بالكامل وكافة بياناتك ومستنداتك بنجاح من التطبيق.",
+        [
+          {
+            text: "موافق",
+            onPress: () => {
+              console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Auth State: Guest. Executing replace...");
+              router.replace("/auth/login" as any);
+              console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Done.");
+            }
+          }
+        ]
+      );
     } catch (err: any) {
-      console.error(err);
-      setError("فشل حذف الحساب: " + (err.message || String(err)));
+      console.error("Delete Account flow failed:", err);
+      // Show exact error returned from the Edge Function
+      setError(err.message || String(err));
     } finally {
       setLoading(false);
     }
@@ -221,6 +139,7 @@ export default function DeleteAccount() {
             onChangeText={setEmailInput}
             autoCapitalize="none"
             keyboardType="email-address"
+            editable={!loading}
           />
 
           {error && <Text style={styles.errorText}>{error}</Text>}
@@ -245,7 +164,7 @@ export default function DeleteAccount() {
         <View style={[styles.noteCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <Feather name="info" size={16} color="#ea580c" style={{ marginLeft: 6 }} />
           <Text style={[styles.noteText, { color: themeColors.textMuted }]}>
-            ملاحظة: لتمكين الحذف الكامل والتلقائي من جهة خوادم التوثيق (Auth)، يجب على مدير النظام تفعيل دالة `delete_user_account()` في لوحة تحكم Supabase SQL.
+            ملاحظة: يتطلب هذا الإجراء تفعيل دالة `delete_user_account()` ورفع دالة Deno Edge Function `delete-account` في مشروع Supabase الخاص بك.
           </Text>
         </View>
       </ScrollView>

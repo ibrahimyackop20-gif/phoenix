@@ -42,7 +42,7 @@ export default function ChatProvider({
         .select("id")
         .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
 
-      const convIds = convs?.map((c) => c.id) || [];
+      const convIds = convs?.map((c: { id: string }) => c.id) || [];
 
       if (convIds.length === 0) {
         setUnreadChatCount(0);

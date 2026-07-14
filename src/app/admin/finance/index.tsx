@@ -36,8 +36,8 @@ export default function FinanceScreen() {
           .order("created_at", { ascending: false });
 
         if (orders) {
-          const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-          const shipping = orders.reduce((sum, o) => sum + (o.shipping_cost || 0), 0);
+          const revenue = orders.reduce((sum: number, o: { total: number | null }) => sum + (o.total || 0), 0);
+          const shipping = orders.reduce((sum: number, o: { shipping_cost: number | null }) => sum + (o.shipping_cost || 0), 0);
           setTotalRevenue(revenue);
           setTotalOrders(orders.length);
           setTotalShipping(shipping);
@@ -48,11 +48,11 @@ export default function FinanceScreen() {
             d.setDate(d.getDate() - i);
             const dateStr = d.toISOString().slice(0, 10);
             const dayOrders = orders.filter(
-              (o) => o.created_at?.slice(0, 10) === dateStr
+              (o: { created_at: string | null }) => o.created_at?.slice(0, 10) === dateStr
             );
             last7.push({
               date: d.toLocaleDateString("ar-SA", { weekday: "short", day: "numeric" }),
-              total: dayOrders.reduce((s, o) => s + (o.total || 0), 0),
+              total: dayOrders.reduce((s: number, o: { total: number | null }) => s + (o.total || 0), 0),
               count: dayOrders.length,
             });
           }
@@ -65,7 +65,7 @@ export default function FinanceScreen() {
           .eq("status", "Completed");
 
         if (printOrders) {
-          const printCost = printOrders.reduce((s, o) => s + (o.total_cost || 0), 0);
+          const printCost = printOrders.reduce((s: number, o: { total_cost: number | null }) => s + (o.total_cost || 0), 0);
           setTotalPrintingCost(printCost);
         }
       } catch (err) {

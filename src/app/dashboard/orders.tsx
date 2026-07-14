@@ -125,7 +125,7 @@ export default function OrdersScreen() {
         console.error("Fetch Print Orders Error:", printErr.message);
       }
 
-      const printOrders: PrintOrder[] = (printData || []).map((o) => ({
+      const printOrders: PrintOrder[] = (printData || []).map((o: Omit<PrintOrder, "type">) => ({
         ...o,
         type: "print" as const,
       }));
@@ -141,7 +141,7 @@ export default function OrdersScreen() {
         console.error("Fetch Library Orders Error:", libErr.message);
       }
 
-      const libOrders: LibraryOrder[] = (libData || []).map((o) => ({
+      const libOrders: LibraryOrder[] = (libData || []).map((o: Omit<LibraryOrder, "type">) => ({
         ...o,
         type: "library" as const,
       }));
@@ -195,7 +195,7 @@ export default function OrdersScreen() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
-        (payload) => {
+        (payload: { eventType: string; new: Omit<PrintOrder, "type"> }) => {
           if (payload.eventType === "UPDATE") {
             setOrders((prev) =>
               prev.map((order) =>
@@ -224,7 +224,7 @@ export default function OrdersScreen() {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "sales_orders" },
-        (payload) => {
+        (payload: { new: Omit<LibraryOrder, "type"> }) => {
           setOrders((prev) =>
             prev.map((o) => (o.id === payload.new.id ? { ...o, status: payload.new.status } : o))
           );

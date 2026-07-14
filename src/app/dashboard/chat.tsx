@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
+import { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
 import { useChat } from "../../../components/ChatProvider";
 import { useNotifications } from "../../../components/NotificationProvider";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -173,8 +174,8 @@ export default function ChatScreen() {
           table: "chat_messages",
           filter: `conversation_id=eq.${activeConv}`,
         },
-        (payload) => {
-          const newMessage = payload.new as ChatMessage;
+        (payload: RealtimePostgresInsertPayload<ChatMessage>) => {
+          const newMessage = payload.new;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMessage.id)) return prev;
             return [...prev, newMessage];

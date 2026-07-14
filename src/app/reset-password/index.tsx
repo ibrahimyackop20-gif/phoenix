@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabaseClient";
+import { AuthChangeEvent } from "@supabase/supabase-js";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
 export default function ResetPasswordScreen() {
@@ -25,7 +26,7 @@ export default function ResetPasswordScreen() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === "PASSWORD_RECOVERY") {
         // User arrived from password reset email — ready to set new password
       }

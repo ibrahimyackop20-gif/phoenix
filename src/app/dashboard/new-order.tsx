@@ -236,7 +236,14 @@ export default function NewOrderScreen() {
 
       if (pricingData && pricingData.length > 0) {
         console.log("Downloaded raw pricing records count:", pricingData.length);
-        const mappedPrices: PricingRow[] = pricingData.map((p) => ({
+        const mappedPrices: PricingRow[] = pricingData.map((p: {
+          id: number | string;
+          paper_name: string | null;
+          category: string | null;
+          display_name_ar: string | null;
+          price_per_meter: number | null;
+          double_price: number | null;
+        }) => ({
           id: String(p.id),
           paper_type: p.paper_name || "",
           category: p.category || "",

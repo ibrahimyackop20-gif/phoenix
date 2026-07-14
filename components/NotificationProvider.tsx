@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
 
 export interface Notification {
   id: string;
@@ -139,8 +140,8 @@ export default function NotificationProvider({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
-        (payload) => {
-          const newNotif = payload.new as Notification;
+        (payload: RealtimePostgresInsertPayload<Notification>) => {
+          const newNotif = payload.new;
           // Only add if it's for the current user
           if (newNotif.user_id === userId) {
             setNotifications((prev) => [newNotif, ...prev.slice(0, 19)]);

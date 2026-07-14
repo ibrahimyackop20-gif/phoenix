@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import { supabase } from "../lib/supabaseClient";
+import { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
 
 /**
  * AdminPushProvider (React Native)
@@ -42,8 +43,8 @@ export default function AdminPushProvider() {
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "orders" },
-            (payload) => {
-              const order = payload.new as Record<string, unknown>;
+            (payload: RealtimePostgresInsertPayload<Record<string, unknown>>) => {
+              const order = payload.new;
               const fileName = (order.file_name as string) || "ملف";
 
               console.log("📦 New print order received:", fileName);
@@ -58,8 +59,8 @@ export default function AdminPushProvider() {
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "sales_orders" },
-            (payload) => {
-              const order = payload.new as Record<string, unknown>;
+            (payload: RealtimePostgresInsertPayload<Record<string, unknown>>) => {
+              const order = payload.new;
               const orderType = order.order_type as string;
 
               const title = orderType === "print"

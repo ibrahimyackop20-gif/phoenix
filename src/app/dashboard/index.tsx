@@ -56,9 +56,9 @@ export default function DashboardIndex() {
         .eq("user_id", user.id);
 
       const totalOrders = orders?.length || 0;
-      const pendingOrders = orders?.filter((o) => o.status === "Pending").length || 0;
-      const printingOrders = orders?.filter((o) => o.status === "Printing").length || 0;
-      const completedOrders = orders?.filter((o) => o.status === "Completed").length || 0;
+      const pendingOrders = orders?.filter((o: { status: string }) => o.status === "Pending").length || 0;
+      const printingOrders = orders?.filter((o: { status: string }) => o.status === "Printing").length || 0;
+      const completedOrders = orders?.filter((o: { status: string }) => o.status === "Completed").length || 0;
 
       const statsList: StatItem[] = [
         {
