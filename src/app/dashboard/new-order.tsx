@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  SafeAreaView,
   Clipboard,
   Modal,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { supabase } from "../../../lib/supabaseClient";
@@ -20,24 +20,60 @@ import AddressPickerMap from "../../../components/AddressPickerMap";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
-import Constants from "expo-constants";
 
+// PDF page count is parsed fully on-device (no network round trip). Earlier this
+// data flowed through a local dev-only "/api/pdf-pages" route reached over a
+// hardcoded http://<ip>:8081 URL; that request only ever worked by coincidence
+// (Metro must run on port 8081, and Android must allow cleartext HTTP to a LAN
+// IP, which it doesn't by default) and doesn't exist at all in production
+// builds. Parsing locally removes that failure point entirely.
 const fallbackParsePagesCount = (text: string): number => {
-  // Strategy 1: Search for Count directly under /Type /Pages
+  // Strategy 1: Traverse PDF structure Trailer -> Root -> Pages -> Count
+  try {
+    const rootRegex = /\/Root\s*(\d+)\s*0\s*R/i;
+    const rootMatch = rootRegex.exec(text);
+    if (rootMatch) {
+      const rootObjNum = rootMatch[1];
+      const rootObjRegex = new RegExp(`${rootObjNum}\\s+0\\s+obj\\s*[<<]?[\\s\\S]*?endobj`, "i");
+      const rootObjMatch = rootObjRegex.exec(text);
+      if (rootObjMatch) {
+        const rootObjText = rootObjMatch[0];
+        const pagesRefRegex = /\/Pages\s*(\d+)\s*0\s*R/i;
+        const pagesRefMatch = pagesRefRegex.exec(rootObjText);
+        if (pagesRefMatch) {
+          const pagesObjNum = pagesRefMatch[1];
+          const pagesObjRegex = new RegExp(`${pagesObjNum}\\s+0\\s+obj\\s*[<<]?[\\s\\S]*?endobj`, "i");
+          const pagesObjMatch = pagesObjRegex.exec(text);
+          if (pagesObjMatch) {
+            const pagesObjText = pagesObjMatch[0];
+            const countRegex = /\/Count\s*(\d+)/i;
+            const countMatch = countRegex.exec(pagesObjText);
+            if (countMatch) {
+              return parseInt(countMatch[1], 10);
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("PDF structural traversal failed, using fallback regex strategies:", err);
+  }
+
+  // Strategy 2: Search for Count directly under /Type /Pages
   const pagesPattern1 = /\/Type\s*\/Pages[\s\S]*?\/Count\s*(\d+)/g;
   const pagesPattern2 = /\/Count\s*(\d+)[\s\S]*?\/Type\s*\/Pages/g;
-  
+
   let match = pagesPattern1.exec(text);
   if (match && match[1]) {
     return parseInt(match[1], 10);
   }
-  
+
   match = pagesPattern2.exec(text);
   if (match && match[1]) {
     return parseInt(match[1], 10);
   }
-  
-  // Strategy 2: Find the maximum /Count value in structural objects
+
+  // Strategy 3: Find the maximum /Count value in structural objects
   const countPattern = /\/Count\s*(\d+)/g;
   let maxPages = 0;
   let countMatch;
@@ -50,58 +86,29 @@ const fallbackParsePagesCount = (text: string): number => {
   if (maxPages > 0) {
     return maxPages;
   }
-  
-  // Strategy 3: Count instances of individual /Type /Page objects
+
+  // Strategy 4: Count instances of individual /Type /Page objects
   const pagePattern = /\/Type\s*\/Page\b/g;
   const matches = text.match(pagePattern);
   if (matches && matches.length > 0) {
     return matches.length;
   }
-  
+
   return 1;
 };
 
 const countPdfPages = async (fileUri: string): Promise<number> => {
   try {
     const response = await fetch(fileUri);
-    const blob = await response.blob();
-
-    const hostUri = Constants.expoConfig?.hostUri;
-    const ip = hostUri ? hostUri.split(":")[0] : "localhost";
-    const serverUrl = `http://${ip}:8081/api/pdf-pages`;
-
-    const serverResponse = await fetch(serverUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/pdf",
-      },
-      body: blob,
-    });
-
-    if (!serverResponse.ok) {
-      const errData = await serverResponse.json().catch(() => ({}));
-      throw new Error(errData.error || `Server returned status ${serverResponse.status}`);
+    const text = await response.text();
+    const pages = fallbackParsePagesCount(text);
+    if (pages > 0) {
+      return pages;
     }
-
-    const data = await serverResponse.json();
-    if (data.pages && typeof data.pages === "number") {
-      return data.pages;
-    }
-    throw new Error("No pages returned from server");
+    throw new Error("لم يتم العثور على أي صفحات في الملف");
   } catch (err: any) {
-    console.warn("Server PDF parsing failed, trying local fallback:", err);
-    try {
-      const response = await fetch(fileUri);
-      const text = await response.text();
-      const localPages = fallbackParsePagesCount(text);
-      if (localPages > 0) {
-        return localPages;
-      }
-      throw new Error("Local fallback parsed 0 pages");
-    } catch (fallbackErr: any) {
-      console.error("Local PDF parsing fallback error:", fallbackErr);
-      throw new Error(`فشل قراءة صفحات ملف PDF: ${err.message || fallbackErr.message}`);
-    }
+    console.error("PDF parsing error:", err);
+    throw new Error(`فشل قراءة صفحات ملف PDF: ${err.message}`);
   }
 };
 
@@ -568,11 +575,14 @@ export default function NewOrderScreen() {
       const filePath = `${currentUser.id}/print-receipt-${Date.now()}.${fileExtension}`;
 
       const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: upErr } = await supabase.storage
         .from("products")
-        .upload(filePath, blob, { upsert: true });
+        .upload(filePath, arrayBuffer, {
+          upsert: true,
+          contentType: asset.mimeType || "image/jpeg",
+        });
 
       if (upErr) {
         showToast("فشل رفع إيصال الدفع الإلكتروني", "error");
@@ -689,12 +699,28 @@ export default function NewOrderScreen() {
           const fileExtension = uf.name.split(".").pop();
           const filePath = `${currentUser.id}/prints/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
 
-          const response = await fetch(uf.uri);
-          const blob = await response.blob();
+          let response: Response;
+          try {
+            response = await fetch(uf.uri);
+          } catch (fetchErr: any) {
+            showToast(`فشل قراءة الملف من الجهاز: ${fetchErr?.message}`, "error");
+            setSubmitting(false);
+            return;
+          }
+
+          // supabase-js documents that Blob/File/FormData upload bodies do not
+          // work reliably on React Native; ArrayBuffer must be used instead.
+          // Uploading a Blob here (previous implementation) is what produced
+          // "Network request failed": storage-js wraps the Blob in a FormData
+          // multipart body, which RN's networking layer fails to serialize.
+          const arrayBuffer = await response.arrayBuffer();
 
           const { error: upErr } = await supabase.storage
             .from("products")
-            .upload(filePath, blob, { upsert: true });
+            .upload(filePath, arrayBuffer, {
+              upsert: true,
+              contentType: uf.type || "application/octet-stream",
+            });
 
           if (upErr) {
             showToast(`فشل رفع ملف الطباعة (${uf.name}): ${upErr.message}`, "error");

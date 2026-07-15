@@ -4,9 +4,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";

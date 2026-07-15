@@ -9,9 +9,9 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import { RealtimePostgresInsertPayload } from "@supabase/supabase-js";

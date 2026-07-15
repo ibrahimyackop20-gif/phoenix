@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  SafeAreaView,
   Image,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";

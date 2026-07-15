@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "phoenix-print-app",
+    "name": "مطبعة العنقاء",
     "slug": "phoenix-print-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "phoenixprintapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -12,13 +12,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/logo.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "monochromeImage": "./assets/images/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.phoenix.printing"
+      "package": "com.phoenix.printing",
+      "googleServicesFile": "./android/app/google-services.json",
+      "permissions": ["POST_NOTIFICATIONS"]
     },
     "web": {
       "output": "static",
@@ -29,15 +30,22 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/logo.png",
-          "imageWidth": 76
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#ea580c",
+          "defaultChannel": "phoenix_alerts"
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},

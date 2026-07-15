@@ -8,10 +8,10 @@ import {
   Modal,
   Image,
   ScrollView,
-  SafeAreaView,
   Dimensions,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Slot, useRouter, usePathname } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import AdminPushProvider from "../../../components/AdminPushProvider";

@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
   FlatList,
   ScrollView,
-  SafeAreaView,
   Image,
   Clipboard,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { supabase } from "../../../lib/supabaseClient";

@@ -5,10 +5,10 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 

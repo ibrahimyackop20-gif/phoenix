@@ -7,8 +7,8 @@ import {
   ActivityIndicator,
   FlatList,
   ScrollView,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import InvoiceGenerator from "../../../components/InvoiceGenerator";

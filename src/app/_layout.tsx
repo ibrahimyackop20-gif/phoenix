@@ -10,8 +10,10 @@ import * as ExpoSplashScreen from 'expo-splash-screen';
 import SplashScreenComponent from '../../components/SplashScreen';
 import SSOCatcher from '../../components/SSOCatcher';
 import AuthProfileGuard from '../../components/AuthProfileGuard';
+import NotificationRegistrar from '../../components/NotificationRegistrar';
 import { ThemeProvider, useAppTheme } from '../../components/ThemeProvider';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabaseClient';
 
 // Prevent native splash screen from auto-hiding
@@ -31,6 +33,7 @@ try {
 function RootLayoutContent() {
   console.log("RootLayoutContent rendering...");
   const { themeColors, isDark } = useAppTheme();
+  console.log("ThemeProvider/useAppTheme OK");
   const [appIsReady, setAppIsReady] = useState(false);
   const [splashFinished, setSplashFinished] = useState(false);
 
@@ -39,6 +42,7 @@ function RootLayoutContent() {
       try {
         console.log("[Splash Startup Flow] Restoring user session...");
         const { data: { user } } = await supabase.auth.getUser();
+        console.log("Supabase getUser OK");
         if (user) {
           console.log("[Splash Startup Flow] User authenticated:", user.email);
         } else {
@@ -68,7 +72,11 @@ function RootLayoutContent() {
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <SSOCatcher />
+      {console.log("SSOCatcher rendered OK")}
+      {/* Permission is requested after splash finishes — not gated on auth */}
+      <NotificationRegistrar ready={appIsReady && splashFinished} />
       <AuthProfileGuard />
+      {console.log("AuthProfileGuard rendered OK")}
       
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen
@@ -106,9 +114,11 @@ export default function RootLayout() {
   console.log("STEP 2: RootLayout started");
   console.log("STEP 3: Before providers");
   const result = (
-    <ThemeProvider>
-      <RootLayoutContent />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <RootLayoutContent />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
   console.log("STEP 4: After providers");
   return result;

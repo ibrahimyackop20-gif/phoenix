@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -7,13 +7,16 @@ import {
   Image,
   Modal,
   ScrollView,
-  SafeAreaView,
   Dimensions,
+  FlatList,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 import { useRouter, usePathname } from "expo-router";
 import { supabase } from "../lib/supabaseClient";
 import { useProfile } from "./ProfileProvider";
-import { useNotifications } from "./NotificationProvider";
+import { useNotifications, extractOrderPrefix } from "./NotificationProvider";
 import { useChat } from "./ChatProvider";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -42,12 +45,59 @@ export default function Navbar({ role }: NavbarProps) {
   const {
     notifications,
     unreadCount,
+    hasMore,
+    loadingMore,
     markAsRead,
+    markVisibleAsRead,
     markAllAsRead,
+    deleteNotification,
+    loadMore,
     latestToast,
     clearToast,
   } = useNotifications();
   const { unreadChatCount } = useChat();
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
+  const showNotifsRef = useRef(showNotifs);
+  showNotifsRef.current = showNotifs;
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item: { id: string; is_read: boolean } }> }) => {
+      if (!showNotifsRef.current) return;
+      const unreadVisible = viewableItems
+        .map((v) => v.item)
+        .filter((n) => n && !n.is_read)
+        .map((n) => n.id);
+      if (unreadVisible.length > 0) {
+        markVisibleAsRead(unreadVisible);
+      }
+    }
+  ).current;
+
+  const handleNotificationPress = useCallback(
+    async (n: { id: string; message: string }) => {
+      await markAsRead(n.id);
+      setShowNotifs(false);
+      const prefix = extractOrderPrefix(n.message);
+      if (prefix) {
+        router.push({
+          pathname: "/dashboard/orders",
+          params: { orderId: prefix },
+        } as any);
+      }
+    },
+    [markAsRead, router]
+  );
+
+  const renderRightActions = useCallback(
+    (id: string) => (
+      <TouchableOpacity
+        onPress={() => deleteNotification(id)}
+        style={styles.swipeDeleteAction}
+      >
+        <Feather name="trash-2" size={18} color="#ffffff" />
+      </TouchableOpacity>
+    ),
+    [deleteNotification]
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -240,52 +290,84 @@ export default function Navbar({ role }: NavbarProps) {
           activeOpacity={1}
           onPress={() => setShowNotifs(false)}
         >
-          <View style={[styles.notifDropdown, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <View style={[styles.dropdownHeader, { borderBottomColor: themeColors.cardBorder }]}>
-              <TouchableOpacity
-                onPress={() => {
-                  markAllAsRead();
-                  setShowNotifs(false);
-                }}
-                style={styles.readAllButton}
-              >
-                <MaterialCommunityIcons name="check-all" size={12} color="#ea580c" />
-                <Text style={styles.readAllText}>{t("read_all")}</Text>
-              </TouchableOpacity>
-              <Text style={[styles.dropdownTitle, { color: themeColors.text }]}>{t("notifications")}</Text>
-            </View>
-
-            {notifications.length === 0 ? (
-              <View style={styles.emptyNotifContainer}>
-                <Text style={[styles.emptyNotifText, { color: themeColors.textMuted }]}>
-                  {t("no_notifications")}
-                </Text>
+          <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+            <View
+              style={[styles.notifDropdown, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <View style={[styles.dropdownHeader, { borderBottomColor: themeColors.cardBorder }]}>
+                <TouchableOpacity
+                  onPress={() => {
+                    markAllAsRead();
+                    setShowNotifs(false);
+                  }}
+                  style={styles.readAllButton}
+                >
+                  <MaterialCommunityIcons name="check-all" size={12} color="#ea580c" />
+                  <Text style={styles.readAllText}>{t("read_all")}</Text>
+                </TouchableOpacity>
+                <Text style={[styles.dropdownTitle, { color: themeColors.text }]}>{t("notifications")}</Text>
               </View>
-            ) : (
-              <ScrollView style={styles.notifScroll}>
-                {notifications.map((n) => (
-                  <TouchableOpacity
-                    key={n.id}
-                    onPress={() => {
-                      markAsRead(n.id);
-                      setShowNotifs(false);
-                    }}
-                    style={[
-                      styles.notifItem,
-                      { borderBottomColor: themeColors.cardBorder },
-                      !n.is_read && { backgroundColor: isDark ? "rgba(234, 88, 12, 0.05)" : "rgba(234, 88, 12, 0.03)" },
-                    ]}
-                  >
-                    <Text style={[styles.notifTitle, { color: themeColors.text }]}>{n.title}</Text>
-                    <Text style={[styles.notifBody, { color: themeColors.textMuted }]}>{n.message}</Text>
-                    <Text style={[styles.notifTime, { color: themeColors.textMuted }]}>
-                      {new Date(n.created_at).toLocaleDateString("ar-SA")}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
+
+              {notifications.length === 0 ? (
+                <View style={styles.emptyNotifContainer}>
+                  <Text style={[styles.emptyNotifText, { color: themeColors.textMuted }]}>
+                    {t("no_notifications")}
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  style={styles.notifScroll}
+                  data={notifications}
+                  keyExtractor={(item) => item.id}
+                  onViewableItemsChanged={onViewableItemsChanged}
+                  viewabilityConfig={viewabilityConfig}
+                  onEndReached={() => {
+                    if (hasMore && !loadingMore) loadMore();
+                  }}
+                  onEndReachedThreshold={0.4}
+                  ListFooterComponent={
+                    loadingMore ? (
+                      <ActivityIndicator
+                        size="small"
+                        color="#ea580c"
+                        style={{ marginVertical: 10 }}
+                      />
+                    ) : null
+                  }
+                  renderItem={({ item: n }) => (
+                    <Swipeable
+                      overshootRight={false}
+                      renderRightActions={() => renderRightActions(n.id)}
+                    >
+                      <TouchableOpacity
+                        onPress={() => handleNotificationPress(n)}
+                        style={[
+                          styles.notifItem,
+                          { borderBottomColor: themeColors.cardBorder },
+                          !n.is_read && {
+                            backgroundColor: isDark
+                              ? "rgba(234, 88, 12, 0.05)"
+                              : "rgba(234, 88, 12, 0.03)",
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.notifTitle, { color: themeColors.text }]}>
+                          {n.title}
+                        </Text>
+                        <Text style={[styles.notifBody, { color: themeColors.textMuted }]}>
+                          {n.message}
+                        </Text>
+                        <Text style={[styles.notifTime, { color: themeColors.textMuted }]}>
+                          {new Date(n.created_at).toLocaleDateString("ar-SA")}
+                        </Text>
+                      </TouchableOpacity>
+                    </Swipeable>
+                  )}
+                />
+              )}
+            </View>
+          </GestureHandlerRootView>
         </TouchableOpacity>
       </Modal>
 
@@ -572,6 +654,12 @@ const styles = StyleSheet.create({
   notifItem: {
     padding: 12,
     borderBottomWidth: 1,
+  },
+  swipeDeleteAction: {
+    backgroundColor: "#ef4444",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 64,
   },
   notifTitle: {
     fontSize: 12,

@@ -7,9 +7,10 @@ import {
   ActivityIndicator,
   FlatList,
   ScrollView,
-  SafeAreaView,
   Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -89,6 +90,10 @@ const PRINT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
 export default function OrdersScreen() {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
+  const { highlight, orderId } = useLocalSearchParams<{
+    highlight?: string;
+    orderId?: string;
+  }>();
   const [orders, setOrders] = useState<UnifiedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -167,6 +172,35 @@ export default function OrdersScreen() {
   };
 
   useEffect(() => {
+    if (orders.length === 0) return;
+
+    if (orderId) {
+      const id = String(Array.isArray(orderId) ? orderId[0] : orderId);
+      const match = orders.find(
+        (o) =>
+          o.id === id || o.id.slice(0, 8).toUpperCase() === id.toUpperCase()
+      );
+      if (match) {
+        setExpandedOrder(match.id);
+        if (match.type === "library") setFilter("library");
+        else if (match.type === "print") setFilter("print");
+      }
+      return;
+    }
+
+    if (!highlight) return;
+    const prefix = String(
+      Array.isArray(highlight) ? highlight[0] : highlight
+    ).toUpperCase();
+    const match = orders.find((o) => o.id.slice(0, 8).toUpperCase() === prefix);
+    if (match) {
+      setExpandedOrder(match.id);
+      if (match.type === "library") setFilter("library");
+      else if (match.type === "print") setFilter("print");
+    }
+  }, [highlight, orderId, orders]);
+
+  useEffect(() => {
     fetchOrders();
 
     // Fetch site prices
@@ -195,12 +229,13 @@ export default function OrdersScreen() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
-        (payload: { eventType: string; new: Omit<PrintOrder, "type"> }) => {
+        (payload) => {
           if (payload.eventType === "UPDATE") {
+            const updated = payload.new as Record<string, unknown>;
             setOrders((prev) =>
               prev.map((order) =>
-                order.id === payload.new.id
-                  ? ({ ...order, ...payload.new, type: "print" as const } as any)
+                order.id === updated.id
+                  ? ({ ...order, ...updated, type: "print" as const } as PrintOrder)
                   : order
               )
             );
@@ -210,7 +245,7 @@ export default function OrdersScreen() {
               Completed: "مكتمل",
               Rejected: "مرفوض",
             };
-            const newStatus = payload.new.status;
+            const newStatus = String(updated.status || "");
             triggerToast(`تم تحديث حالة طلب الطباعة: ${statusLabels[newStatus] || newStatus}`);
           } else if (payload.eventType === "INSERT") {
             fetchOrders();
@@ -224,9 +259,10 @@ export default function OrdersScreen() {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "sales_orders" },
-        (payload: { new: Omit<LibraryOrder, "type"> }) => {
+        (payload) => {
+          const updated = payload.new as Record<string, unknown>;
           setOrders((prev) =>
-            prev.map((o) => (o.id === payload.new.id ? { ...o, status: payload.new.status } : o))
+            prev.map((o) => (o.id === updated.id ? { ...o, status: String(updated.status || o.status) } : o))
           );
           triggerToast("تم تحديث حالة طلب المكتبة");
         }

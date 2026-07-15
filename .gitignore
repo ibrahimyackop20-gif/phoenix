@@ -32,6 +32,11 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Firebase / local secrets (never commit)
+.temp/
+*-firebase-adminsdk-*.json
 
 # typescript
 *.tsbuildinfo

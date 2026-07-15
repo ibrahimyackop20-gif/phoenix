@@ -5,11 +5,11 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   FlatList,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import { useCart } from "../../../components/CartProvider";

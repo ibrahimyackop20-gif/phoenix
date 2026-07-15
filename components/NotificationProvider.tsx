@@ -3,10 +3,13 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
+import type {
+  RealtimePostgresChangesPayload,
+} from "@supabase/supabase-js";
 
 export interface Notification {
   id: string;
@@ -17,11 +20,18 @@ export interface Notification {
   created_at: string;
 }
 
+const PAGE_SIZE = 20;
+
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
+  hasMore: boolean;
+  loadingMore: boolean;
   markAsRead: (id: string) => Promise<void>;
+  markVisibleAsRead: (ids: string[]) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  loadMore: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
   markChatNotificationsAsRead: () => Promise<void>;
   latestToast: string | null;
@@ -31,8 +41,13 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType>({
   notifications: [],
   unreadCount: 0,
+  hasMore: false,
+  loadingMore: false,
   markAsRead: async () => {},
+  markVisibleAsRead: async () => {},
   markAllAsRead: async () => {},
+  deleteNotification: async () => {},
+  loadMore: async () => {},
   refreshNotifications: async () => {},
   markChatNotificationsAsRead: async () => {},
   latestToast: null,
@@ -46,18 +61,39 @@ export default function NotificationProvider({
 }: {
   children: React.ReactNode;
 }) {
-  console.log("Entering NotificationProvider");
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [latestToast, setLatestToast] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markingIdsRef = useRef<Set<string>>(new Set());
 
-  // Fetch notifications
+  const refreshUnreadCount = useCallback(async (uid: string) => {
+    const { count, error } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", uid)
+      .eq("is_read", false);
+
+    if (!error) {
+      setUnreadCount(count ?? 0);
+    }
+  }, []);
+
   const refreshNotifications = useCallback(async () => {
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setUserId(null);
+        setNotifications([]);
+        setUnreadCount(0);
+        setHasMore(false);
+        return;
+      }
       setUserId(user.id);
 
       const { data } = await supabase
@@ -65,42 +101,135 @@ export default function NotificationProvider({
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(0, PAGE_SIZE - 1);
 
-      setNotifications((data || []) as Notification[]);
+      const rows = (data || []) as Notification[];
+      setNotifications(rows);
+      setHasMore(rows.length === PAGE_SIZE);
+      await refreshUnreadCount(user.id);
     } catch (err) {
       console.error("🔔 NotificationProvider refreshNotifications error:", err);
     }
-  }, []);
+  }, [refreshUnreadCount]);
 
-  // Mark one as read
+  const loadMore = useCallback(async () => {
+    if (!userId || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const from = notifications.length;
+      const to = from + PAGE_SIZE - 1;
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      const rows = (data || []) as Notification[];
+      setNotifications((prev) => {
+        const seen = new Set(prev.map((n) => n.id));
+        const merged = [...prev];
+        for (const row of rows) {
+          if (!seen.has(row.id)) merged.push(row);
+        }
+        return merged;
+      });
+      setHasMore(rows.length === PAGE_SIZE);
+    } catch (err) {
+      console.error("🔔 NotificationProvider loadMore error:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [userId, loadingMore, hasMore, notifications.length]);
+
   const markAsRead = useCallback(async (id: string) => {
     try {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      let wasUnread = false;
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+        prev.map((n) => {
+          if (n.id === id && !n.is_read) {
+            wasUnread = true;
+            return { ...n, is_read: true };
+          }
+          return n;
+        })
       );
+      if (wasUnread) {
+        setUnreadCount((c) => Math.max(0, c - 1));
+      }
+      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
     } catch (err) {
       console.error("🔔 NotificationProvider markAsRead error:", err);
     }
   }, []);
 
-  // Mark all as read
+  const markVisibleAsRead = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    const unique = ids.filter((id) => {
+      if (markingIdsRef.current.has(id)) return false;
+      markingIdsRef.current.add(id);
+      return true;
+    });
+    if (!unique.length) return;
+
+    try {
+      let marked = 0;
+      setNotifications((prev) =>
+        prev.map((n) => {
+          if (unique.includes(n.id) && !n.is_read) {
+            marked += 1;
+            return { ...n, is_read: true };
+          }
+          return n;
+        })
+      );
+      if (marked > 0) {
+        setUnreadCount((c) => Math.max(0, c - marked));
+        await supabase
+          .from("notifications")
+          .update({ is_read: true })
+          .in("id", unique)
+          .eq("is_read", false);
+      }
+    } catch (err) {
+      console.error("🔔 NotificationProvider markVisibleAsRead error:", err);
+    } finally {
+      unique.forEach((id) => markingIdsRef.current.delete(id));
+    }
+  }, []);
+
   const markAllAsRead = useCallback(async () => {
     if (!userId) return;
     try {
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
       await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("user_id", userId)
         .eq("is_read", false);
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch (err) {
       console.error("🔔 NotificationProvider markAllAsRead error:", err);
     }
   }, [userId]);
 
-  // Mark chat-related notifications as read
+  const deleteNotification = useCallback(async (id: string) => {
+    try {
+      let wasUnread = false;
+      setNotifications((prev) => {
+        const target = prev.find((n) => n.id === id);
+        wasUnread = !!target && !target.is_read;
+        return prev.filter((n) => n.id !== id);
+      });
+      if (wasUnread) {
+        setUnreadCount((c) => Math.max(0, c - 1));
+      }
+      await supabase.from("notifications").delete().eq("id", id);
+    } catch (err) {
+      console.error("🔔 NotificationProvider deleteNotification error:", err);
+    }
+  }, []);
+
   const markChatNotificationsAsRead = useCallback(async () => {
     if (!userId) return;
     try {
@@ -115,41 +244,103 @@ export default function NotificationProvider({
       if (error) {
         console.error("❌ Supabase Mark-As-Read Error (notifications):", error);
       } else if (data) {
+        const count = data.length;
         setNotifications((prev) =>
           prev.map((n) =>
             n.title === "رسالة جديدة" ? { ...n, is_read: true } : n
           )
         );
+        if (count > 0) {
+          setUnreadCount((c) => Math.max(0, c - count));
+        }
       }
     } catch (err) {
       console.error("❌ markChatNotificationsAsRead error:", err);
     }
   }, [userId]);
 
-  const clearToast = useCallback(() => setLatestToast(null), []);
+  const clearToast = useCallback(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setLatestToast(null);
+  }, []);
 
-  // Initial load + real-time subscription
+  // Auth bootstrap
   useEffect(() => {
-    console.log("Provider initialized: NotificationProvider");
     refreshNotifications();
+    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        refreshNotifications();
+      } else {
+        setUserId(null);
+        setNotifications([]);
+        setUnreadCount(0);
+        setHasMore(false);
+      }
+    });
+    return () => {
+      authSub.subscription.unsubscribe();
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, [refreshNotifications]);
 
+  // Realtime — no polling
+  useEffect(() => {
     if (!userId) return;
 
     const channel = supabase
-      .channel("user-notifications-rt-rn")
+      .channel(`user-notifications-rt-${userId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications" },
-        (payload: RealtimePostgresInsertPayload<Notification>) => {
-          const newNotif = payload.new;
-          // Only add if it's for the current user
-          if (newNotif.user_id === userId) {
-            setNotifications((prev) => [newNotif, ...prev.slice(0, 19)]);
-            setLatestToast(newNotif.message);
-            
-            // Auto dismiss toast after 4 seconds
-            const timer = setTimeout(() => setLatestToast(null), 4000);
-            return () => clearTimeout(timer);
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<Notification>) => {
+          if (payload.eventType === "INSERT") {
+            const row = payload.new as Notification;
+            setNotifications((prev) => {
+              if (prev.some((n) => n.id === row.id)) return prev;
+              return [row, ...prev];
+            });
+            if (!row.is_read) {
+              setUnreadCount((c) => c + 1);
+              setLatestToast(row.message);
+              if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+              toastTimerRef.current = setTimeout(() => setLatestToast(null), 4000);
+            }
+            return;
+          }
+
+          if (payload.eventType === "UPDATE") {
+            const row = payload.new as Notification;
+            setNotifications((prev) => {
+              const existing = prev.find((n) => n.id === row.id);
+              if (existing && existing.is_read !== row.is_read) {
+                if (row.is_read) {
+                  setUnreadCount((c) => Math.max(0, c - 1));
+                } else {
+                  setUnreadCount((c) => c + 1);
+                }
+              }
+              return prev.map((n) => (n.id === row.id ? { ...n, ...row } : n));
+            });
+            return;
+          }
+
+          if (payload.eventType === "DELETE") {
+            const old = payload.old as Partial<Notification>;
+            if (!old.id) return;
+            setNotifications((prev) => {
+              const target = prev.find((n) => n.id === old.id);
+              if (!target) return prev;
+              if (!target.is_read) {
+                setUnreadCount((c) => Math.max(0, c - 1));
+              }
+              return prev.filter((n) => n.id !== old.id);
+            });
           }
         }
       )
@@ -158,18 +349,20 @@ export default function NotificationProvider({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, refreshNotifications]);
+  }, [userId]);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-
-  console.log("Leaving NotificationProvider");
   return (
     <NotificationContext.Provider
       value={{
         notifications,
         unreadCount,
+        hasMore,
+        loadingMore,
         markAsRead,
+        markVisibleAsRead,
         markAllAsRead,
+        deleteNotification,
+        loadMore,
         refreshNotifications,
         markChatNotificationsAsRead,
         latestToast,
@@ -179,4 +372,10 @@ export default function NotificationProvider({
       {children}
     </NotificationContext.Provider>
   );
+}
+
+/** Extract an #XXXXXXXX order prefix from notification message text. */
+export function extractOrderPrefix(message: string): string | null {
+  const match = message.match(/#([A-Fa-f0-9]{8})/);
+  return match ? match[1].toUpperCase() : null;
 }

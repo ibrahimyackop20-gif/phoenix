@@ -9,8 +9,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../lib/supabaseClient";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
