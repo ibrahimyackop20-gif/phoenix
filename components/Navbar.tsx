@@ -73,14 +73,18 @@ export default function Navbar({ role }: NavbarProps) {
   ).current;
 
   const handleNotificationPress = useCallback(
-    async (n: { id: string; message: string }) => {
+    async (n: {
+      id: string;
+      message: string;
+      order_id?: string | null;
+    }) => {
       await markAsRead(n.id);
       setShowNotifs(false);
-      const prefix = extractOrderPrefix(n.message);
-      if (prefix) {
+      const orderId = n.order_id || extractOrderPrefix(n.message);
+      if (orderId) {
         router.push({
           pathname: "/dashboard/orders",
-          params: { orderId: prefix },
+          params: { orderId },
         } as any);
       }
     },

@@ -18,6 +18,8 @@ export interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
+  order_id?: string | null;
+  type?: string | null;
 }
 
 const PAGE_SIZE = 20;

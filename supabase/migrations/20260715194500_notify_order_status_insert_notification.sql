@@ -1,12 +1,15 @@
--- Database-driven push notifications for print order status changes.
--- Inserts into public.notifications, then invokes Edge Function: send-push.
--- Only fires when OLD.status IS DISTINCT FROM NEW.status.
-
-create extension if not exists pg_net with schema extensions;
+-- Insert in-app notification rows on order status change (same trigger as push).
+-- Extends existing public.notifications model; does not create a new table.
+-- Keep send-push behavior unchanged.
 
 alter table public.notifications
   add column if not exists order_id uuid null,
   add column if not exists type text null;
+
+comment on column public.notifications.order_id is
+  'Optional related order (print order UUID) for deep links.';
+comment on column public.notifications.type is
+  'Optional notification category, e.g. order_status.';
 
 create or replace function public.notify_order_status_change()
 returns trigger
@@ -40,6 +43,7 @@ begin
   end;
 
   _title := 'تحديث حالة الطلب';
+  -- Existing app deep-link parser looks for #XXXXXXXX (first 8 chars of UUID).
   _body := 'تم تحديث حالة طلب الطباعة #' ||
            upper(substr(new.id::text, 1, 8)) ||
            ' إلى: ' || _status_ar;
@@ -97,14 +101,6 @@ begin
   return new;
 end;
 $$;
-
-drop trigger if exists trg_notify_order_status_change on public.orders;
-
-create trigger trg_notify_order_status_change
-  after update on public.orders
-  for each row
-  when (old.status is distinct from new.status)
-  execute function public.notify_order_status_change();
 
 comment on function public.notify_order_status_change() is
   'Inserts into public.notifications then calls send-push when public.orders.status changes.';
