@@ -19,7 +19,6 @@ import { useAppTheme } from "../../../components/ThemeProvider";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
-const ADMIN_EMAIL = "ibrahimyackop20@gmail.com";
 const { width } = Dimensions.get("window");
 
 const navItems = [
@@ -66,7 +65,7 @@ export default function AdminLayout() {
           .eq("id", session.user.id)
           .maybeSingle();
 
-        const isUserAdmin = profileData?.role === "admin" || session.user.email === ADMIN_EMAIL;
+        const isUserAdmin = profileData?.role === "admin";
 
         if (!isUserAdmin) {
           if (active) {

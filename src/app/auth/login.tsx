@@ -56,9 +56,18 @@ export default function LoginPage() {
         return;
       }
 
-      const destination = data.user?.email === "ibrahimyackop20@gmail.com"
-        ? "/admin"
-        : "/dashboard";
+      const userId = data.user?.id;
+      let destination = "/dashboard";
+      if (userId) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .maybeSingle();
+        if (profileData?.role === "admin") {
+          destination = "/admin";
+        }
+      }
 
       console.log(`[Navigation] Component: Login, Current Route: /auth/login, Target Route: ${destination}, Auth State: Authenticated (${data.user?.email}). Executing replace...`);
       router.replace(destination as any);

@@ -10,7 +10,7 @@ import {
   Clipboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as DocumentPicker from "expo-document-picker";
+import { pickDocumentWithPermission } from "../../../lib/filePermissions";
 import { supabase } from "../../../lib/supabaseClient";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -143,7 +143,7 @@ export default function PaymentScreen() {
 
     try {
       setUploading(true);
-      const res = await DocumentPicker.getDocumentAsync({
+      const res = await pickDocumentWithPermission({
         type: "image/*",
         copyToCacheDirectory: true,
       });
@@ -165,11 +165,11 @@ export default function PaymentScreen() {
       const filePath = `receipts/${fileName}`;
 
       const response = await fetch(file.uri);
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from("receipts")
-        .upload(filePath, blob, { contentType: file.mimeType || "image/jpeg" });
+        .upload(filePath, arrayBuffer, { contentType: file.mimeType || "image/jpeg" });
 
       if (uploadError) {
         throw new Error(uploadError.message);

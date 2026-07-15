@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import { pickDocumentWithPermission } from "../../../../lib/filePermissions";
 import { supabase } from "../../../../lib/supabaseClient";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 
@@ -101,40 +101,43 @@ export default function AdminLibraryScreen() {
 
   const handleSelectImage = async () => {
     if (!adminStoreId) return;
-    setUploadingImage(true);
 
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await pickDocumentWithPermission({
         type: "image/*",
         copyToCacheDirectory: true,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
 
-        const response = await fetch(asset.uri);
-        const blob = await response.blob();
+      setUploadingImage(true);
 
-        const ext = asset.name?.split(".").pop() || "jpg";
-        const filePath = `official/${Date.now()}.${ext}`;
+      const asset = result.assets[0];
 
-        const { error: upErr } = await supabase.storage
+      const response = await fetch(asset.uri);
+      const arrayBuffer = await response.arrayBuffer();
+
+      const ext = asset.name?.split(".").pop() || "jpg";
+      const filePath = `official/${Date.now()}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("products")
+        .upload(filePath, arrayBuffer, {
+          contentType: asset.mimeType || "image/jpeg",
+          upsert: true,
+        });
+
+      if (upErr) {
+        console.error(upErr);
+        showToast(`فشل رفع الصورة: ${upErr.message}`, "error");
+      } else {
+        const { data: urlData } = supabase.storage
           .from("products")
-          .upload(filePath, blob, {
-            contentType: asset.mimeType || "image/jpeg",
-            upsert: true,
-          });
-
-        if (upErr) {
-          console.error(upErr);
-          showToast(`فشل رفع الصورة: ${upErr.message}`, "error");
-        } else {
-          const { data: urlData } = supabase.storage
-            .from("products")
-            .getPublicUrl(filePath);
-          setProductImage(urlData.publicUrl);
-          showToast("تم رفع الصورة بنجاح ✓");
-        }
+          .getPublicUrl(filePath);
+        setProductImage(urlData.publicUrl);
+        showToast("تم رفع الصورة بنجاح ✓");
       }
     } catch (err) {
       console.error(err);

@@ -13,10 +13,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import { pickDocumentWithPermission } from "../../../lib/filePermissions";
 import { supabase } from "../../../lib/supabaseClient";
 import { useCart } from "../../../components/CartProvider";
-import DeliveryMap from "../../../components/DeliveryMap";
+import LocationPickerModal from "../../../components/LocationPickerModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
@@ -66,6 +66,7 @@ export default function CartScreen() {
   const [selectedZone, setSelectedZone] = useState("");
   const [fullAddress, setFullAddress] = useState("");
   const [lat, setLat] = useState<number | null>(null);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [lng, setLng] = useState<number | null>(null);
 
   // Shipping cost states
@@ -338,7 +339,7 @@ export default function CartScreen() {
 
   const handleReceiptPicker = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await pickDocumentWithPermission({
         type: "image/*",
         copyToCacheDirectory: true,
       });
@@ -357,11 +358,14 @@ export default function CartScreen() {
       const filePath = `${user.id}/receipt-${Date.now()}.${fileExtension}`;
 
       const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error } = await supabase.storage
         .from("products")
-        .upload(filePath, blob, { upsert: true });
+        .upload(filePath, arrayBuffer, {
+          upsert: true,
+          contentType: asset.mimeType || "image/jpeg",
+        });
 
       if (error) {
         triggerToast("فشل رفع صورة الإيصال", "error");
@@ -656,10 +660,36 @@ export default function CartScreen() {
             <View style={styles.glassCard}>
               <Text style={styles.cardHeaderTitle}>معلومات التوصيل</Text>
 
-              {/* Map */}
-              <View style={styles.mapContainer}>
-                <DeliveryMap onLocationSelect={handleLocationSelect} />
-              </View>
+              {/* Full-screen location picker entry */}
+              <TouchableOpacity
+                onPress={() => setShowLocationPicker(true)}
+                style={styles.pickLocationButton}
+              >
+                <Feather name="map-pin" size={16} color="#ea580c" />
+                <Text style={styles.pickLocationButtonText}>
+                  🗺️ اختيار موقع التسليم
+                </Text>
+              </TouchableOpacity>
+              {lat != null && fullAddress ? (
+                <Text style={styles.selectedLocationPreview} numberOfLines={2}>
+                  {fullAddress}
+                </Text>
+              ) : null}
+
+              <LocationPickerModal
+                visible={showLocationPicker}
+                onClose={() => setShowLocationPicker(false)}
+                initialLat={lat ?? undefined}
+                initialLng={lng ?? undefined}
+                onConfirm={(data) => {
+                  handleLocationSelect(
+                    data.lat,
+                    data.lng,
+                    data.formattedAddress || data.area,
+                    data.governorate
+                  );
+                }}
+              />
 
               {/* Governorate Dropdown */}
               <View style={styles.inputGroup}>
@@ -741,7 +771,7 @@ export default function CartScreen() {
                 <TextInput
                   value={fullAddress}
                   onChangeText={setFullAddress}
-                  placeholder="حدد الموقع من الخريطة أعلاه أو اكتب العنوان يدوياً هنا..."
+                  placeholder="اختر موقع التسليم من الزر أعلاه أو اكتب العنوان يدوياً هنا..."
                   placeholderTextColor="#71717a"
                   multiline
                   numberOfLines={3}
@@ -1173,6 +1203,31 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
+  },
+  pickLocationButton: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(234, 88, 12, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(234, 88, 12, 0.35)",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  pickLocationButtonText: {
+    color: "#ea580c",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  selectedLocationPreview: {
+    color: themeColors.textMuted,
+    fontSize: 12,
+    textAlign: "right",
+    marginBottom: 14,
+    lineHeight: 18,
   },
   inputGroup: {
     marginBottom: 16,

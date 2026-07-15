@@ -7,8 +7,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import * as Location from "expo-location";
 import { Feather } from "@expo/vector-icons";
+import { getCurrentLocationWithPermission } from "../lib/locationPermissions";
 
 interface DeliveryMapProps {
   onLocationSelect: (
@@ -91,17 +91,12 @@ export default function DeliveryMap({
   const handleLocateMe = async () => {
     setLocating(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setLocating(false);
+      const coords = await getCurrentLocationWithPermission();
+      if (!coords) {
         return;
       }
 
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = position.coords;
+      const { latitude, longitude } = coords;
 
       // Update position inside Leaflet WebView
       webViewRef.current?.postMessage(
@@ -231,6 +226,21 @@ export default function DeliveryMap({
         حدد موقع التوصيل على الخريطة
       </Text>
 
+      <TouchableOpacity
+        onPress={handleLocateMe}
+        disabled={locating || !mapLoaded}
+        style={styles.useMyLocationButton}
+        accessibilityRole="button"
+        accessibilityLabel="استخدم موقعي الحالي"
+      >
+        {locating ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
+          <Feather name="navigation" size={16} color="#ffffff" />
+        )}
+        <Text style={styles.useMyLocationButtonText}>📍 استخدم موقعي الحالي</Text>
+      </TouchableOpacity>
+
       <View style={styles.mapBorder}>
         <WebView
           ref={webViewRef}
@@ -248,19 +258,6 @@ export default function DeliveryMap({
             <ActivityIndicator size="large" color="#f97316" />
           </View>
         )}
-
-        <TouchableOpacity
-          onPress={handleLocateMe}
-          disabled={locating || !mapLoaded}
-          style={styles.locateButton}
-        >
-          {locating ? (
-            <ActivityIndicator size="small" color="#ffffff" style={styles.spinner} />
-          ) : (
-            <Feather name="navigation" size={14} color="#ffffff" />
-          )}
-          <Text style={styles.locateButtonText}>حدد موقعي الحالي</Text>
-        </TouchableOpacity>
       </View>
 
       {outsideIraq && (
@@ -271,7 +268,7 @@ export default function DeliveryMap({
       )}
 
       <Text style={styles.infoText}>
-        انقر على الخريطة لتحديد نقطة التوصيل أو استخدم زر "حدد موقعي الحالي"
+        انقر على الخريطة لتحديد نقطة التوصيل أو استخدم زر "استخدم موقعي الحالي"
       </Text>
     </View>
   );
@@ -310,31 +307,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  locateButton: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 400,
-    backgroundColor: "#ea580c", // Primary orange
+  useMyLocationButton: {
+    backgroundColor: "#ea580c",
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 6,
-    shadowColor: "#ea580c",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    justifyContent: "center",
+    gap: 8,
   },
-  spinner: {
-    marginLeft: 2,
-  },
-  locateButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
+  useMyLocationButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
     color: "#ffffff",
+    textAlign: "center",
   },
   warningBanner: {
     backgroundColor: "rgba(239, 68, 68, 0.1)",

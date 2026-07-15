@@ -46,7 +46,7 @@ export default function ProfileProvider({
   console.log("Entering ProfileProvider");
   const [fullName, setFullName] = useState(initialName);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatar);
-  const [role] = useState(initialRole);
+  const [role, setRole] = useState(initialRole);
   const [balance, setBalance] = useState(initialBalance);
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function ProfileProvider({
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url, balance")
+        .select("full_name, avatar_url, balance, role")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -75,6 +75,7 @@ export default function ProfileProvider({
         setFullName(data.full_name || "");
         setAvatarUrl(data.avatar_url || null);
         setBalance(data.balance ?? 0);
+        if (typeof data.role === "string") setRole(data.role);
       }
     } catch (err) {
       console.error("❌ ProfileProvider refreshProfile exception:", err);
@@ -109,12 +110,14 @@ export default function ProfileProvider({
                 balance?: number;
                 full_name?: string;
                 avatar_url?: string;
+                role?: string;
               };
               if (updated.balance !== undefined) setBalance(updated.balance);
               if (updated.full_name) setFullName(updated.full_name);
               if (updated.avatar_url !== undefined) {
                 setAvatarUrl(updated.avatar_url || null);
               }
+              if (typeof updated.role === "string") setRole(updated.role);
             }
           )
           .subscribe();

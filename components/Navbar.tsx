@@ -23,7 +23,6 @@ import { useTranslation } from "react-i18next";
 import { useAppTheme } from "./ThemeProvider";
 
 const { width } = Dimensions.get("window");
-const ADMIN_EMAIL = "ibrahimyackop20@gmail.com";
 
 interface NavbarProps {
   role?: string;
@@ -170,7 +169,7 @@ export default function Navbar({ role }: NavbarProps) {
       },
     ];
 
-    if (role === "admin" || userEmail === ADMIN_EMAIL) {
+    if (role === "admin") {
       list.push({
         href: "/admin",
         label: "administration",
@@ -201,7 +200,7 @@ export default function Navbar({ role }: NavbarProps) {
     );
 
     return list.filter((l) => l.visible);
-  }, [role, userEmail, isLibraryEnabled]);
+  }, [role, isLibraryEnabled]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.cardBg }]}>

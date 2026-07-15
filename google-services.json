@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1069019387665",
+    "project_id": "phoenix-print-f5261",
+    "storage_bucket": "phoenix-print-f5261.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1069019387665:android:d0b226b995ce37581b9eb0",
+        "android_client_info": {
+          "package_name": "com.phoenix.printing"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBycK3HO6UWp5yHo_TSHZ8gulGQc1NAP-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

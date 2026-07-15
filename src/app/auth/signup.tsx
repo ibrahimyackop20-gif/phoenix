@@ -118,9 +118,20 @@ export default function SignupPage() {
         setSuccess(true);
         setError("");
 
-        const destination = email.trim() === "ibrahimyackop20@gmail.com"
-          ? "/admin"
-          : "/dashboard";
+        let destination = "/dashboard";
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.id) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (profileData?.role === "admin") {
+            destination = "/admin";
+          }
+        }
 
         setTimeout(() => {
           console.log(`[Navigation] Component: Signup, Current Route: /auth/signup, Target Route: ${destination}, Auth State: Authenticated (${email}). Executing replace...`);

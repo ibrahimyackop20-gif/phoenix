@@ -9,15 +9,17 @@ import {
   ScrollView,
   Image,
   Modal,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import { pickDocumentWithPermission } from "../../../lib/filePermissions";
+import { launchCameraWithPermission } from "../../../lib/cameraPermissions";
 import { supabase } from "../../../lib/supabaseClient";
 import { useProfile } from "../../../components/ProfileProvider";
 import { useAppTheme } from "../../../components/ThemeProvider";
-import AddressPickerMap from "../../../components/AddressPickerMap";
+import LocationPickerModal from "../../../components/LocationPickerModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
 interface DeliveryAddress {
@@ -135,16 +137,50 @@ export default function ProfileScreen() {
     if (ctxAvatar && !avatarUrl) setAvatarUrl(ctxAvatar);
   }, [ctxName, ctxAvatar]);
 
-  const handleAvatarPicker = async () => {
+  const handleAvatarPicker = () => {
+    Alert.alert("تحديث الصورة الشخصية", "كيف تريد إضافة الصورة؟", [
+      {
+        text: "التقاط صورة",
+        onPress: () => {
+          void pickAvatarAsset("camera");
+        },
+      },
+      {
+        text: "اختيار من المعرض",
+        onPress: () => {
+          void pickAvatarAsset("gallery");
+        },
+      },
+      { text: "إلغاء", style: "cancel" },
+    ]);
+  };
+
+  const pickAvatarAsset = async (source: "camera" | "gallery") => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "image/*",
-        copyToCacheDirectory: true,
-      });
+      let uri: string | null = null;
+      let mimeType: string | undefined = "image/jpeg";
 
-      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      if (source === "camera") {
+        const result = await launchCameraWithPermission({
+          mediaTypes: ["images"],
+          quality: 0.85,
+          allowsEditing: true,
+          aspect: [1, 1],
+        });
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        uri = result.assets[0].uri;
+        mimeType = result.assets[0].mimeType || "image/jpeg";
+      } else {
+        const result = await pickDocumentWithPermission({
+          type: "image/*",
+          copyToCacheDirectory: true,
+        });
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        uri = result.assets[0].uri;
+        mimeType = result.assets[0].mimeType || "image/jpeg";
+      }
 
-      const asset = result.assets[0];
+      if (!uri) return;
       setUploading(true);
 
       const {
@@ -158,12 +194,12 @@ export default function ProfileScreen() {
 
       const filePath = `${user.id}/avatar.png`;
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, blob, { upsert: true, contentType: asset.mimeType });
+        .upload(filePath, arrayBuffer, { upsert: true, contentType: mimeType });
 
       if (uploadError) {
         triggerToast(`فشل رفع الصورة: ${uploadError.message}`, "error");
@@ -439,27 +475,31 @@ export default function ProfileScreen() {
                 ))}
               </View>
 
-              {/* Map coordinates picker */}
-              <TouchableOpacity onPress={() => setShowMap(!showMap)} style={styles.mapToggleButton}>
+              {/* Full-screen location picker */}
+              <TouchableOpacity onPress={() => setShowMap(true)} style={styles.mapToggleButton}>
                 <Feather name="map" size={14} color="#ea580c" style={styles.buttonIcon} />
                 <Text style={styles.mapToggleButtonText}>
-                  {newLat ? "تغيير إحداثيات الخريطة (تم التحديد)" : "تحديد الموقع الجغرافي من الخريطة"}
+                  {newLat ? "🗺️ تغيير موقع التسليم" : "🗺️ اختيار موقع التسليم"}
                 </Text>
               </TouchableOpacity>
+              {newLat && (newLandmark || newArea) ? (
+                <Text style={[styles.selectedLocationHint, { color: themeColors.textMuted }]} numberOfLines={2}>
+                  {newLandmark || newArea}
+                </Text>
+              ) : null}
 
-              {showMap && (
-                <View style={styles.mapSection}>
-                  <AddressPickerMap
-                    onLocationSelect={(data) => {
-                      setNewLat(String(data.lat));
-                      setNewLng(String(data.lng));
-                      setNewArea(data.area || newArea);
-                      setNewLandmark(data.formattedAddress || newLandmark);
-                      setShowMap(false);
-                    }}
-                  />
-                </View>
-              )}
+              <LocationPickerModal
+                visible={showMap}
+                onClose={() => setShowMap(false)}
+                initialLat={newLat ? parseFloat(newLat) : undefined}
+                initialLng={newLng ? parseFloat(newLng) : undefined}
+                onConfirm={(data) => {
+                  setNewLat(String(data.lat));
+                  setNewLng(String(data.lng));
+                  setNewArea(data.area || newArea);
+                  setNewLandmark(data.formattedAddress || newLandmark);
+                }}
+              />
 
               <View style={styles.inputGroup}>
                 <Text style={[styles.inputLabel, { color: themeColors.text }]}>{t("area_neighborhood")}</Text>
@@ -906,6 +946,13 @@ const styles = StyleSheet.create({
     color: "#ea580c",
     fontSize: 11,
     fontWeight: "bold",
+  },
+  selectedLocationHint: {
+    fontSize: 11,
+    textAlign: "right",
+    marginTop: -10,
+    marginBottom: 12,
+    lineHeight: 16,
   },
   mapSection: {
     height: 180,

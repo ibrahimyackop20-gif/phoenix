@@ -30,13 +30,24 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local env / server secrets (never commit)
 .env
+.env.*
+!.env.example
+supabase.env
+*.env
+!supabase/secrets.example
 
 # Firebase / local secrets (never commit)
 .temp/
 *-firebase-adminsdk-*.json
+**/firebase-adminsdk*.json
+
+# Supabase CLI temp / linked project metadata
+supabase/.temp/
+
+# Accidental Metro dumps
+bundle.js
 
 # typescript
 *.tsbuildinfo

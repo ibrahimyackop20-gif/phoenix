@@ -10,10 +10,12 @@ import {
   Image,
   Modal,
   Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import { pickDocumentWithPermission } from "../../../../lib/filePermissions";
+import { launchCameraWithPermission } from "../../../../lib/cameraPermissions";
 import { supabase } from "../../../../lib/supabaseClient";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
@@ -258,28 +260,69 @@ export default function MyStoreIndexScreen() {
   };
 
   // Upload logo
-  const handleLogoPicker = async () => {
+  const handleLogoPicker = () => {
+    if (!store) return;
+    Alert.alert("شعار المتجر", "كيف تريد إضافة الشعار؟", [
+      {
+        text: "التقاط صورة",
+        onPress: () => {
+          void pickLogoAsset("camera");
+        },
+      },
+      {
+        text: "اختيار من المعرض",
+        onPress: () => {
+          void pickLogoAsset("gallery");
+        },
+      },
+      { text: "إلغاء", style: "cancel" },
+    ]);
+  };
+
+  const pickLogoAsset = async (source: "camera" | "gallery") => {
     if (!store) return;
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "image/*",
-        copyToCacheDirectory: true,
-      });
+      let uri: string | null = null;
+      let name = "logo.jpg";
+      let mimeType = "image/jpeg";
 
-      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      if (source === "camera") {
+        const result = await launchCameraWithPermission({
+          mediaTypes: ["images"],
+          quality: 0.85,
+          allowsEditing: true,
+          aspect: [1, 1],
+        });
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        uri = result.assets[0].uri;
+        name = result.assets[0].fileName || "logo.jpg";
+        mimeType = result.assets[0].mimeType || "image/jpeg";
+      } else {
+        const result = await pickDocumentWithPermission({
+          type: "image/*",
+          copyToCacheDirectory: true,
+        });
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        uri = result.assets[0].uri;
+        name = result.assets[0].name;
+        mimeType = result.assets[0].mimeType || "image/jpeg";
+      }
 
-      const asset = result.assets[0];
+      if (!uri) return;
       setUploadingLogo(true);
 
-      const fileExtension = asset.name.split(".").pop();
+      const fileExtension = name.split(".").pop() || "jpg";
       const filePath = `stores/${store.id}/logo.${fileExtension}`;
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: upErr } = await supabase.storage
         .from("products")
-        .upload(filePath, blob, { upsert: true });
+        .upload(filePath, arrayBuffer, {
+          upsert: true,
+          contentType: mimeType,
+        });
 
       if (upErr) {
         triggerToast(`فشل رفع الشعار: ${upErr.message}`, "error");
@@ -305,28 +348,67 @@ export default function MyStoreIndexScreen() {
   };
 
   // Upload product image
-  const handleProductImagePicker = async () => {
+  const handleProductImagePicker = () => {
+    if (!store) return;
+    Alert.alert("صورة المنتج", "كيف تريد إضافة الصورة؟", [
+      {
+        text: "التقاط صورة",
+        onPress: () => {
+          void pickProductImageAsset("camera");
+        },
+      },
+      {
+        text: "اختيار من المعرض",
+        onPress: () => {
+          void pickProductImageAsset("gallery");
+        },
+      },
+      { text: "إلغاء", style: "cancel" },
+    ]);
+  };
+
+  const pickProductImageAsset = async (source: "camera" | "gallery") => {
     if (!store) return;
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "image/*",
-        copyToCacheDirectory: true,
-      });
+      let uri: string | null = null;
+      let name = "product.jpg";
+      let mimeType = "image/jpeg";
 
-      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      if (source === "camera") {
+        const result = await launchCameraWithPermission({
+          mediaTypes: ["images"],
+          quality: 0.85,
+        });
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        uri = result.assets[0].uri;
+        name = result.assets[0].fileName || "product.jpg";
+        mimeType = result.assets[0].mimeType || "image/jpeg";
+      } else {
+        const result = await pickDocumentWithPermission({
+          type: "image/*",
+          copyToCacheDirectory: true,
+        });
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        uri = result.assets[0].uri;
+        name = result.assets[0].name;
+        mimeType = result.assets[0].mimeType || "image/jpeg";
+      }
 
-      const asset = result.assets[0];
+      if (!uri) return;
       setUploadingImage(true);
 
-      const fileExtension = asset.name.split(".").pop();
+      const fileExtension = name.split(".").pop() || "jpg";
       const filePath = `stores/${store.id}/products/${Date.now()}.${fileExtension}`;
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: upErr } = await supabase.storage
         .from("products")
-        .upload(filePath, blob, { upsert: true });
+        .upload(filePath, arrayBuffer, {
+          upsert: true,
+          contentType: mimeType,
+        });
 
       if (upErr) {
         triggerToast(`فشل رفع الصورة: ${upErr.message}`, "error");

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import * as DocumentPicker from "expo-document-picker";
+import { pickDocumentWithPermission } from "../lib/filePermissions";
 import { Feather } from "@expo/vector-icons";
 
 interface FileMock {
@@ -44,7 +44,7 @@ export default function FileUploader({
 
   const handlePickFile = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await pickDocumentWithPermission({
         type: ["application/pdf", "image/*"],
         copyToCacheDirectory: true,
       });

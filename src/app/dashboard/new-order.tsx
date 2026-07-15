@@ -13,10 +13,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import { pickDocumentWithPermission } from "../../../lib/filePermissions";
 import { supabase } from "../../../lib/supabaseClient";
 import FileUploader from "../../../components/FileUploader";
-import AddressPickerMap from "../../../components/AddressPickerMap";
+import LocationPickerModal from "../../../components/LocationPickerModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
@@ -561,7 +561,7 @@ export default function NewOrderScreen() {
   const handleReceiptPicker = async () => {
     if (!currentUser) return;
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await pickDocumentWithPermission({
         type: "image/*",
         copyToCacheDirectory: true,
       });
@@ -922,53 +922,34 @@ export default function NewOrderScreen() {
                 />
               </View>
 
-              {/* Coordinates Map Picker overlay toggle */}
+              {/* Full-screen location picker */}
               <TouchableOpacity
-                onPress={() => {
-                  const targetState = !showMap;
-                  console.log("[Map Modal Flow Log] Toggle Map Coordinates Pressed");
-                  console.log("- State before toggle: showMap =", showMap);
-                  console.log("- Coordinates before toggle: lat =", newLat, ", lng =", newLng);
-                  setShowMap(targetState);
-                  console.log("- State after toggle: showMap =", targetState);
-                }}
+                onPress={() => setShowMap(true)}
                 style={styles.mapToggleButton}
               >
                 <Feather name="map-pin" size={14} color="#ea580c" style={styles.buttonIcon} />
                 <Text style={styles.mapToggleButtonText}>
-                  {newLat ? "تغيير إحداثيات الخريطة (تم التحديد)" : "تحديد الموقع الجغرافي من الخريطة"}
+                  {newLat ? "🗺️ تغيير موقع التسليم" : "🗺️ اختيار موقع التسليم"}
                 </Text>
               </TouchableOpacity>
+              {newLat && (newLandmark || newArea) ? (
+                <Text style={styles.selectedLocationHint} numberOfLines={2}>
+                  {newLandmark || newArea}
+                </Text>
+              ) : null}
 
-              {showMap && (
-                <View style={{ marginBottom: 16 }}>
-                  <View style={styles.mapSection}>
-                    <AddressPickerMap
-                      initialLat={newLat ? parseFloat(newLat) : undefined}
-                      initialLng={newLng ? parseFloat(newLng) : undefined}
-                      onLocationSelect={(data) => {
-                        console.log("[Map Component Callback] Location updated in form:", data);
-                        setNewLat(String(data.lat));
-                        setNewLng(String(data.lng));
-                        setNewArea(data.area || newArea);
-                        setNewLandmark(data.formattedAddress || newLandmark);
-                      }}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      console.log("[Map Modal Flow Log] Confirm Selection Pressed");
-                      console.log("- Reason for closing: User confirmed coordinates");
-                      console.log("- Confirmed coordinates: lat =", newLat, ", lng =", newLng);
-                      console.log("- Address fields updated: area =", newArea, ", landmark =", newLandmark);
-                      setShowMap(false);
-                    }}
-                    style={[styles.primaryButtonCompact, { marginTop: 0, backgroundColor: "#22c55e" }]}
-                  >
-                    <Text style={styles.buttonTextCompact}>تأكيد الموقع الحالي ✓</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              <LocationPickerModal
+                visible={showMap}
+                onClose={() => setShowMap(false)}
+                initialLat={newLat ? parseFloat(newLat) : undefined}
+                initialLng={newLng ? parseFloat(newLng) : undefined}
+                onConfirm={(data) => {
+                  setNewLat(String(data.lat));
+                  setNewLng(String(data.lng));
+                  setNewArea(data.area || newArea);
+                  setNewLandmark(data.formattedAddress || newLandmark);
+                }}
+              />
 
               <TouchableOpacity
                 onPress={handleCreateAddress}
@@ -1632,6 +1613,14 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     color: "#ea580c",
     fontSize: 12,
     fontWeight: "bold",
+  },
+  selectedLocationHint: {
+    color: themeColors.textMuted,
+    fontSize: 11,
+    textAlign: "right",
+    marginTop: -10,
+    marginBottom: 12,
+    lineHeight: 16,
   },
   mapSection: {
     height: 200,

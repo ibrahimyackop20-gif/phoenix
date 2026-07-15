@@ -10,8 +10,8 @@ import {
   Dimensions,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import * as Location from "expo-location";
 import { Feather } from "@expo/vector-icons";
+import { getCurrentLocationWithPermission } from "../lib/locationPermissions";
 
 interface LocationData {
   lat: number;
@@ -130,19 +130,14 @@ export default function AddressPickerMap({
     setGpsLoading(true);
     setError("");
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setError("تم رفض الوصول إلى الموقع الجغرافي");
-        setGpsLoading(false);
+      const coords = await getCurrentLocationWithPermission();
+      if (!coords) {
+        setError("");
         return;
       }
 
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const { latitude, longitude } = coords;
 
-      const { latitude, longitude } = position.coords;
-      
       // Update position inside Leaflet WebView
       webViewRef.current?.postMessage(
         JSON.stringify({
@@ -243,8 +238,7 @@ export default function AddressPickerMap({
             sendCoordinates(e.latlng.lat, e.latlng.lng);
           });
 
-          // Report initial position
-          sendCoordinates(defaultLat, defaultLng);
+          // Do NOT auto-report / reverse-geocode on open — wait for user action.
         }
 
         function updateMarkerPosition(lat, lng) {
@@ -336,6 +330,22 @@ export default function AddressPickerMap({
         )}
       </View>
 
+      {/* Current location — only requests permission when pressed */}
+      <TouchableOpacity
+        onPress={handleGPS}
+        disabled={gpsLoading || !mapLoaded}
+        style={styles.useMyLocationButton}
+        accessibilityRole="button"
+        accessibilityLabel="استخدم موقعي الحالي"
+      >
+        {gpsLoading ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
+          <Feather name="navigation" size={16} color="#ffffff" />
+        )}
+        <Text style={styles.useMyLocationButtonText}>📍 استخدم موقعي الحالي</Text>
+      </TouchableOpacity>
+
       {/* Map container */}
       <View style={styles.mapBorder}>
         <View style={styles.mapWrapper}>
@@ -364,20 +374,6 @@ export default function AddressPickerMap({
             <Text style={styles.geocodingText}>جاري تحديد العنوان...</Text>
           </View>
         )}
-
-        {/* GPS button */}
-        <TouchableOpacity
-          onPress={handleGPS}
-          disabled={gpsLoading || !mapLoaded}
-          style={styles.gpsButton}
-        >
-          {gpsLoading ? (
-            <ActivityIndicator size="small" color="#f97316" />
-          ) : (
-            <Feather name="navigation" size={14} color="#f97316" />
-          )}
-          <Text style={styles.gpsButtonText}>حدد موقعي</Text>
-        </TouchableOpacity>
       </View>
 
       {error ? (
@@ -502,30 +498,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#a1a1aa",
   },
-  gpsButton: {
-    position: "absolute",
-    bottom: 12,
-    left: 12,
-    zIndex: 1000,
-    backgroundColor: "rgba(24, 24, 27, 0.9)",
-    borderColor: "#27272a",
-    borderWidth: 1,
+  useMyLocationButton: {
+    backgroundColor: "#ea580c",
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    flexDirection: "row",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    justifyContent: "center",
+    gap: 8,
   },
-  gpsButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#f97316",
+  useMyLocationButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#ffffff",
+    textAlign: "center",
   },
   infoText: {
     fontSize: 10,
