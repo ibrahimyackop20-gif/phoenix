@@ -63,7 +63,7 @@ export default function SignupPage() {
     setError("");
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -92,8 +92,29 @@ export default function SignupPage() {
         return;
       }
 
+      // Supabase "Confirm signup" often sends a magic link, not a 6-digit code.
+      // Password-reset works because recovery templates include {{ .Token }}.
+      // Send an OTP email explicitly (same path as Magic Link / email OTP) so
+      // the in-app verify screen receives a code the user can enter.
+      const identities = signUpData?.user?.identities;
+      if (Array.isArray(identities) && identities.length === 0) {
+        setError(t("auth_email_exists"));
+        setLoading(false);
+        return;
+      }
+
       setStep("verify");
       setCountdown(60);
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { shouldCreateUser: false },
+      });
+
+      if (otpError) {
+        console.error("[Signup] signInWithOtp failed:", otpError.message);
+        setError(t("auth_signup_failed", { message: otpError.message }));
+      }
     } catch (err) {
       console.error(err);
       setError(t("auth_unexpected"));
@@ -109,11 +130,25 @@ export default function SignupPage() {
       setOtpError(false);
 
       try {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          email: email.trim(),
-          token: code,
-          type: "signup",
-        });
+        // OTP is sent via signInWithOtp → verify type "email" first.
+        // Fallback to "signup" if Confirm-signup template also sent a code.
+        let verifyError = (
+          await supabase.auth.verifyOtp({
+            email: email.trim(),
+            token: code,
+            type: "email",
+          })
+        ).error;
+
+        if (verifyError) {
+          verifyError = (
+            await supabase.auth.verifyOtp({
+              email: email.trim(),
+              token: code,
+              type: "signup",
+            })
+          ).error;
+        }
 
         if (verifyError) {
           console.error("[Signup] verifyOtp failed:", verifyError.message);
@@ -148,13 +183,14 @@ export default function SignupPage() {
     setOtpError(false);
 
     try {
-      const { error: resendError } = await supabase.auth.resend({
-        type: "signup",
+      // Resend via the same OTP path used after signUp (6-digit code email).
+      const { error: resendError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
+        options: { shouldCreateUser: false },
       });
 
       if (resendError) {
-        setError(t("auth_unexpected"));
+        setError(t("auth_signup_failed", { message: resendError.message }));
         return;
       }
 

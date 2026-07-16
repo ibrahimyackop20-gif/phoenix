@@ -162,6 +162,10 @@ export const arExtra = {
   no_pickup: "استلام من المطبعة",
   no_delivery: "توصيل",
   no_delivery_zone: "منطقة التوصيل",
+  no_zone_detecting: "جاري تحديد منطقة التوصيل تلقائياً...",
+  no_zone_locked: "تم تحديد منطقة التوصيل تلقائياً حسب موقع عنوانك ولا يمكن تغييرها",
+  no_zone_no_match:
+    "تعذر تحديد منطقة توصيل لهذا العنوان. يرجى التواصل مع الدعم لاختيار منطقة التوصيل المناسبة",
   no_new_address: "عنوان جديد",
   no_choose_address: "اختر عنوان التوصيل",
   no_no_addresses: "لا توجد عناوين مسجلة، يرجى إضافة عنوان جديد",
@@ -570,6 +574,10 @@ export const enExtra = {
   no_pickup: "Pickup from shop",
   no_delivery: "Delivery",
   no_delivery_zone: "Delivery area",
+  no_zone_detecting: "Detecting delivery area automatically...",
+  no_zone_locked: "Delivery area was set automatically from your address and cannot be changed",
+  no_zone_no_match:
+    "Could not match a delivery area for this address. Please contact support to set the correct delivery zone",
   no_new_address: "New address",
   no_choose_address: "Choose delivery address",
   no_no_addresses: "No addresses saved. Please add a new address",

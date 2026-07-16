@@ -28,6 +28,11 @@ import {
   openTelegramBot,
   notifyTelegramAdmin,
 } from "../../../lib/telegramApi";
+import {
+  matchDeliveryFeeForAddress,
+  resolveDeliveryFeeCenters,
+  type FeeCenter,
+} from "../../../lib/matchDeliveryFee";
 
 interface PricingRow {
   id: string;
@@ -120,7 +125,11 @@ export default function NewOrderScreen() {
   // Delivery states
   const [deliveryOption, setDeliveryOption] = useState<"pickup" | "delivery">("pickup");
   const [deliveryFees, setDeliveryFees] = useState<DeliveryFeeRow[]>([]);
+  const [deliveryFeeCenters, setDeliveryFeeCenters] = useState<FeeCenter[]>([]);
   const [selectedFeeId, setSelectedFeeId] = useState<string>("");
+  const [zoneMatchError, setZoneMatchError] = useState("");
+  const [zoneMatching, setZoneMatching] = useState(false);
+  const [zoneLocked, setZoneLocked] = useState(false);
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
 
@@ -248,8 +257,12 @@ export default function NewOrderScreen() {
         .order("area_name");
 
       if (feesData) {
-        setDeliveryFees(feesData as DeliveryFeeRow[]);
-        if (feesData.length > 0) setSelectedFeeId(feesData[0].id);
+        const fees = feesData as DeliveryFeeRow[];
+        setDeliveryFees(fees);
+        // Do not pre-select a fee — zone is auto-matched from the address.
+        resolveDeliveryFeeCenters(fees)
+          .then(setDeliveryFeeCenters)
+          .catch(() => setDeliveryFeeCenters([]));
       }
     } catch (err) {
       console.error("Error launching printer form:", err);
@@ -259,6 +272,72 @@ export default function NewOrderScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-detect delivery zone from the selected address coordinates and lock it.
+  useEffect(() => {
+    if (deliveryOption !== "delivery") {
+      setZoneMatchError("");
+      setZoneLocked(false);
+      return;
+    }
+
+    if (!selectedAddressId) {
+      setSelectedFeeId("");
+      setZoneMatchError("");
+      setZoneLocked(false);
+      return;
+    }
+
+    const address = addresses.find((a) => a.id === selectedAddressId);
+    if (!address) return;
+
+    const lat = address.latitude != null ? parseFloat(String(address.latitude)) : NaN;
+    const lng = address.longitude != null ? parseFloat(String(address.longitude)) : NaN;
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setSelectedFeeId("");
+      setZoneLocked(false);
+      setZoneMatchError(t("no_zone_no_match"));
+      return;
+    }
+
+    if (deliveryFees.length === 0) return;
+
+    // Wait until zone centers are resolved so nearest-match can run.
+    if (deliveryFeeCenters.length === 0) {
+      setZoneMatching(true);
+      return;
+    }
+
+    setZoneMatching(true);
+    const matched = matchDeliveryFeeForAddress({
+      latitude: lat,
+      longitude: lng,
+      area: address.area,
+      formattedAddress: address.formatted_address,
+      fees: deliveryFees,
+      centers: deliveryFeeCenters,
+    });
+    setZoneMatching(false);
+
+    if (!matched) {
+      setSelectedFeeId("");
+      setZoneLocked(false);
+      setZoneMatchError(t("no_zone_no_match"));
+      return;
+    }
+
+    setSelectedFeeId(matched.id);
+    setZoneLocked(true);
+    setZoneMatchError("");
+  }, [
+    deliveryOption,
+    selectedAddressId,
+    addresses,
+    deliveryFees,
+    deliveryFeeCenters,
+    t,
+  ]);
 
   const activePaperTypes = useMemo(() => {
     return orderMode === "roll"
@@ -316,14 +395,19 @@ export default function NewOrderScreen() {
 
   const couponDiscount = useMemo(() => {
     if (!appliedCoupon) return 0;
+    const value = Number(appliedCoupon.discount_value) || 0;
     if (appliedCoupon.discount_type === "percentage") {
-      return Math.round((printSubtotal * appliedCoupon.discount_value) / 100);
+      // Percentage continues to apply to print subtotal only (unchanged).
+      return Math.round((printSubtotal * value) / 100);
     }
-    return Math.min(appliedCoupon.discount_value, printSubtotal);
-  }, [appliedCoupon, printSubtotal]);
+    // Fixed IQD coupons apply to the full order (print + delivery), so a
+    // 1000 IQD coupon deducts 1000 even when print alone is smaller.
+    const orderBeforeDiscount = printSubtotal + deliveryFee;
+    return Math.min(value, orderBeforeDiscount);
+  }, [appliedCoupon, printSubtotal, deliveryFee]);
 
   const totalPrice = useMemo(() => {
-    return Math.max(0, printSubtotal - couponDiscount) + deliveryFee;
+    return Math.max(0, printSubtotal + deliveryFee - couponDiscount);
   }, [printSubtotal, couponDiscount, deliveryFee]);
 
   // Extract page count from Telegram bot code (same rules as web)
@@ -590,6 +674,11 @@ export default function NewOrderScreen() {
 
     if (deliveryOption === "delivery" && !selectedAddressId) {
       showToast(t("no_need_address"), "error");
+      return;
+    }
+
+    if (deliveryOption === "delivery" && (!selectedFeeId || zoneMatchError)) {
+      showToast(t("no_zone_no_match"), "error");
       return;
     }
 
@@ -1280,20 +1369,39 @@ export default function NewOrderScreen() {
 
           {deliveryOption === "delivery" && (
             <View style={styles.deliverySection}>
-              {/* Region fee selector */}
+              {/* Region fee — auto-detected from address, read-only */}
               <Text style={styles.inputLabel}>{t("no_delivery_zone")}</Text>
+              {zoneMatching ? (
+                <View style={styles.zoneMatchingRow}>
+                  <ActivityIndicator size="small" color="#ea580c" />
+                  <Text style={styles.zoneMatchingText}>{t("no_zone_detecting")}</Text>
+                </View>
+              ) : null}
               <View style={styles.feeSelectorRow}>
-                {deliveryFees.map((f) => (
-                  <TouchableOpacity
-                    key={f.id}
-                    onPress={() => setSelectedFeeId(f.id)}
-                    style={[styles.feeSelectorBox, selectedFeeId === f.id && styles.feeSelectorBoxActive]}
-                  >
-                    <Text style={styles.feeAreaName}>{f.area_name}</Text>
-                    <Text style={styles.feeAmountText}>{f.fee_amount} {t("currency")}</Text>
-                  </TouchableOpacity>
-                ))}
+                {deliveryFees.map((f) => {
+                  const isActive = selectedFeeId === f.id;
+                  return (
+                    <View
+                      key={f.id}
+                      style={[
+                        styles.feeSelectorBox,
+                        isActive && styles.feeSelectorBoxActive,
+                        zoneLocked && !isActive && styles.feeSelectorBoxLocked,
+                      ]}
+                      accessibilityState={{ selected: isActive, disabled: true }}
+                    >
+                      <Text style={styles.feeAreaName}>{f.area_name}</Text>
+                      <Text style={styles.feeAmountText}>{f.fee_amount} {t("currency")}</Text>
+                    </View>
+                  );
+                })}
               </View>
+              {zoneLocked && selectedFeeId ? (
+                <Text style={styles.zoneLockedHint}>{t("no_zone_locked")}</Text>
+              ) : null}
+              {zoneMatchError ? (
+                <Text style={styles.zoneMatchErrorText}>{zoneMatchError}</Text>
+              ) : null}
 
               {/* Select existing addresses */}
               <View style={styles.addressSelectHeader}>
@@ -1947,6 +2055,35 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   feeSelectorBoxActive: {
     borderColor: "rgba(234, 88, 12, 0.4)",
     backgroundColor: "rgba(234, 88, 12, 0.05)",
+  },
+  feeSelectorBoxLocked: {
+    opacity: 0.45,
+  },
+  zoneMatchingRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  zoneMatchingText: {
+    color: themeColors.textMuted,
+    fontSize: 12,
+    textAlign: "right",
+    flex: 1,
+  },
+  zoneLockedHint: {
+    color: themeColors.textMuted,
+    fontSize: 11,
+    textAlign: "right",
+    marginBottom: 12,
+    lineHeight: 16,
+  },
+  zoneMatchErrorText: {
+    color: "#ef4444",
+    fontSize: 12,
+    textAlign: "right",
+    marginBottom: 12,
+    lineHeight: 18,
   },
   feeAreaName: {
     color: themeColors.text,

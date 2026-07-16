@@ -219,14 +219,18 @@ export default function CartScreen() {
 
   const couponDiscount = useMemo(() => {
     if (!appliedCoupon) return 0;
+    const value = Number(appliedCoupon.discount_value) || 0;
     if (appliedCoupon.discount_type === "percentage") {
-      return Math.round((subtotal * appliedCoupon.discount_value) / 100);
+      // Percentage continues to apply to product subtotal only (unchanged).
+      return Math.round((subtotal * value) / 100);
     }
-    return Math.min(appliedCoupon.discount_value, subtotal);
-  }, [appliedCoupon, subtotal]);
+    // Fixed IQD coupons apply to the full checkout total (items + shipping).
+    const orderBeforeDiscount = subtotal + shippingCost;
+    return Math.min(value, orderBeforeDiscount);
+  }, [appliedCoupon, subtotal, shippingCost]);
 
   const totalPrice = useMemo(() => {
-    return Math.max(0, subtotal - couponDiscount) + shippingCost;
+    return Math.max(0, subtotal + shippingCost - couponDiscount);
   }, [subtotal, couponDiscount, shippingCost]);
 
   const validateStoreCoupon = async () => {
