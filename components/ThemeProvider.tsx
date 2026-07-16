@@ -97,20 +97,15 @@ export default ThemeProvider;
  * Uses NativeWind's useColorScheme under the hood.
  */
 export function useAppTheme() {
-  console.log("useAppTheme() hook executed");
   try {
     const { colorScheme, setColorScheme } = useColorScheme();
-    console.log("useColorScheme colorScheme:", colorScheme);
 
     const setTheme = async (newTheme: 'light' | 'dark') => {
-      console.log("setTheme called with:", newTheme);
-      setColorScheme(newTheme);
       try {
-        console.log("setTheme: Saving theme to AsyncStorage...");
+        setColorScheme(newTheme);
         await AsyncStorage.setItem('theme', newTheme);
-        console.log("setTheme: Theme saved successfully.");
       } catch (error) {
-        console.error("Startup Error:", error);
+        console.error("Startup Error (setTheme):", error);
       }
     };
 
@@ -124,7 +119,12 @@ export function useAppTheme() {
       themeColors,
     };
   } catch (error) {
-    console.error("Startup Error:", error);
-    throw error;
+    console.error("Startup Error (useAppTheme):", error);
+    return {
+      theme: 'dark' as const,
+      isDark: true,
+      setTheme: async () => {},
+      themeColors: darkColors,
+    };
   }
 }

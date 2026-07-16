@@ -2,90 +2,98 @@ console.log("STEP 1: File loaded");
 
 import '../i18n';
 import '../global.css';
-// app/_layout.tsx
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { View, StyleSheet, LogBox } from 'react-native';
+import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import SplashScreenComponent from '../../components/SplashScreen';
 import SSOCatcher from '../../components/SSOCatcher';
 import AuthProfileGuard from '../../components/AuthProfileGuard';
 import NotificationRegistrar from '../../components/NotificationRegistrar';
+import AppErrorBoundary from '../../components/AppErrorBoundary';
 import { ThemeProvider, useAppTheme } from '../../components/ThemeProvider';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { supabase } from '../../lib/supabaseClient';
+import { getMissingSupabaseEnv, isSupabaseConfigured, supabase } from '../../lib/supabaseClient';
 
-// Prevent native splash screen from auto-hiding
-console.log("ExpoSplashScreen.preventAutoHideAsync() - Accessing...");
+try {
+  LogBox.ignoreLogs([
+    "SafeAreaView has been deprecated",
+    "Non-serializable values were found in the navigation state",
+  ]);
+} catch {
+  // ignore
+}
+
 try {
   ExpoSplashScreen.preventAutoHideAsync()
     .then(() => {
       console.log("ExpoSplashScreen.preventAutoHideAsync() - Success");
     })
     .catch((error) => {
-      console.error("Startup Error:", error);
+      console.error("Startup Error (preventAutoHideAsync):", error);
     });
 } catch (error) {
-  console.error("Startup Error:", error);
+  console.error("Startup Error (preventAutoHideAsync sync):", error);
 }
 
 function RootLayoutContent() {
   console.log("RootLayoutContent rendering...");
   const { themeColors, isDark } = useAppTheme();
-  console.log("ThemeProvider/useAppTheme OK");
   const [appIsReady, setAppIsReady] = useState(false);
   const [splashFinished, setSplashFinished] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function prepare() {
       try {
         console.log("[Splash Startup Flow] Restoring user session...");
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log("Supabase getUser OK");
-        if (user) {
-          console.log("[Splash Startup Flow] User authenticated:", user.email);
-        } else {
-          console.log("[Splash Startup Flow] User is guest");
+        const missing = getMissingSupabaseEnv();
+        if (missing.length > 0) {
+          console.error(
+            "[Splash Startup Flow] Supabase env missing:",
+            missing.join(", ")
+          );
+        } else if (isSupabaseConfigured()) {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          console.log(
+            user
+              ? `[Splash Startup Flow] User authenticated: ${user.email}`
+              : "[Splash Startup Flow] User is guest"
+          );
         }
       } catch (e) {
-        console.error("Startup Error:", e);
+        console.error("Startup Error (prepare):", e);
       } finally {
-        setAppIsReady(true);
+        if (!cancelled) setAppIsReady(true);
       }
     }
 
     prepare();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useEffect(() => {
-    console.log("STEP 6: Layout rendered");
-  });
-
   const handleSplashFinish = () => {
-    console.log("[Splash Startup Flow] Custom animation finished. Splash status updated.");
+    console.log("[Splash Startup Flow] Custom animation finished.");
     setSplashFinished(true);
   };
 
-  console.log("STEP 5: Before returning JSX (Unconditional Stack layout with optional Splash overlay)");
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <SSOCatcher />
-      {console.log("SSOCatcher rendered OK")}
-      {/* Permission is requested after splash finishes — not gated on auth */}
       <NotificationRegistrar ready={appIsReady && splashFinished} />
       <AuthProfileGuard />
-      {console.log("AuthProfileGuard rendered OK")}
-      
+
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen
-          name="index"
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
       </Stack>
 
-      {/* Splash overlay covers the Stack absolutely until ready & finished */}
       {(!appIsReady || !splashFinished) && (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: '#09090b', zIndex: 99999 }]}>
           <StatusBar style="light" />
@@ -93,13 +101,10 @@ function RootLayoutContent() {
             <SplashScreenComponent
               onFinish={handleSplashFinish}
               onReadyToHideNative={async () => {
-                console.log("[Splash Startup Flow] Custom splash ready. Hiding native splash...");
-                console.log("ExpoSplashScreen.hideAsync() - Accessing...");
                 try {
                   await ExpoSplashScreen.hideAsync();
-                  console.log("ExpoSplashScreen.hideAsync() - Success");
                 } catch (error) {
-                  console.error("Startup Error:", error);
+                  console.error("Startup Error (hideAsync):", error);
                 }
               }}
             />
@@ -112,14 +117,15 @@ function RootLayoutContent() {
 
 export default function RootLayout() {
   console.log("STEP 2: RootLayout started");
-  console.log("STEP 3: Before providers");
-  const result = (
+  return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <RootLayoutContent />
-      </ThemeProvider>
+      <AppErrorBoundary>
+        <ThemeProvider>
+          <AppErrorBoundary>
+            <RootLayoutContent />
+          </AppErrorBoundary>
+        </ThemeProvider>
+      </AppErrorBoundary>
     </SafeAreaProvider>
   );
-  console.log("STEP 4: After providers");
-  return result;
 }

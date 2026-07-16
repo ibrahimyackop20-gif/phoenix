@@ -29,164 +29,154 @@ export default function SSOCatcher() {
 
   useEffect(() => {
     const handleUrl = async (url: string) => {
-      console.log("🔗 SSOCatcher: Incoming URL received:", url);
+      try {
+        console.log("🔗 SSOCatcher: Incoming URL received:", url);
 
-      const parsed = Linking.parse(url);
-      let accessToken = parsed.queryParams?.access_token as string | undefined;
-      let refreshToken = parsed.queryParams?.refresh_token as string | undefined;
+        const parsed = Linking.parse(url);
+        let accessToken = parsed.queryParams?.access_token as string | undefined;
+        let refreshToken = parsed.queryParams?.refresh_token as string | undefined;
 
-      // Check if tokens are in the hash fragment (Supabase standard redirection)
-      if (!accessToken || !refreshToken) {
-        const hashIndex = url.indexOf("#");
-        if (hashIndex !== -1) {
-          const hash = url.substring(hashIndex + 1);
-          const params = new URLSearchParams(hash);
-          accessToken = params.get("access_token") || undefined;
-          refreshToken = params.get("refresh_token") || undefined;
-        }
-      }
-
-      // If both parameters exist, execute central-to-local SSO sync
-      if (accessToken && refreshToken) {
-        if (isProcessing.current) {
-          console.log("🔑 SSOCatcher: SSO catch already in progress, ignoring duplicate call...");
-          return;
+        if (!accessToken || !refreshToken) {
+          const hashIndex = url.indexOf("#");
+          if (hashIndex !== -1) {
+            const hash = url.substring(hashIndex + 1);
+            const params = new URLSearchParams(hash);
+            accessToken = params.get("access_token") || undefined;
+            refreshToken = params.get("refresh_token") || undefined;
+          }
         }
 
-        // Check if a local session already exists before proceeding
-        const {
-          data: { session: localSession },
-        } = await supabase.auth.getSession();
-
-        if (localSession) {
-          console.log("🔑 SSOCatcher: Local session already exists, redirecting to dashboard...");
-          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Auth State: Authenticated (Local Session). Executing replace...");
-          router.replace("/dashboard" as any);
-          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Done.");
-          return;
-        }
-
-        isProcessing.current = true;
-        setLoading(true);
-        setError(null);
-
-        try {
-          console.log("🔑 Central SSO: Catching tokens...");
-
-          // 1. Apply tokens to the central client
-          const { data: centralData, error: centralError } =
-            await centralSupabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-
-          if (centralError) {
-            throw new Error(`Central Auth Error: ${centralError.message}`);
+        if (accessToken && refreshToken) {
+          if (isProcessing.current) {
+            console.log("🔑 SSOCatcher: SSO catch already in progress, ignoring duplicate call...");
+            return;
           }
 
-          const user = centralData?.user;
-          if (!user) {
-            throw new Error("No user details found in Central Auth session.");
-          }
-
-          const email = user.email;
-          const fullName =
-            user.user_metadata?.full_name ||
-            user.user_metadata?.name ||
-            email ||
-            "";
-
-          if (!email) {
-            throw new Error("User email is missing from Central Auth metadata.");
-          }
-
-          console.log("👤 Central User Details:", { email, fullName, id: user.id });
-
-          // 2. Call local API route to sync profile and get local login token_hash
-          const webUrl = process.env.EXPO_PUBLIC_WEB_URL || "";
-          if (!webUrl) {
-            throw new Error(
-              "EXPO_PUBLIC_WEB_URL is not configured in .env. Cannot verify local session."
-            );
-          }
-
-          const response = await fetch(`${webUrl}/api/auth/register-profile`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email,
-              fullName,
-              centralId: user.id,
-            }),
-          });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || "Failed to register profile locally.");
-          }
-
-          const result = await response.json();
-          const { token_hash } = result;
-
-          if (!token_hash) {
-            throw new Error("Local sync succeeded but no login token was returned.");
-          }
-
-          // 3. Log in local Supabase client using the token_hash
-          const { error: localVerifyError } = await supabase.auth.verifyOtp({
-            token_hash,
-            type: "magiclink",
-          });
-
-          if (localVerifyError) {
-            throw new Error(
-              `Local Auth Verification Error: ${localVerifyError.message}`
-            );
-          }
-
-          console.log("✅ SSO Flow Complete. Redirecting to dashboard...");
-          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Auth State: Authenticated (SSO Complete). Executing replace...");
-          router.replace("/dashboard" as any);
-          console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Done.");
-        } catch (err) {
-          console.error("❌ SSO catching failed:", err);
-          const message = err instanceof Error ? err.message : String(err);
-
-          // Graceful fallback if link invalidation error is returned but local session is active
-          const isInvalidLink =
-            message.includes("invalid or has expired") || message.includes("403");
           const {
-            data: { session },
+            data: { session: localSession },
           } = await supabase.auth.getSession();
 
-          if (isInvalidLink && session) {
-            console.log(
-              "🔑 SSOCatcher: Link expired error ignored as local session already exists. Redirecting..."
-            );
-            console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Auth State: Authenticated (Graceful Fallback). Executing replace...");
+          if (localSession) {
             router.replace("/dashboard" as any);
-            console.log("[Navigation] Component: SSOCatcher, Current Route: Link, Target Route: /dashboard, Done.");
-          } else {
-            setError(message || "حدث خطأ أثناء تسجيل الدخول الموحد");
+            return;
           }
-        } finally {
-          setLoading(false);
-          isProcessing.current = false;
+
+          isProcessing.current = true;
+          setLoading(true);
+          setError(null);
+
+          try {
+            const { data: centralData, error: centralError } =
+              await centralSupabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+            if (centralError) {
+              throw new Error(`Central Auth Error: ${centralError.message}`);
+            }
+
+            const user = centralData?.user;
+            if (!user) {
+              throw new Error("No user details found in Central Auth session.");
+            }
+
+            const email = user.email;
+            const fullName =
+              user.user_metadata?.full_name ||
+              user.user_metadata?.name ||
+              email ||
+              "";
+
+            if (!email) {
+              throw new Error("User email is missing from Central Auth metadata.");
+            }
+
+            const webUrl = process.env.EXPO_PUBLIC_WEB_URL || "";
+            if (!webUrl) {
+              throw new Error(
+                "EXPO_PUBLIC_WEB_URL is not configured in .env. Cannot verify local session."
+              );
+            }
+
+            const response = await fetch(`${webUrl}/api/auth/register-profile`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email,
+                fullName,
+                centralId: user.id,
+              }),
+            });
+
+            if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.error || "Failed to register profile locally.");
+            }
+
+            const result = await response.json();
+            const { token_hash } = result;
+
+            if (!token_hash) {
+              throw new Error("Local sync succeeded but no login token was returned.");
+            }
+
+            const { error: localVerifyError } = await supabase.auth.verifyOtp({
+              token_hash,
+              type: "magiclink",
+            });
+
+            if (localVerifyError) {
+              throw new Error(
+                `Local Auth Verification Error: ${localVerifyError.message}`
+              );
+            }
+
+            router.replace("/dashboard" as any);
+          } catch (err) {
+            console.error("❌ SSO catching failed:", err);
+            const message = err instanceof Error ? err.message : String(err);
+
+            const isInvalidLink =
+              message.includes("invalid or has expired") || message.includes("403");
+            try {
+              const {
+                data: { session },
+              } = await supabase.auth.getSession();
+
+              if (isInvalidLink && session) {
+                router.replace("/dashboard" as any);
+              } else {
+                setError(message || "حدث خطأ أثناء تسجيل الدخول الموحد");
+              }
+            } catch {
+              setError(message || "حدث خطأ أثناء تسجيل الدخول الموحد");
+            }
+          } finally {
+            setLoading(false);
+            isProcessing.current = false;
+          }
         }
+      } catch (outerErr) {
+        console.error("❌ SSOCatcher handleUrl fatal:", outerErr);
+        setLoading(false);
+        isProcessing.current = false;
       }
     };
 
-    // Get initial deep link URL if application was opened from an external trigger
-    Linking.getInitialURL().then((url) => {
-      if (url && !initialUrlProcessed) {
-        initialUrlProcessed = true;
-        handleUrl(url);
-      }
-    });
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url && !initialUrlProcessed) {
+          initialUrlProcessed = true;
+          handleUrl(url);
+        }
+      })
+      .catch((err) => {
+        console.warn("SSOCatcher getInitialURL failed:", err);
+      });
 
-    // Subscribe to incoming deep links during application runtime
     const subscription = Linking.addEventListener("url", (event) => {
       if (event.url) {
         handleUrl(event.url);

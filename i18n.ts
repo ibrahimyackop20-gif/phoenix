@@ -277,8 +277,8 @@ try {
     });
   console.log("i18n.init() - Initialization completed successfully.");
 } catch (error) {
-  console.error("Startup Error:", error);
-  throw error;
+  // Never abort app startup because of i18n — fall back to Arabic keys.
+  console.error("Startup Error (i18n.init):", error);
 }
 
 export default i18n;

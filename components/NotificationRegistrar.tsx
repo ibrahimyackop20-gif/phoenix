@@ -97,66 +97,95 @@ export default function NotificationRegistrar({
   useEffect(() => {
     if (!ready || registrationStarted.current) return;
     registrationStarted.current = true;
-    registerForPushNotificationsAsync();
+    registerForPushNotificationsAsync().catch((error) => {
+      console.warn("[NotificationRegistrar] registration failed:", error);
+    });
   }, [ready]);
 
   // 2. Auth / token / tap listeners
   useEffect(() => {
     let isMounted = true;
+    let authSub: { subscription: { unsubscribe: () => void } } | null = null;
+    let tokenSub: { remove: () => void } | null = null;
+    let receivedSub: { remove: () => void } | null = null;
+    let responseSub: { remove: () => void } | null = null;
 
     const associate = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!isMounted || !user) return;
-      if (associatedForUser.current === user.id) return;
-      associatedForUser.current = user.id;
-      await associateCachedTokenWithUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!isMounted || !user) return;
+        if (associatedForUser.current === user.id) return;
+        associatedForUser.current = user.id;
+        await associateCachedTokenWithUser();
+      } catch (error) {
+        console.warn("[NotificationRegistrar] associate failed:", error);
+      }
     };
 
-    associate();
+    try {
+      associate();
 
-    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        if (associatedForUser.current !== session.user.id) {
-          associatedForUser.current = session.user.id;
-          associateCachedTokenWithUser();
+      const auth = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          if (associatedForUser.current !== session.user.id) {
+            associatedForUser.current = session.user.id;
+            associateCachedTokenWithUser().catch(() => {});
+          }
+        } else {
+          associatedForUser.current = null;
         }
-      } else {
-        associatedForUser.current = null;
-      }
-    });
-
-    // FCM token refresh: update cache (and Supabase if logged in).
-    const tokenSub = Notifications.addPushTokenListener(async (token) => {
-      if (!token?.data) return;
-      const value = token.data as string;
-      await cacheFcmToken(value);
-      await saveTokenToSupabase(value);
-    });
-
-    const receivedSub = Notifications.addNotificationReceivedListener(() => {});
-
-    const responseSub = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        handleNotificationResponse(response);
-      }
-    );
-
-    // Cold start: notification that launched the app.
-    if (ready) {
-      Notifications.getLastNotificationResponseAsync().then((response) => {
-        if (!isMounted) return;
-        handleNotificationResponse(response);
       });
+      authSub = auth.data;
+
+      tokenSub = Notifications.addPushTokenListener(async (token) => {
+        try {
+          if (!token?.data) return;
+          const value = token.data as string;
+          await cacheFcmToken(value);
+          await saveTokenToSupabase(value);
+        } catch (error) {
+          console.warn("[NotificationRegistrar] token listener failed:", error);
+        }
+      });
+
+      receivedSub = Notifications.addNotificationReceivedListener(() => {});
+
+      responseSub = Notifications.addNotificationResponseReceivedListener(
+        (response) => {
+          try {
+            handleNotificationResponse(response);
+          } catch (error) {
+            console.warn("[NotificationRegistrar] response handler failed:", error);
+          }
+        }
+      );
+
+      if (ready) {
+        Notifications.getLastNotificationResponseAsync()
+          .then((response) => {
+            if (!isMounted) return;
+            handleNotificationResponse(response);
+          })
+          .catch((error) => {
+            console.warn("[NotificationRegistrar] last response failed:", error);
+          });
+      }
+    } catch (error) {
+      console.warn("[NotificationRegistrar] listener setup failed:", error);
     }
 
     return () => {
       isMounted = false;
-      authSub.subscription.unsubscribe();
-      tokenSub.remove();
-      receivedSub.remove();
-      responseSub.remove();
+      try {
+        authSub?.subscription.unsubscribe();
+        tokenSub?.remove();
+        receivedSub?.remove();
+        responseSub?.remove();
+      } catch {
+        // ignore cleanup errors
+      }
     };
   }, [router, ready]);
 

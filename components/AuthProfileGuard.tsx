@@ -236,27 +236,37 @@ export default function AuthProfileGuard() {
 
   // Setup event listeners exactly once on mount
   useEffect(() => {
-    // Listen for Central session updates
-    const {
-      data: { subscription: centralSub },
-    } = centralSupabase.auth.onAuthStateChange((event: any) => {
-      // Ignore initial synchronous callback
-      if (event === "INITIAL_SESSION") return;
-      checkAuth(pathnameRef.current);
-    });
+    let centralSub: { unsubscribe: () => void } | null = null;
+    let localSub: { unsubscribe: () => void } | null = null;
 
-    // Listen for Local session updates
-    const {
-      data: { subscription: localSub },
-    } = supabase.auth.onAuthStateChange((event: any) => {
-      // Ignore initial synchronous callback
-      if (event === "INITIAL_SESSION") return;
-      checkAuth(pathnameRef.current);
-    });
+    try {
+      const central = centralSupabase.auth.onAuthStateChange((event: any) => {
+        if (event === "INITIAL_SESSION") return;
+        checkAuth(pathnameRef.current).catch((err) => {
+          console.error("❌ AuthProfileGuard central auth check error:", err);
+        });
+      });
+      centralSub = central.data.subscription;
+
+      const local = supabase.auth.onAuthStateChange((event: any) => {
+        if (event === "INITIAL_SESSION") return;
+        checkAuth(pathnameRef.current).catch((err) => {
+          console.error("❌ AuthProfileGuard local auth check error:", err);
+        });
+      });
+      localSub = local.data.subscription;
+    } catch (err) {
+      console.error("❌ AuthProfileGuard listener setup failed:", err);
+      if (isMountedRef.current) setLoading(false);
+    }
 
     return () => {
-      centralSub.unsubscribe();
-      localSub.unsubscribe();
+      try {
+        centralSub?.unsubscribe();
+        localSub?.unsubscribe();
+      } catch {
+        // ignore
+      }
     };
   }, [checkAuth]);
 

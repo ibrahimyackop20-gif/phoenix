@@ -1,108 +1,170 @@
 /**
- * Singleton Supabase clients with environment variable validation.
+ * Singleton Supabase clients with fail-safe environment handling.
  *
- * Clients are created lazily on first access (not at module-load time)
- * so that a missing env var produces a descriptive error instead of
- * an opaque crash that kills the JS thread before React mounts.
+ * Credentials are resolved from (in order):
+ * 1. process.env.EXPO_PUBLIC_* (Metro inline / EAS)
+ * 2. Constants.expoConfig.extra (app.config.js embed — reliable for release APKs)
+ *
+ * Missing credentials must NEVER crash the JS thread.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-// ---------------------------------------------------------------------------
-// Environment validation
-// ---------------------------------------------------------------------------
-
-const REQUIRED_ENV = [
-  "EXPO_PUBLIC_SUPABASE_URL",
-  "EXPO_PUBLIC_SUPABASE_ANON_KEY",
-  "EXPO_PUBLIC_CENTRAL_SUPABASE_URL",
-  "EXPO_PUBLIC_CENTRAL_SUPABASE_ANON_KEY",
-] as const;
-
-function getEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(
-      `[Supabase Init] Missing required environment variable: ${name}. ` +
-        "Ensure your .env file is in the project root and contains this variable. " +
-        "For EAS builds, verify eas.json or EAS Secrets include it."
-    );
-  }
-  return value;
-}
-
-// ---------------------------------------------------------------------------
-// Lazy singleton instances
-// ---------------------------------------------------------------------------
+type ClientKind = "primary" | "central";
 
 let _supabase: SupabaseClient | null = null;
 let _centralSupabase: SupabaseClient | null = null;
+let _configLogged = false;
 
-/**
- * Primary (local project) Supabase client.
- *
- * Uses EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.
- */
-export function getSupabase(): SupabaseClient {
-  if (!_supabase) {
-    const url = getEnv("EXPO_PUBLIC_SUPABASE_URL");
-    const key = getEnv("EXPO_PUBLIC_SUPABASE_ANON_KEY");
+type PublicExtra = {
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+  centralSupabaseUrl?: string;
+  centralSupabaseAnonKey?: string;
+  webUrl?: string;
+};
 
-    _supabase = createClient(url, key, {
+function getExtra(): PublicExtra {
+  const extra =
+    (Constants.expoConfig?.extra as PublicExtra | undefined) ||
+    ((Constants as any).manifest?.extra as PublicExtra | undefined) ||
+    {};
+  return extra || {};
+}
+
+function readEnv(name: string, extraKey: keyof PublicExtra): string | undefined {
+  const fromProcess = process.env[name];
+  if (typeof fromProcess === "string" && fromProcess.trim().length > 0) {
+    return fromProcess.trim();
+  }
+  const fromExtra = getExtra()[extraKey];
+  if (typeof fromExtra === "string" && fromExtra.trim().length > 0) {
+    return fromExtra.trim();
+  }
+  return undefined;
+}
+
+export function getMissingSupabaseEnv(): string[] {
+  const checks: Array<[string, string | undefined]> = [
+    ["EXPO_PUBLIC_SUPABASE_URL", readEnv("EXPO_PUBLIC_SUPABASE_URL", "supabaseUrl")],
+    [
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+      readEnv("EXPO_PUBLIC_SUPABASE_ANON_KEY", "supabaseAnonKey"),
+    ],
+    [
+      "EXPO_PUBLIC_CENTRAL_SUPABASE_URL",
+      readEnv("EXPO_PUBLIC_CENTRAL_SUPABASE_URL", "centralSupabaseUrl"),
+    ],
+    [
+      "EXPO_PUBLIC_CENTRAL_SUPABASE_ANON_KEY",
+      readEnv("EXPO_PUBLIC_CENTRAL_SUPABASE_ANON_KEY", "centralSupabaseAnonKey"),
+    ],
+  ];
+  return checks.filter(([, value]) => !value).map(([name]) => name);
+}
+
+export function isSupabaseConfigured(): boolean {
+  return getMissingSupabaseEnv().length === 0;
+}
+
+function logMissingConfigOnce(): void {
+  if (_configLogged) return;
+  _configLogged = true;
+  const missing = getMissingSupabaseEnv();
+  if (missing.length === 0) return;
+  console.error(
+    "[Supabase Init] Missing required environment variables:",
+    missing.join(", "),
+    "— Supabase calls will fail softly. Set these in EAS Environment Variables (or .env for local builds)."
+  );
+}
+
+function createSafeClient(
+  kind: ClientKind,
+  url: string | undefined,
+  key: string | undefined
+): SupabaseClient {
+  const safeUrl = url || "https://invalid.supabase.co";
+  const safeKey = key || "missing-anon-key";
+
+  if (!url || !key) {
+    console.error(
+      `[Supabase Init] ${kind} client started in DISABLED mode (missing URL or anon key).`
+    );
+  } else {
+    console.log(`[Supabase Init] ${kind} client configured.`);
+  }
+
+  try {
+    return createClient(safeUrl, safeKey, {
       auth: {
         storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
+        autoRefreshToken: Boolean(url && key),
+        persistSession: Boolean(url && key),
         detectSessionInUrl: false,
       },
     });
+  } catch (error) {
+    console.error(`[Supabase Init] Failed to create ${kind} client:`, error);
+    return createClient("https://invalid.supabase.co", "missing-anon-key", {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    });
+  }
+}
+
+export function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    logMissingConfigOnce();
+    _supabase = createSafeClient(
+      "primary",
+      readEnv("EXPO_PUBLIC_SUPABASE_URL", "supabaseUrl"),
+      readEnv("EXPO_PUBLIC_SUPABASE_ANON_KEY", "supabaseAnonKey")
+    );
   }
   return _supabase;
 }
 
-/**
- * Central Supabase client (cross-project SSO / shared auth).
- *
- * Uses EXPO_PUBLIC_CENTRAL_SUPABASE_URL and EXPO_PUBLIC_CENTRAL_SUPABASE_ANON_KEY.
- */
 export function getCentralSupabase(): SupabaseClient {
   if (!_centralSupabase) {
-    const url = getEnv("EXPO_PUBLIC_CENTRAL_SUPABASE_URL");
-    const key = getEnv("EXPO_PUBLIC_CENTRAL_SUPABASE_ANON_KEY");
-
-    _centralSupabase = createClient(url, key, {
-      auth: {
-        storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    });
+    logMissingConfigOnce();
+    _centralSupabase = createSafeClient(
+      "central",
+      readEnv("EXPO_PUBLIC_CENTRAL_SUPABASE_URL", "centralSupabaseUrl"),
+      readEnv("EXPO_PUBLIC_CENTRAL_SUPABASE_ANON_KEY", "centralSupabaseAnonKey")
+    );
   }
   return _centralSupabase;
 }
 
-// ---------------------------------------------------------------------------
-// Backward-compatible exports
-//
-// Every file in the project imports `supabase` or `centralSupabase` as plain
-// values.  We keep this working via ES module live-binding: the getter runs
-// once, caches the result, and every subsequent read returns the same instance.
-//
-// NOTE: These are module-level property reads that trigger on first import,
-// but the getEnv() guard now throws a READABLE error instead of letting
-// createClient(undefined, undefined) crash opaquely.
-// ---------------------------------------------------------------------------
-
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop, receiver) {
-    return Reflect.get(getSupabase(), prop, receiver);
+    try {
+      const client = getSupabase();
+      const value = Reflect.get(client, prop, receiver);
+      return typeof value === "function" ? value.bind(client) : value;
+    } catch (error) {
+      console.error("[Supabase] Proxy get failed:", prop, error);
+      return undefined;
+    }
   },
 });
 
 export const centralSupabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop, receiver) {
-    return Reflect.get(getCentralSupabase(), prop, receiver);
+    try {
+      const client = getCentralSupabase();
+      const value = Reflect.get(client, prop, receiver);
+      return typeof value === "function" ? value.bind(client) : value;
+    } catch (error) {
+      console.error("[Supabase] Central proxy get failed:", prop, error);
+      return undefined;
+    }
   },
 });
