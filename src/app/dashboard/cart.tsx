@@ -244,37 +244,42 @@ export default function CartScreen() {
         .maybeSingle();
 
       if (error || !data) {
-        setPromoError("كود الخصم غير صالح");
+        setPromoError(t("cart_coupon_invalid"));
         setPromoLoading(false);
         return;
       }
 
       if (data.target_type === "store") {
         if (!storeId || data.store_id !== storeId) {
-          setPromoError("هذا الكوبون غير صالح لهذا المتجر");
+          setPromoError(t("cart_coupon_store_invalid"));
           setPromoLoading(false);
           return;
         }
       } else if (data.target_type === "library") {
         if (data.store_id !== null) {
-          setPromoError("كود غير صالح");
+          setPromoError(t("cart_coupon_code_invalid"));
           setPromoLoading(false);
           return;
         }
       } else {
-        setPromoError("هذا الكوبون غير صالح للمشتريات");
+        setPromoError(t("cart_coupon_purchase_invalid"));
         setPromoLoading(false);
         return;
       }
 
       if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
-        setPromoError("كود الخصم منتهي الصلاحية");
+        setPromoError(t("no_coupon_expired"));
         setPromoLoading(false);
         return;
       }
 
       if (data.min_order_amount && subtotal < data.min_order_amount) {
-        setPromoError(`الحد الأدنى للاستفادة هو ${data.min_order_amount.toLocaleString()} د.ع`);
+        setPromoError(
+          t("cart_coupon_min", {
+            amount: data.min_order_amount.toLocaleString(),
+            currency: t("currency"),
+          })
+        );
         setPromoLoading(false);
         return;
       }
@@ -285,10 +290,10 @@ export default function CartScreen() {
         discount_type: data.discount_type,
       });
       setPromoError("");
-      triggerToast("تم تطبيق الكوبون بنجاح!");
+      triggerToast(t("no_coupon_ok"));
     } catch (err) {
       console.error(err);
-      setPromoError("فشل التحقق من الكوبون");
+      setPromoError(t("no_coupon_check_fail"));
     } finally {
       setPromoLoading(false);
     }
@@ -312,7 +317,7 @@ export default function CartScreen() {
       await supabase.from("cart_items").delete().eq("id", itemId);
       setItems((prev) => prev.filter((i) => i.id !== itemId));
       refreshCart();
-      triggerToast("تم إزالة المنتج من السلة");
+      triggerToast(t("cart_item_removed"));
     } catch (err) {
       console.error(err);
     }
@@ -368,7 +373,7 @@ export default function CartScreen() {
         });
 
       if (error) {
-        triggerToast("فشل رفع صورة الإيصال", "error");
+        triggerToast(t("cart_receipt_upload_fail"), "error");
         setUploadingReceipt(false);
         return;
       }
@@ -378,10 +383,10 @@ export default function CartScreen() {
         .getPublicUrl(filePath);
 
       setReceiptUrl(urlData.publicUrl);
-      triggerToast("تم رفع الإيصال بنجاح ✓");
+      triggerToast(t("cart_receipt_upload_ok"));
     } catch (err) {
       console.error(err);
-      triggerToast("فشل اختيار صورة الإيصال", "error");
+      triggerToast(t("no_receipt_pick_fail"), "error");
     } finally {
       setUploadingReceipt(false);
     }
@@ -389,29 +394,29 @@ export default function CartScreen() {
 
   const copyPaymentNumber = (num: string) => {
     Clipboard.setString(num);
-    triggerToast("تم نسخ الرقم بنجاح");
+    triggerToast(t("copied_success"));
   };
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
 
     if (!selectedGovernorate) {
-      triggerToast("يرجى اختيار المحافظة", "error");
+      triggerToast(t("cart_select_governorate"), "error");
       return;
     }
 
     if (!fullAddress.trim()) {
-      triggerToast("يرجى تحديد موقع التوصيل أو إدخال العنوان", "error");
+      triggerToast(t("cart_select_location"), "error");
       return;
     }
 
     if (paymentMethod === "wallet" && walletBalance < totalPrice) {
-      triggerToast("رصيدك الحالي غير كافٍ لإتمام الدفع من المحفظة", "error");
+      triggerToast(t("no_wallet_low"), "error");
       return;
     }
 
     if (paymentMethod === "electronic" && !receiptUrl) {
-      triggerToast("يرجى رفع إيصال التحويل لإتمام الدفع", "error");
+      triggerToast(t("no_need_receipt"), "error");
       return;
     }
 
@@ -485,7 +490,7 @@ export default function CartScreen() {
         .single();
 
       if (error) {
-        triggerToast(`فشل إتمام الشراء: ${error.message}`, "error");
+        triggerToast(t("cart_checkout_fail", { message: error.message }), "error");
         setCheckingOut(false);
         return;
       }
@@ -525,7 +530,7 @@ export default function CartScreen() {
       setOrderId(orderData?.id || null);
     } catch (err) {
       console.error(err);
-      triggerToast("فشل إتمام الشراء", "error");
+      triggerToast(t("cart_checkout_fail_short"), "error");
     } finally {
       setCheckingOut(false);
     }
@@ -547,15 +552,18 @@ export default function CartScreen() {
           <View style={styles.successBadge}>
             <Feather name="check-circle" size={40} color="#ffffff" />
           </View>
-          <Text style={styles.successTitle}>تم الشراء بنجاح! 🎉</Text>
+          <Text style={styles.successTitle}>{t("cart_success_title")}</Text>
           <Text style={styles.successSubtitle}>
-            رقم الفاتورة: #{orderId.slice(0, 8).toUpperCase()}
+            {t("cart_invoice_number", { id: orderId.slice(0, 8).toUpperCase() })}
           </Text>
 
           {paymentMethod === "wallet" && (
             <View style={styles.successDetails}>
               <Text style={styles.successDetailsText}>
-                تم خصم القيمة من محفظتك. الرصيد المتبقي: {walletBalance.toLocaleString()} د.ع
+                {t("cart_wallet_deducted", {
+                  balance: walletBalance.toLocaleString(),
+                  currency: t("currency"),
+                })}
               </Text>
             </View>
           )}
@@ -563,12 +571,12 @@ export default function CartScreen() {
           <View style={styles.successActions}>
             <Link href={"/dashboard/purchases" as any} asChild>
               <TouchableOpacity style={styles.primaryBtnCompact}>
-                <Text style={styles.btnTextCompact}>تتبع المشتريات</Text>
+                <Text style={styles.btnTextCompact}>{t("cart_track_purchases")}</Text>
               </TouchableOpacity>
             </Link>
             <Link href={"/dashboard" as any} asChild>
               <TouchableOpacity style={styles.secondaryBtnCompact}>
-                <Text style={styles.secondaryBtnTextCompact}>العودة للرئيسية</Text>
+                <Text style={styles.secondaryBtnTextCompact}>{t("cart_back_home")}</Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -588,18 +596,18 @@ export default function CartScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>سلة المشتريات</Text>
-          <Text style={styles.subtitle}>راجع طلباتك قبل المتابعة لعملية الدفع</Text>
+          <Text style={styles.title}>{t("cart_title")}</Text>
+          <Text style={styles.subtitle}>{t("cart_subtitle")}</Text>
         </View>
 
         {items.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="cart-outline" size={80} color="#71717a" />
-            <Text style={styles.emptyTitle}>سلتك فارغة</Text>
-            <Text style={styles.emptySubtitle}>ابدأ بالتسوق واختيار كتبك المفضلة من المكتبة</Text>
+            <Text style={styles.emptyTitle}>{t("cart_empty_title")}</Text>
+            <Text style={styles.emptySubtitle}>{t("cart_empty_subtitle")}</Text>
             <Link href={"/dashboard" as any} asChild>
               <TouchableOpacity style={styles.shopButton}>
-                <Text style={styles.shopButtonText}>تصفح المكتبة</Text>
+                <Text style={styles.shopButtonText}>{t("cart_browse_library")}</Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -620,10 +628,10 @@ export default function CartScreen() {
                       </Text>
                       <Text style={styles.storeNameText}>
                         <Feather name="home" size={10} color="#34d399" />{" "}
-                        {item.products.stores?.name || "متجر"}
+                        {item.products.stores?.name || t("cart_store_fallback")}
                       </Text>
                       <Text style={styles.productPriceText}>
-                        {(item.products.price * item.quantity).toLocaleString()} د.ع
+                        {(item.products.price * item.quantity).toLocaleString()} {t("currency")}
                       </Text>
 
                       {/* Quantity counter */}
@@ -658,7 +666,7 @@ export default function CartScreen() {
 
             {/* Delivery address details */}
             <View style={styles.glassCard}>
-              <Text style={styles.cardHeaderTitle}>معلومات التوصيل</Text>
+              <Text style={styles.cardHeaderTitle}>{t("cart_delivery_info")}</Text>
 
               {/* Full-screen location picker entry */}
               <TouchableOpacity
@@ -667,7 +675,7 @@ export default function CartScreen() {
               >
                 <Feather name="map-pin" size={16} color="#ea580c" />
                 <Text style={styles.pickLocationButtonText}>
-                  🗺️ اختيار موقع التسليم
+                  {t("cart_pick_location")}
                 </Text>
               </TouchableOpacity>
               {lat != null && fullAddress ? (
@@ -693,14 +701,15 @@ export default function CartScreen() {
 
               {/* Governorate Dropdown */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>المحافظة *</Text>
+                <Text style={styles.inputLabel}>{t("cart_governorate")}</Text>
                 <TouchableOpacity
                   onPress={() => setShowGovDropdown(!showGovDropdown)}
                   style={styles.dropdownSelector}
                 >
                   <Feather name="chevron-down" size={14} color="#71717a" />
                   <Text style={styles.dropdownSelectorText}>
-                    {governorates.find((g) => g.id === selectedGovernorate)?.name || "اختر المحافظة"}
+                    {governorates.find((g) => g.id === selectedGovernorate)?.name ||
+                      t("cart_select_governorate_placeholder")}
                   </Text>
                 </TouchableOpacity>
 
@@ -726,14 +735,15 @@ export default function CartScreen() {
               {/* Zone Dropdown */}
               {selectedGovernorate && filteredZones.length > 0 && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>المنطقة *</Text>
+                  <Text style={styles.inputLabel}>{t("cart_zone")}</Text>
                   <TouchableOpacity
                     onPress={() => setShowZoneDropdown(!showZoneDropdown)}
                     style={styles.dropdownSelector}
                   >
                     <Feather name="chevron-down" size={14} color="#71717a" />
                     <Text style={styles.dropdownSelectorText}>
-                      {deliveryZones.find((z) => z.id === selectedZone)?.name || "اختر المنطقة"}
+                      {deliveryZones.find((z) => z.id === selectedZone)?.name ||
+                        t("cart_select_zone_placeholder")}
                     </Text>
                   </TouchableOpacity>
 
@@ -749,7 +759,11 @@ export default function CartScreen() {
                           style={styles.dropdownMenuItem}
                         >
                           <Text style={styles.dropdownMenuItemText}>
-                            {zone.name} — {zone.cost} د.ع
+                            {t("cart_zone_cost", {
+                              name: zone.name,
+                              cost: zone.cost,
+                              currency: t("currency"),
+                            })}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -758,8 +772,11 @@ export default function CartScreen() {
 
                   {storeShippingCost !== null && storeShippingCost !== defaultZoneCost && (
                     <Text style={styles.overrideCostText}>
-                      سعر التوصيل الخاص بالبائع: {storeShippingCost.toLocaleString()} د.ع (بدلاً من{" "}
-                      {defaultZoneCost.toLocaleString()} د.ع)
+                      {t("cart_seller_shipping", {
+                        seller: storeShippingCost.toLocaleString(),
+                        default: defaultZoneCost.toLocaleString(),
+                        currency: t("currency"),
+                      })}
                     </Text>
                   )}
                 </View>
@@ -767,11 +784,11 @@ export default function CartScreen() {
 
               {/* Address string text inputs */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>العنوان بالتفصيل *</Text>
+                <Text style={styles.inputLabel}>{t("cart_full_address")}</Text>
                 <TextInput
                   value={fullAddress}
                   onChangeText={setFullAddress}
-                  placeholder="اختر موقع التسليم من الزر أعلاه أو اكتب العنوان يدوياً هنا..."
+                  placeholder={t("cart_address_placeholder")}
                   placeholderTextColor="#71717a"
                   multiline
                   numberOfLines={3}
@@ -783,7 +800,7 @@ export default function CartScreen() {
 
             {/* Coupon details */}
             <View style={styles.glassCard}>
-              <Text style={styles.cardHeaderTitle}>كود خصم (كوبون)</Text>
+              <Text style={styles.cardHeaderTitle}>{t("no_coupon_title")}</Text>
               <View style={styles.promoRow}>
                 <TouchableOpacity
                   onPress={validateStoreCoupon}
@@ -793,13 +810,13 @@ export default function CartScreen() {
                   {promoLoading ? (
                     <ActivityIndicator size="small" color="#ffffff" />
                   ) : (
-                    <Text style={styles.promoBtnText}>تطبيق</Text>
+                    <Text style={styles.promoBtnText}>{t("no_coupon_apply")}</Text>
                   )}
                 </TouchableOpacity>
                 <TextInput
                   value={promoCode}
                   onChangeText={setPromoCode}
-                  placeholder="مثال: OFFER15"
+                  placeholder={t("no_coupon_placeholder")}
                   placeholderTextColor="#71717a"
                   style={styles.promoInput}
                   textAlign="right"
@@ -810,21 +827,23 @@ export default function CartScreen() {
               {appliedCoupon ? (
                 <View style={styles.appliedCouponWrapper}>
                   <Feather name="check" size={12} color="#34d399" />
-                  <Text style={styles.appliedCouponText}>تم تطبيق الكوبون {appliedCoupon.code}</Text>
+                  <Text style={styles.appliedCouponText}>
+                    {t("no_coupon_applied", { code: appliedCoupon.code })}
+                  </Text>
                 </View>
               ) : null}
             </View>
 
             {/* Payment selections */}
             <View style={styles.glassCard}>
-              <Text style={styles.cardHeaderTitle}>طريقة الدفع</Text>
+              <Text style={styles.cardHeaderTitle}>{t("no_payment_method")}</Text>
               <View style={styles.paymentMethodsRow}>
                 <TouchableOpacity
                   onPress={() => setPaymentMethod("electronic")}
                   style={[styles.paymentMethodBox, paymentMethod === "electronic" && styles.paymentMethodActive]}
                 >
                   <Feather name="credit-card" size={20} color={paymentMethod === "electronic" ? "#ea580c" : "#71717a"} />
-                  <Text style={[styles.paymentMethodLabel, paymentMethod === "electronic" && styles.paymentMethodTextActive]}>دفع إلكتروني</Text>
+                  <Text style={[styles.paymentMethodLabel, paymentMethod === "electronic" && styles.paymentMethodTextActive]}>{t("no_pay_electronic")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -838,7 +857,7 @@ export default function CartScreen() {
                   ]}
                 >
                   <Ionicons name="wallet-outline" size={20} color={paymentMethod === "wallet" ? "#ea580c" : "#71717a"} />
-                  <Text style={[styles.paymentMethodLabel, paymentMethod === "wallet" && styles.paymentMethodTextActive]}>رصيد المحفظة</Text>
+                  <Text style={[styles.paymentMethodLabel, paymentMethod === "wallet" && styles.paymentMethodTextActive]}>{t("no_pay_wallet")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -846,32 +865,36 @@ export default function CartScreen() {
                   style={[styles.paymentMethodBox, paymentMethod === "cod" && styles.paymentMethodActive]}
                 >
                   <Feather name="dollar-sign" size={20} color={paymentMethod === "cod" ? "#ea580c" : "#71717a"} />
-                  <Text style={[styles.paymentMethodLabel, paymentMethod === "cod" && styles.paymentMethodTextActive]}>الدفع عند الاستلام</Text>
+                  <Text style={[styles.paymentMethodLabel, paymentMethod === "cod" && styles.paymentMethodTextActive]}>{t("no_pay_cod")}</Text>
                 </TouchableOpacity>
               </View>
 
               {paymentMethod === "wallet" && (
                 <View style={styles.walletDetails}>
-                  <Text style={styles.walletDetailsText}>رصيد المحفظة المتاح: {walletBalance.toLocaleString()} د.ع</Text>
+                  <Text style={styles.walletDetailsText}>
+                    {t("no_wallet_balance", { balance: walletBalance.toLocaleString() })}
+                  </Text>
                   {walletBalance < totalPrice ? (
-                    <Text style={styles.walletError}>رصيد المحفظة غير كافٍ لتغطية إجمالي الفاتورة</Text>
+                    <Text style={styles.walletError}>{t("no_wallet_insufficient")}</Text>
                   ) : (
-                    <Text style={styles.walletSuccess}>رصيدك كافٍ لإتمام الدفع</Text>
+                    <Text style={styles.walletSuccess}>{t("no_wallet_enough")}</Text>
                   )}
                 </View>
               )}
 
               {paymentMethod === "electronic" && (
                 <View style={styles.electronicDetails}>
-                  <Text style={styles.detailsTitle}>التحويل الإلكتروني</Text>
-                  <Text style={styles.detailsDesc}>يرجى إرسال مبلغ الفاتورة وتأكيد التحويل بإرفاق صورة الوصل:</Text>
+                  <Text style={styles.detailsTitle}>{t("cart_electronic_title")}</Text>
+                  <Text style={styles.detailsDesc}>{t("cart_electronic_desc")}</Text>
 
                   {zaincashNum ? (
                     <View style={styles.paymentAccountRow}>
                       <TouchableOpacity onPress={() => copyPaymentNumber(zaincashNum)} style={styles.copyBtn}>
                         <Feather name="copy" size={14} color="#ea580c" />
                       </TouchableOpacity>
-                      <Text style={styles.paymentAccountText}>زين كاش: {zaincashNum}</Text>
+                      <Text style={styles.paymentAccountText}>
+                        {t("cart_zaincash_label", { number: zaincashNum })}
+                      </Text>
                     </View>
                   ) : null}
 
@@ -880,14 +903,16 @@ export default function CartScreen() {
                       <TouchableOpacity onPress={() => copyPaymentNumber(asiaNum)} style={styles.copyBtn}>
                         <Feather name="copy" size={14} color="#ea580c" />
                       </TouchableOpacity>
-                      <Text style={styles.paymentAccountText}>آسيا حوالة: {asiaNum}</Text>
+                      <Text style={styles.paymentAccountText}>
+                        {t("cart_asia_label", { number: asiaNum })}
+                      </Text>
                     </View>
                   ) : null}
 
                   {receiptUrl ? (
                     <View style={styles.receiptPreview}>
                       <Feather name="image" size={18} color="#34d399" />
-                      <Text style={styles.receiptSuccessText}>تم رفع صورة الإيصال بنجاح ✓</Text>
+                      <Text style={styles.receiptSuccessText}>{t("no_receipt_ok")}</Text>
                       <TouchableOpacity onPress={() => setReceiptUrl("")} style={styles.receiptRemoveBtn}>
                         <Feather name="x" size={14} color="#ef4444" />
                       </TouchableOpacity>
@@ -899,7 +924,7 @@ export default function CartScreen() {
                       ) : (
                         <View style={styles.receiptPickerDashedInner}>
                           <Feather name="upload" size={16} color="#71717a" />
-                          <Text style={styles.receiptPickerDashedText}>إرفاق صورة إيصال التحويل</Text>
+                          <Text style={styles.receiptPickerDashedText}>{t("no_attach_receipt")}</Text>
                         </View>
                       )}
                     </TouchableOpacity>
@@ -910,26 +935,26 @@ export default function CartScreen() {
 
             {/* Calculations billing details summary */}
             <View style={styles.glassCard}>
-              <Text style={styles.cardHeaderTitle}>ملخص التكلفة</Text>
+              <Text style={styles.cardHeaderTitle}>{t("cart_cost_summary")}</Text>
               <View style={styles.billingRow}>
-                <Text style={styles.billingValue}>{subtotal.toLocaleString()} د.ع</Text>
-                <Text style={styles.billingLabel}>المجموع الفرعي</Text>
+                <Text style={styles.billingValue}>{subtotal.toLocaleString()} {t("currency")}</Text>
+                <Text style={styles.billingLabel}>{t("cart_subtotal")}</Text>
               </View>
               {couponDiscount > 0 ? (
                 <View style={styles.billingRow}>
-                  <Text style={[styles.billingValue, { color: "#34d399" }]}>-{couponDiscount.toLocaleString()} د.ع</Text>
-                  <Text style={styles.billingLabel}>خصم الكوبون</Text>
+                  <Text style={[styles.billingValue, { color: "#34d399" }]}>-{couponDiscount.toLocaleString()} {t("currency")}</Text>
+                  <Text style={styles.billingLabel}>{t("no_coupon_discount")}</Text>
                 </View>
               ) : null}
               {shippingCost > 0 ? (
                 <View style={styles.billingRow}>
-                  <Text style={styles.billingValue}>{shippingCost.toLocaleString()} د.ع</Text>
-                  <Text style={styles.billingLabel}>رسوم التوصيل</Text>
+                  <Text style={styles.billingValue}>{shippingCost.toLocaleString()} {t("currency")}</Text>
+                  <Text style={styles.billingLabel}>{t("no_shipping_fee")}</Text>
                 </View>
               ) : null}
               <View style={[styles.billingRow, styles.billingTotalRow]}>
-                <Text style={styles.billingTotalValue}>{totalPrice.toLocaleString()} د.ع</Text>
-                <Text style={styles.billingTotalLabel}>المجموع النهائي</Text>
+                <Text style={styles.billingTotalValue}>{totalPrice.toLocaleString()} {t("currency")}</Text>
+                <Text style={styles.billingTotalLabel}>{t("cart_grand_total")}</Text>
               </View>
             </View>
 
@@ -939,7 +964,7 @@ export default function CartScreen() {
               ) : (
                 <View style={styles.buttonInner}>
                   <Feather name="shopping-bag" size={18} color="#ffffff" style={styles.buttonIcon} />
-                  <Text style={styles.checkoutBtnText}>تأكيد الشراء وإرسال الطلب</Text>
+                  <Text style={styles.checkoutBtnText}>{t("cart_checkout_btn")}</Text>
                 </View>
               )}
             </TouchableOpacity>

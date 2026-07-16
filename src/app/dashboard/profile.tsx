@@ -53,6 +53,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
 
   const { theme: currentTheme, setTheme: handleThemeToggle, themeColors } = useAppTheme();
+  const styles = getStyles(themeColors);
   const currentLanguage = i18n.language || "ar";
 
   const handleLanguageChange = async (lang: "ar" | "en") => {
@@ -60,7 +61,7 @@ export default function ProfileScreen() {
     try {
       await AsyncStorage.setItem("language", lang);
     } catch (err) {
-      console.log("Error saving language preference:", err);
+      console.error("Error saving language preference:", err);
     }
   };
 
@@ -138,20 +139,20 @@ export default function ProfileScreen() {
   }, [ctxName, ctxAvatar]);
 
   const handleAvatarPicker = () => {
-    Alert.alert("تحديث الصورة الشخصية", "كيف تريد إضافة الصورة؟", [
+    Alert.alert(t("profile_toast_avatar_title"), t("profile_toast_avatar_pick"), [
       {
-        text: "التقاط صورة",
+        text: t("profile_toast_take_photo"),
         onPress: () => {
           void pickAvatarAsset("camera");
         },
       },
       {
-        text: "اختيار من المعرض",
+        text: t("profile_toast_pick_gallery"),
         onPress: () => {
           void pickAvatarAsset("gallery");
         },
       },
-      { text: "إلغاء", style: "cancel" },
+      { text: t("cancel"), style: "cancel" },
     ]);
   };
 
@@ -187,7 +188,7 @@ export default function ProfileScreen() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        triggerToast("يرجى تسجيل الدخول أولاً", "error");
+        triggerToast(t("profile_toast_login_required"), "error");
         setUploading(false);
         return;
       }
@@ -202,7 +203,7 @@ export default function ProfileScreen() {
         .upload(filePath, arrayBuffer, { upsert: true, contentType: mimeType });
 
       if (uploadError) {
-        triggerToast(`فشل رفع الصورة: ${uploadError.message}`, "error");
+        triggerToast(t("profile_toast_avatar_upload_fail", { message: uploadError.message }), "error");
         setUploading(false);
         return;
       }
@@ -218,7 +219,7 @@ export default function ProfileScreen() {
         .maybeSingle();
 
       if (updateError) {
-        triggerToast(`فشل تحديث الصورة: ${updateError.message}`, "error");
+        triggerToast(t("profile_toast_avatar_update_fail", { message: updateError.message }), "error");
         setUploading(false);
         return;
       }
@@ -226,10 +227,10 @@ export default function ProfileScreen() {
       const savedUrl = avatarResult?.avatar_url || publicUrl;
       setAvatarUrl(savedUrl);
       await refreshProfile();
-      triggerToast("تم تحديث الصورة الشخصية بنجاح ✓");
+      triggerToast(t("profile_toast_avatar_ok"));
     } catch (err) {
       console.error(err);
-      triggerToast("فشل رفع الصورة الشخصية", "error");
+      triggerToast(t("profile_toast_avatar_fail"), "error");
     } finally {
       setUploading(false);
     }
@@ -237,7 +238,7 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     if (!fullName.trim()) {
-      triggerToast("يرجى إدخال الاسم الكامل", "error");
+      triggerToast(t("profile_toast_name_required"), "error");
       return;
     }
 
@@ -247,7 +248,7 @@ export default function ProfileScreen() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        triggerToast("يرجى تسجيل الدخول أولاً", "error");
+        triggerToast(t("profile_toast_login_required"), "error");
         setSaving(false);
         return;
       }
@@ -261,7 +262,7 @@ export default function ProfileScreen() {
         .maybeSingle();
 
       if (error) {
-        triggerToast(`فشل حفظ البيانات: ${error.message}`, "error");
+        triggerToast(t("profile_toast_save_fail", { message: error.message }), "error");
         setSaving(false);
         return;
       }
@@ -269,10 +270,10 @@ export default function ProfileScreen() {
       const savedName = data?.full_name || trimmedName;
       setFullName(savedName);
       await refreshProfile();
-      triggerToast("تم تحديث البيانات بنجاح ✓");
+      triggerToast(t("profile_toast_save_ok"));
     } catch (err) {
       console.error(err);
-      triggerToast("فشل تحديث ملف الحساب", "error");
+      triggerToast(t("profile_toast_profile_fail"), "error");
     } finally {
       setSaving(false);
     }
@@ -280,7 +281,7 @@ export default function ProfileScreen() {
 
   const handleCreateAddress = async () => {
     if (!newArea.trim() || !newPhone.trim()) {
-      triggerToast("يرجى ملء المنطقة ورقم الهاتف", "error");
+      triggerToast(t("profile_toast_address_fields"), "error");
       return;
     }
 
@@ -346,15 +347,15 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ea580c" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" style={{ backgroundColor: themeColors.background }}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {successMsg && (
           <View style={styles.toastSuccess}>
             <Text style={styles.toastText}>{successMsg}</Text>
@@ -479,7 +480,7 @@ export default function ProfileScreen() {
               <TouchableOpacity onPress={() => setShowMap(true)} style={styles.mapToggleButton}>
                 <Feather name="map" size={14} color="#ea580c" style={styles.buttonIcon} />
                 <Text style={styles.mapToggleButtonText}>
-                  {newLat ? "🗺️ تغيير موقع التسليم" : "🗺️ اختيار موقع التسليم"}
+                  {newLat ? t("profile_toast_change_location") : t("profile_toast_pick_location")}
                 </Text>
               </TouchableOpacity>
               {newLat && (newLandmark || newArea) ? (
@@ -691,11 +692,11 @@ export default function ProfileScreen() {
               }}
             >
               <Feather name="shield" size={14} color="#ea580c" />
-              <Text style={{ fontSize: 10, color: "#ea580c", fontWeight: "bold" }}>عرض المركز</Text>
+              <Text style={{ fontSize: 10, color: "#ea580c", fontWeight: "bold" }}>{t("privacy_profile_link_cta")}</Text>
             </TouchableOpacity>
             <View style={styles.prefLabels}>
-              <Text style={[styles.prefTitle, { color: themeColors.text }]}>الخصوصية والأمان</Text>
-              <Text style={[styles.prefDesc, { color: themeColors.textMuted }]}>إدارة سياسة الخصوصية وتراخيص الجهاز وتصدير وحذف الحساب</Text>
+              <Text style={[styles.prefTitle, { color: themeColors.text }]}>{t("privacy_profile_link_title")}</Text>
+              <Text style={[styles.prefDesc, { color: themeColors.textMuted }]}>{t("privacy_profile_link_desc")}</Text>
             </View>
           </View>
         </View>
@@ -704,14 +705,24 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: {
+  background: string;
+  cardBg: string;
+  cardBorder: string;
+  text: string;
+  textMuted: string;
+  inputBg: string;
+  inputBorder: string;
+  disabledBg: string;
+}) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#09090b", // zinc-950
+    backgroundColor: themeColors.background,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#09090b",
+    backgroundColor: themeColors.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -734,7 +745,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   toastText: {
-    color: "#f4f4f5",
+    color: themeColors.text,
     fontSize: 13,
     textAlign: "center",
   },
@@ -749,16 +760,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#f4f4f5",
+    color: themeColors.text,
   },
   subtitle: {
     fontSize: 13,
-    color: "#a1a1aa",
+    color: themeColors.textMuted,
     marginTop: 4,
   },
   glassCard: {
-    backgroundColor: "#18181b",
-    borderColor: "#27272a",
+    backgroundColor: themeColors.cardBg,
+    borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 20,
     padding: 20,
@@ -795,17 +806,17 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#f4f4f5",
+    color: themeColors.text,
     marginTop: 12,
   },
   userEmail: {
     fontSize: 12,
-    color: "#71717a",
+    color: themeColors.textMuted,
     marginTop: 2,
   },
   avatarTip: {
     fontSize: 11,
-    color: "#71717a",
+    color: themeColors.textMuted,
     marginTop: 12,
   },
   cardHeader: {
@@ -817,22 +828,22 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: "bold",
-    color: "#f4f4f5",
+    color: themeColors.text,
   },
   inputGroup: {
     marginBottom: 16,
   },
   inputLabel: {
     fontSize: 12,
-    color: "#71717a",
+    color: themeColors.textMuted,
     marginBottom: 8,
     textAlign: "right",
   },
   inputWrapper: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: "#09090b",
-    borderColor: "#27272a",
+    backgroundColor: themeColors.inputBg,
+    borderColor: themeColors.inputBorder,
     borderWidth: 1,
     borderRadius: 12,
     height: 44,
@@ -846,15 +857,15 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    color: "#f4f4f5",
+    color: themeColors.text,
     fontSize: 14,
   },
   textInputDisabled: {
-    color: "#71717a",
+    color: themeColors.textMuted,
   },
   readOnlyText: {
     fontSize: 10,
-    color: "#71717a",
+    color: themeColors.textMuted,
     marginTop: 4,
     textAlign: "right",
   },
@@ -896,8 +907,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addressForm: {
-    backgroundColor: "#09090b",
-    borderColor: "#27272a",
+    backgroundColor: themeColors.background,
+    borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
@@ -912,8 +923,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 32,
     borderRadius: 8,
-    backgroundColor: "#18181b",
-    borderColor: "#27272a",
+    backgroundColor: themeColors.cardBg,
+    borderColor: themeColors.cardBorder,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -987,15 +998,15 @@ const styles = StyleSheet.create({
   secondaryButtonCompact: {
     flex: 1,
     height: 38,
-    backgroundColor: "#18181b",
-    borderColor: "#27272a",
+    backgroundColor: themeColors.cardBg,
+    borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   secondaryButtonTextCompact: {
-    color: "#f4f4f5",
+    color: themeColors.text,
     fontSize: 12,
     fontWeight: "bold",
   },
@@ -1006,8 +1017,8 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     padding: 12,
-    backgroundColor: "#09090b",
-    borderColor: "#27272a",
+    backgroundColor: themeColors.background,
+    borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 14,
   },
@@ -1027,16 +1038,16 @@ const styles = StyleSheet.create({
   addressTitle: {
     fontSize: 13,
     fontWeight: "bold",
-    color: "#f4f4f5",
+    color: themeColors.text,
   },
   addressDetailText: {
     fontSize: 11,
-    color: "#a1a1aa",
+    color: themeColors.textMuted,
     marginTop: 2,
   },
   addressPhoneText: {
     fontSize: 10,
-    color: "#71717a",
+    color: themeColors.textMuted,
     marginTop: 4,
   },
   trashBtn: {
@@ -1052,11 +1063,11 @@ const styles = StyleSheet.create({
   emptyTitleText: {
     fontSize: 13,
     fontWeight: "bold",
-    color: "#f4f4f5",
+    color: themeColors.text,
   },
   emptyDescText: {
     fontSize: 11,
-    color: "#71717a",
+    color: themeColors.textMuted,
     marginTop: 4,
     textAlign: "center",
   },
@@ -1068,7 +1079,7 @@ const styles = StyleSheet.create({
   },
   prefRowBorder: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(39, 39, 42, 0.5)",
+    borderTopColor: themeColors.cardBorder,
     paddingTop: 16,
     marginTop: 8,
   },
@@ -1079,16 +1090,16 @@ const styles = StyleSheet.create({
   prefTitle: {
     fontSize: 13,
     fontWeight: "bold",
-    color: "#f4f4f5",
+    color: themeColors.text,
   },
   prefDesc: {
     fontSize: 10,
-    color: "#71717a",
+    color: themeColors.textMuted,
     marginTop: 2,
   },
   langToggles: {
     flexDirection: "row-reverse",
-    borderColor: "#27272a",
+    borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 8,
     overflow: "hidden",
@@ -1096,7 +1107,7 @@ const styles = StyleSheet.create({
   langBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#09090b",
+    backgroundColor: themeColors.background,
   },
   langBtnActive: {
     backgroundColor: "rgba(234, 88, 12, 0.1)",
@@ -1111,7 +1122,7 @@ const styles = StyleSheet.create({
   },
   themeToggles: {
     flexDirection: "row-reverse",
-    borderColor: "#27272a",
+    borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 8,
     overflow: "hidden",
@@ -1121,7 +1132,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: "#09090b",
+    backgroundColor: themeColors.background,
     gap: 4,
   },
   themeBtnActive: {

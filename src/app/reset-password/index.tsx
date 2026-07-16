@@ -15,9 +15,15 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabaseClient";
 import { AuthChangeEvent } from "@supabase/supabase-js";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import { useAppTheme } from "../../../components/ThemeProvider";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { themeColors, isDark } = useAppTheme();
+  const styles = getStyles(themeColors, isDark);
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -38,12 +44,12 @@ export default function ResetPasswordScreen() {
     setError("");
 
     if (password.length < 6) {
-      setError("يجب أن تكون كلمة المرور 6 أحرف على الأقل");
+      setError(t("auth_password_min"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("كلمتا المرور غير متطابقتين");
+      setError(t("auth_password_mismatch"));
       return;
     }
 
@@ -71,22 +77,20 @@ export default function ResetPasswordScreen() {
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
               <Feather name="key" size={32} color="#ffffff" />
             </View>
-            <Text style={styles.titleText}>إعادة تعيين كلمة المرور</Text>
-            <Text style={styles.subtitleText}>أدخل كلمة المرور الجديدة</Text>
+            <Text style={styles.titleText}>{t("auth_reset_title")}</Text>
+            <Text style={styles.subtitleText}>{t("auth_reset_subtitle")}</Text>
           </View>
 
-          {/* Form Card */}
           <View style={styles.card}>
             {success ? (
               <View style={styles.successContainer}>
                 <Ionicons name="checkmark-circle" size={48} color="#10b981" />
-                <Text style={styles.successTitle}>تم التغيير بنجاح ✓</Text>
-                <Text style={styles.successText}>جاري التوجيه للوحة التحكم...</Text>
+                <Text style={styles.successTitle}>{t("auth_reset_success")}</Text>
+                <Text style={styles.successText}>{t("auth_reset_redirecting")}</Text>
               </View>
             ) : (
               <View style={styles.form}>
@@ -96,17 +100,16 @@ export default function ResetPasswordScreen() {
                   </View>
                 ) : null}
 
-                {/* Password field */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>كلمة المرور الجديدة</Text>
+                  <Text style={styles.inputLabel}>{t("auth_reset_new_password")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Feather name="lock" size={18} color="#71717a" style={styles.fieldIcon} />
+                    <Feather name="lock" size={18} color={themeColors.textMuted} style={styles.fieldIcon} />
                     <TextInput
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
-                      placeholder="••••••••"
-                      placeholderTextColor="#71717a"
+                      placeholder={t("auth_password_placeholder")}
+                      placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="right"
                     />
@@ -117,30 +120,28 @@ export default function ResetPasswordScreen() {
                       <Feather
                         name={showPassword ? "eye-off" : "eye"}
                         size={18}
-                        color="#71717a"
+                        color={themeColors.textMuted}
                       />
                     </TouchableOpacity>
                   </View>
                 </View>
 
-                {/* Confirm Password field */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>تأكيد كلمة المرور</Text>
+                  <Text style={styles.inputLabel}>{t("auth_reset_confirm_password")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Feather name="lock" size={18} color="#71717a" style={styles.fieldIcon} />
+                    <Feather name="lock" size={18} color={themeColors.textMuted} style={styles.fieldIcon} />
                     <TextInput
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
                       secureTextEntry={!showPassword}
-                      placeholder="••••••••"
-                      placeholderTextColor="#71717a"
+                      placeholder={t("auth_password_placeholder")}
+                      placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="right"
                     />
                   </View>
                 </View>
 
-                {/* Submit button */}
                 <TouchableOpacity
                   onPress={handleReset}
                   disabled={loading}
@@ -150,7 +151,7 @@ export default function ResetPasswordScreen() {
                     <ActivityIndicator size="small" color="#ffffff" />
                   ) : (
                     <View style={styles.buttonInner}>
-                      <Text style={styles.submitButtonText}>تعيين كلمة المرور الجديدة</Text>
+                      <Text style={styles.submitButtonText}>{t("auth_reset_submit")}</Text>
                       <Feather name="key" size={16} color="#ffffff" style={styles.buttonIcon} />
                     </View>
                   )}
@@ -164,148 +165,149 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#09090b", // zinc-950
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: "#ea580c",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    shadowColor: "#ea580c",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  titleText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#f97316", // Orange accent color
-    marginBottom: 8,
-  },
-  subtitleText: {
-    fontSize: 14,
-    color: "#71717a",
-  },
-  card: {
-    backgroundColor: "#18181b", // zinc-900
-    borderWidth: 1,
-    borderColor: "#27272a", // zinc-800
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  successContainer: {
-    alignItems: "center",
-    paddingVertical: 16,
-  },
-  successTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#f4f4f5",
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  successText: {
-    fontSize: 14,
-    color: "#71717a",
-  },
-  form: {
-    gap: 20,
-  },
-  errorBadge: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.2)",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: 13,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#71717a",
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#09090b", // zinc-950
-    borderWidth: 1.5,
-    borderColor: "#27272a",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48,
-  },
-  fieldIcon: {
-    marginRight: 8,
-  },
-  textInput: {
-    flex: 1,
-    color: "#f4f4f5",
-    fontSize: 14,
-    height: "100%",
-  },
-  eyeButton: {
-    padding: 8,
-  },
-  submitButton: {
-    backgroundColor: "#ea580c",
-    borderRadius: 12,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    shadowColor: "#ea580c",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  buttonInner: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  submitButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  buttonIcon: {
-    marginLeft: 8,
-  },
-});
+const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingHorizontal: 24,
+      paddingVertical: 40,
+    },
+    header: {
+      alignItems: "center",
+      marginBottom: 32,
+    },
+    iconContainer: {
+      width: 64,
+      height: 64,
+      borderRadius: 20,
+      backgroundColor: "#ea580c",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+      shadowColor: "#ea580c",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 10,
+      elevation: 4,
+    },
+    titleText: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: "#f97316",
+      marginBottom: 8,
+    },
+    subtitleText: {
+      fontSize: 14,
+      color: themeColors.textMuted,
+    },
+    card: {
+      backgroundColor: themeColors.cardBg,
+      borderWidth: 1,
+      borderColor: themeColors.cardBorder,
+      borderRadius: 24,
+      padding: 24,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.1 : 0.06,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    successContainer: {
+      alignItems: "center",
+      paddingVertical: 16,
+    },
+    successTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginTop: 12,
+      marginBottom: 8,
+    },
+    successText: {
+      fontSize: 14,
+      color: themeColors.textMuted,
+    },
+    form: {
+      gap: 20,
+    },
+    errorBadge: {
+      backgroundColor: "rgba(239, 68, 68, 0.1)",
+      borderWidth: 1,
+      borderColor: "rgba(239, 68, 68, 0.2)",
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      alignItems: "center",
+    },
+    errorText: {
+      color: "#ef4444",
+      fontSize: 13,
+      fontWeight: "600",
+      textAlign: "center",
+    },
+    inputGroup: {
+      gap: 8,
+    },
+    inputLabel: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: themeColors.textMuted,
+    },
+    inputWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: themeColors.inputBg,
+      borderWidth: 1.5,
+      borderColor: themeColors.cardBorder,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 48,
+    },
+    fieldIcon: {
+      marginRight: 8,
+    },
+    textInput: {
+      flex: 1,
+      color: themeColors.text,
+      fontSize: 14,
+      height: "100%",
+    },
+    eyeButton: {
+      padding: 8,
+    },
+    submitButton: {
+      backgroundColor: "#ea580c",
+      borderRadius: 12,
+      height: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+      shadowColor: "#ea580c",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 10,
+      elevation: 4,
+    },
+    buttonInner: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    submitButtonText: {
+      color: "#ffffff",
+      fontSize: 14,
+      fontWeight: "bold",
+    },
+    buttonIcon: {
+      marginLeft: 8,
+    },
+  });

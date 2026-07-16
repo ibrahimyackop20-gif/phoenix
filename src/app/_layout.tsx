@@ -1,5 +1,3 @@
-console.log("STEP 1: File loaded");
-
 import '../i18n';
 import '../global.css';
 import React, { useEffect, useState } from 'react';
@@ -15,6 +13,7 @@ import { ThemeProvider, useAppTheme } from '../../components/ThemeProvider';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { getMissingSupabaseEnv, isSupabaseConfigured, supabase } from '../../lib/supabaseClient';
+import AppSessionProviders from '../../components/AppSessionProviders';
 
 try {
   LogBox.ignoreLogs([
@@ -26,11 +25,7 @@ try {
 }
 
 try {
-  ExpoSplashScreen.preventAutoHideAsync()
-    .then(() => {
-      console.log("ExpoSplashScreen.preventAutoHideAsync() - Success");
-    })
-    .catch((error) => {
+  ExpoSplashScreen.preventAutoHideAsync().catch((error) => {
       console.error("Startup Error (preventAutoHideAsync):", error);
     });
 } catch (error) {
@@ -38,7 +33,6 @@ try {
 }
 
 function RootLayoutContent() {
-  console.log("RootLayoutContent rendering...");
   const { themeColors, isDark } = useAppTheme();
   const [appIsReady, setAppIsReady] = useState(false);
   const [splashFinished, setSplashFinished] = useState(false);
@@ -48,7 +42,6 @@ function RootLayoutContent() {
 
     async function prepare() {
       try {
-        console.log("[Splash Startup Flow] Restoring user session...");
         const missing = getMissingSupabaseEnv();
         if (missing.length > 0) {
           console.error(
@@ -56,14 +49,7 @@ function RootLayoutContent() {
             missing.join(", ")
           );
         } else if (isSupabaseConfigured()) {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          console.log(
-            user
-              ? `[Splash Startup Flow] User authenticated: ${user.email}`
-              : "[Splash Startup Flow] User is guest"
-          );
+          await supabase.auth.getUser();
         }
       } catch (e) {
         console.error("Startup Error (prepare):", e);
@@ -79,7 +65,6 @@ function RootLayoutContent() {
   }, []);
 
   const handleSplashFinish = () => {
-    console.log("[Splash Startup Flow] Custom animation finished.");
     setSplashFinished(true);
   };
 
@@ -90,9 +75,11 @@ function RootLayoutContent() {
       <NotificationRegistrar ready={appIsReady && splashFinished} />
       <AuthProfileGuard />
 
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-      </Stack>
+      <AppSessionProviders>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+        </Stack>
+      </AppSessionProviders>
 
       {(!appIsReady || !splashFinished) && (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: '#09090b', zIndex: 99999 }]}>
@@ -116,7 +103,6 @@ function RootLayoutContent() {
 }
 
 export default function RootLayout() {
-  console.log("STEP 2: RootLayout started");
   return (
     <SafeAreaProvider>
       <AppErrorBoundary>

@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
-import { useRouter, usePathname } from "expo-router";
+import { useRouter, usePathname, useGlobalSearchParams } from "expo-router";
 import { supabase } from "../lib/supabaseClient";
 import { useProfile } from "./ProfileProvider";
 import { useNotifications, extractOrderPrefix } from "./NotificationProvider";
@@ -21,6 +21,7 @@ import { useChat } from "./ChatProvider";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "./ThemeProvider";
+import { isAdminUser } from "../lib/adminAccess";
 
 const { width } = Dimensions.get("window");
 
@@ -28,19 +29,22 @@ interface NavbarProps {
   role?: string;
 }
 
-export default function Navbar({ role }: NavbarProps) {
+export default function Navbar({ role: roleProp }: NavbarProps) {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useGlobalSearchParams<{ feature?: string | string[] }>();
+  const comingSoonFeature = Array.isArray(searchParams.feature)
+    ? searchParams.feature[0]
+    : searchParams.feature;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
-  const [isLibraryEnabled, setIsLibraryEnabled] = useState(true);
-  const [balance, setBalance] = useState(0);
-  const [userEmail, setUserEmail] = useState("");
 
-  const { fullName, avatarUrl } = useProfile();
+  const { fullName, avatarUrl, role: profileRole, email, balance } = useProfile();
+  const role = profileRole || roleProp;
+  const isAdmin = isAdminUser({ role, email });
   const {
     notifications,
     unreadCount,
@@ -81,10 +85,7 @@ export default function Navbar({ role }: NavbarProps) {
       setShowNotifs(false);
       const orderId = n.order_id || extractOrderPrefix(n.message);
       if (orderId) {
-        router.push({
-          pathname: "/dashboard/orders",
-          params: { orderId },
-        } as any);
+        router.push(`/dashboard/orders/${orderId}` as any);
       }
     },
     [markAsRead, router]
@@ -102,39 +103,6 @@ export default function Navbar({ role }: NavbarProps) {
     [deleteNotification]
   );
 
-  useEffect(() => {
-    const loadData = async () => {
-      // Library status
-      const { data: libData } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", "is_library_enabled")
-        .single();
-      if (libData) setIsLibraryEnabled(libData.value === "true");
-
-      // Balance + email
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email || "");
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("balance")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (profile) setBalance(profile.balance || 0);
-      }
-    };
-    loadData();
-  }, []);
-
-  const handleLogout = async () => {
-    setMenuOpen(false);
-    await supabase.auth.signOut();
-    router.replace("/auth/login" as any);
-  };
-
   const navLinks = useMemo(() => {
     const list = [
       {
@@ -149,11 +117,12 @@ export default function Navbar({ role }: NavbarProps) {
         icon: "printer",
         visible: true,
       },
+      // Always visible (matches website drawer). Opens Coming Soon until Library ships.
       {
-        href: "/library",
+        href: "/coming-soon?feature=library",
         label: "library",
         icon: "book-open",
-        visible: isLibraryEnabled,
+        visible: true,
       },
       {
         href: "/dashboard/orders",
@@ -169,7 +138,7 @@ export default function Navbar({ role }: NavbarProps) {
       },
     ];
 
-    if (role === "admin") {
+    if (isAdmin) {
       list.push({
         href: "/admin",
         label: "administration",
@@ -192,7 +161,7 @@ export default function Navbar({ role }: NavbarProps) {
         visible: true,
       },
       {
-        href: "/coming-soon",
+        href: "/dashboard/contact",
         label: "contact_us",
         icon: "mail",
         visible: true,
@@ -200,7 +169,13 @@ export default function Navbar({ role }: NavbarProps) {
     );
 
     return list.filter((l) => l.visible);
-  }, [role, isLibraryEnabled]);
+  }, [isAdmin]);
+
+  const handleLogout = async () => {
+    setMenuOpen(false);
+    await supabase.auth.signOut();
+    router.replace("/auth/login" as any);
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.cardBg }]}>
@@ -422,7 +397,7 @@ export default function Navbar({ role }: NavbarProps) {
                   {fullName || t("new_user")}
                 </Text>
                 <Text style={[styles.drawerProfileEmail, { color: themeColors.textMuted }]} numberOfLines={1}>
-                  {userEmail}
+                  {email}
                 </Text>
               </TouchableOpacity>
 
@@ -448,10 +423,40 @@ export default function Navbar({ role }: NavbarProps) {
               <ScrollView style={styles.drawerNav}>
                 <Text style={[styles.navHeader, { color: themeColors.textMuted }]}>{t("printing_services")}</Text>
                 {navLinks.map((link) => {
-                  const isActive = pathname === link.href;
+                  const isActive = (() => {
+                    if (link.label === "library") {
+                      return (
+                        pathname === "/library" ||
+                        pathname.startsWith("/library/") ||
+                        (pathname === "/coming-soon" &&
+                          comingSoonFeature === "library")
+                      );
+                    }
+                    if (link.label === "contact_us") {
+                      return (
+                        pathname === "/dashboard/contact" ||
+                        pathname.startsWith("/dashboard/contact/") ||
+                        (pathname === "/coming-soon" &&
+                          comingSoonFeature === "contact_us")
+                      );
+                    }
+                    if (link.label === "administration") {
+                      return (
+                        pathname === "/admin" || pathname.startsWith("/admin/")
+                      );
+                    }
+                    if (link.href.includes("?")) {
+                      return pathname === link.href.split("?")[0];
+                    }
+                    return (
+                      pathname === link.href ||
+                      (link.href !== "/dashboard" &&
+                        pathname.startsWith(link.href + "/"))
+                    );
+                  })();
                   return (
                     <TouchableOpacity
-                      key={link.href}
+                      key={`${link.label}-${link.href}`}
                       onPress={() => {
                         setMenuOpen(false);
                         router.push(link.href as any);

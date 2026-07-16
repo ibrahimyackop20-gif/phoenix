@@ -3,9 +3,14 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { supabase } from "../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../lib/realtimeChannel";
 
 interface ChatContextType {
   unreadChatCount: number;
@@ -26,8 +31,8 @@ export default function ChatProvider({
 }: {
   children: React.ReactNode;
 }) {
-  console.log("Entering ChatProvider");
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const refreshUnreadRef = useRef<() => Promise<void>>(async () => {});
 
   const refreshUnread = useCallback(async () => {
     try {
@@ -36,7 +41,6 @@ export default function ChatProvider({
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Fetch conversations where current user is a participant
       const { data: convs } = await supabase
         .from("conversations")
         .select("id")
@@ -49,7 +53,6 @@ export default function ChatProvider({
         return;
       }
 
-      // 2. Count unread messages not sent by current user in those conversations
       const { count } = await supabase
         .from("chat_messages")
         .select("*", { count: "exact", head: true })
@@ -63,6 +66,8 @@ export default function ChatProvider({
     }
   }, []);
 
+  refreshUnreadRef.current = refreshUnread;
+
   const markChatAsRead = useCallback(
     async (convId: string, countToSubtract?: number) => {
       try {
@@ -71,14 +76,11 @@ export default function ChatProvider({
         } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Optimistic UI update
         if (countToSubtract && countToSubtract > 0) {
           setUnreadChatCount((prev) => Math.max(0, prev - countToSubtract));
         }
 
-        console.log("💬 markChatAsRead: Current User ID =", user.id, "Active Conversation ID =", convId);
-
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("chat_messages")
           .update({ is_read: true })
           .eq("conversation_id", convId)
@@ -88,8 +90,6 @@ export default function ChatProvider({
 
         if (error) {
           console.error("❌ Supabase Mark-As-Read Error:", error);
-        } else {
-          console.log("✅ Successfully marked messages as read in DB:", data);
         }
 
         await refreshUnread();
@@ -100,35 +100,72 @@ export default function ChatProvider({
     [refreshUnread]
   );
 
+  // Subscribe once when a user is present — do not depend on refreshUnread
   useEffect(() => {
-    console.log("Provider initialized: ChatProvider");
-    refreshUnread();
+    let cancelled = false;
+    let channel: ReturnType<typeof createRealtimeChannel> | null = null;
 
-    // Real-time: listen for new and updated messages
-    const channel = supabase
-      .channel("chat-unread-rt-rn")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages" },
-        () => {
-          refreshUnread();
+    const setup = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      void refreshUnreadRef.current();
+
+      // channel → on → on → subscribe
+      channel = createRealtimeChannel("chat-unread-rt-rn")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "chat_messages" },
+          () => {
+            void refreshUnreadRef.current();
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "chat_messages" },
+          () => {
+            void refreshUnreadRef.current();
+          }
+        )
+        .subscribe();
+
+      if (cancelled) {
+        teardownRealtimeChannel(channel);
+        channel = null;
+      }
+    };
+
+    void setup();
+
+    const { data: authSub } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_OUT" || !session?.user) {
+          teardownRealtimeChannel(channel);
+          channel = null;
+          setUnreadChatCount(0);
+          return;
         }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "chat_messages" },
-        () => {
-          refreshUnread();
+        if (
+          (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
+          !channel
+        ) {
+          void setup();
+        } else if (session?.user) {
+          void refreshUnreadRef.current();
         }
-      )
-      .subscribe();
+      }
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      authSub.subscription.unsubscribe();
+      teardownRealtimeChannel(channel);
+      channel = null;
     };
-  }, [refreshUnread]);
+  }, []);
 
-  console.log("Leaving ChatProvider");
   return (
     <ChatContext.Provider
       value={{ unreadChatCount, refreshUnread, markChatAsRead }}

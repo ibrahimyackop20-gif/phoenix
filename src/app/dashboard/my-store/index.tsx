@@ -204,11 +204,11 @@ export default function MyStoreIndexScreen() {
               .single();
 
             if (profile?.role !== "admin") {
-              router.replace("/coming-soon" as any);
+              router.replace("/coming-soon?feature=my_store" as any);
               return;
             }
           } else {
-            router.replace("/coming-soon" as any);
+            router.replace("/coming-soon?feature=my_store" as any);
             return;
           }
         }

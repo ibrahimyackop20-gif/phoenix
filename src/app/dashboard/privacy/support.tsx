@@ -10,12 +10,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Feather, FontAwesome5 } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useAppTheme } from "@/../components/ThemeProvider";
+import { useTranslation } from "react-i18next";
 
 export default function ContactSupport() {
   const router = useRouter();
   const { themeColors } = useAppTheme();
+  const { t } = useTranslation();
 
   const handleContactLink = async (type: "email" | "whatsapp" | "telegram") => {
     let url = "";
@@ -39,11 +41,11 @@ export default function ContactSupport() {
         if (type === "whatsapp") {
           await Linking.openURL(`https://api.whatsapp.com/send?phone=9647800000000`);
         } else {
-          Alert.alert("تنبيه", "عذراً، لا يمكن فتح التطبيق المطلوبة على هذا الجهاز.");
+          Alert.alert(t("privacy_support_alert_title"), t("privacy_support_alert_cannot_open"));
         }
       }
     } catch (e) {
-      Alert.alert("خطأ", "فشل فتح قناة الاتصال المطلوبة.");
+      Alert.alert(t("privacy_support_error_title"), t("privacy_support_error_open"));
     }
   };
 
@@ -53,7 +55,7 @@ export default function ContactSupport() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-right" size={22} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>الدعم الفني والمساعدة</Text>
+        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>{t("privacy_support_appbar")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -62,9 +64,9 @@ export default function ContactSupport() {
           <View style={styles.iconWrapper}>
             <Feather name="message-square" size={32} color="#ea580c" />
           </View>
-          <Text style={[styles.title, { color: themeColors.text }]}>فريق الدعم الفني في خدمتك</Text>
+          <Text style={[styles.title, { color: themeColors.text }]}>{t("privacy_support_title")}</Text>
           <Text style={[styles.subtitle, { color: themeColors.textMuted }]}>
-            نسعد بالإجابة عن كافة استفساراتك وحل أي مشكلة تواجهك أثناء طباعة أو توصيل مستنداتك.
+            {t("privacy_support_subtitle")}
           </Text>
         </View>
 
@@ -78,9 +80,9 @@ export default function ContactSupport() {
               <Feather name="chevron-left" size={16} color={themeColors.textMuted} />
             </View>
             <View style={styles.cardInfo}>
-              <Text style={[styles.cardTitle, { color: themeColors.text }]}>تواصل عبر واتساب (WhatsApp)</Text>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("privacy_support_whatsapp_title")}</Text>
               <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
-                محادثة فورية وسريعة مع موظف خدمة العملاء لاستفسارات الطلبات.
+                {t("privacy_support_whatsapp_desc")}
               </Text>
             </View>
             <View style={[styles.channelIcon, { backgroundColor: "rgba(34, 197, 94, 0.08)" }]}>
@@ -97,9 +99,9 @@ export default function ContactSupport() {
               <Feather name="chevron-left" size={16} color={themeColors.textMuted} />
             </View>
             <View style={styles.cardInfo}>
-              <Text style={[styles.cardTitle, { color: themeColors.text }]}>تواصل عبر تليجرام (Telegram)</Text>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("privacy_support_telegram_title")}</Text>
               <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
-                أرسل استفسارك أو الملفات التي تواجه مشكلة في معالجتها مباشرة.
+                {t("privacy_support_telegram_desc")}
               </Text>
             </View>
             <View style={[styles.channelIcon, { backgroundColor: "rgba(14, 165, 233, 0.08)" }]}>
@@ -116,7 +118,7 @@ export default function ContactSupport() {
               <Feather name="chevron-left" size={16} color={themeColors.textMuted} />
             </View>
             <View style={styles.cardInfo}>
-              <Text style={[styles.cardTitle, { color: themeColors.text }]}>البريد الإلكتروني الرسمي</Text>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("privacy_support_email_title")}</Text>
               <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
                 support@phoenixprint.com
               </Text>
@@ -131,9 +133,9 @@ export default function ContactSupport() {
         <View style={[styles.infoCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <Feather name="clock" size={20} color="#ea580c" style={styles.infoIcon} />
           <View style={styles.infoTextContainer}>
-            <Text style={[styles.infoTitle, { color: themeColors.text }]}>ساعات عمل الدعم الفني:</Text>
+            <Text style={[styles.infoTitle, { color: themeColors.text }]}>{t("privacy_support_hours_title")}</Text>
             <Text style={[styles.infoText, { color: themeColors.textMuted }]}>
-              يومياً من الساعة 8:00 صباحاً وحتى الساعة 10:00 مساءً (توقيت العراق).
+              {t("privacy_support_hours_text")}
             </Text>
           </View>
         </View>

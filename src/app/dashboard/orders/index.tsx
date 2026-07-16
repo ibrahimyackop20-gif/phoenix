@@ -1,0 +1,576 @@
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  ScrollView,
+  I18nManager,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { supabase } from "../../../../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../../lib/realtimeChannel";
+import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import { useAppTheme } from "../../../../components/ThemeProvider";
+import StatusBadge from "../../../../components/StatusBadge";
+import {
+  displayOrderId,
+  formatOrderDate,
+  getLibraryStatusLabel,
+  getPrintStatusLabel,
+  getPrintTotal,
+  type LibraryOrder,
+  type PrintOrder,
+  type UnifiedOrder,
+} from "../../../../lib/ordersShared";
+
+type FilterType = "all" | "print" | "library";
+
+const PRINT_STATUS_KEYS: Record<string, string> = {
+  Pending: "pending",
+  Printing: "printing",
+  Completed: "completed",
+  Rejected: "status_rejected",
+  "Out for Delivery": "badge_out_delivery",
+};
+
+export default function OrdersScreen() {
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
+  const { themeColors, isDark } = useAppTheme();
+  const styles = getStyles(themeColors, isDark);
+  const { highlight, orderId } = useLocalSearchParams<{
+    highlight?: string;
+    orderId?: string;
+  }>();
+  const [orders, setOrders] = useState<UnifiedOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [bwPrice, setBwPrice] = useState(0);
+  const [colorPrice, setColorPrice] = useState(0);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const deepLinkHandled = useRef(false);
+  const rtl = i18n.language === "ar" || I18nManager.isRTL;
+
+  const triggerToast = (msg: string) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  const getPrintStatusLabelLocal = useCallback(
+    (status: string) => {
+      const key = PRINT_STATUS_KEYS[status];
+      return key ? t(key) : status;
+    },
+    [t]
+  );
+
+  const fetchOrders = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data: printData, error: printErr } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (printErr) {
+        console.error("Fetch Print Orders Error:", printErr.message);
+      }
+
+      const printOrders: PrintOrder[] = (printData || []).map((o: Omit<PrintOrder, "type">) => ({
+        ...o,
+        type: "print" as const,
+      }));
+
+      const { data: libData, error: libErr } = await supabase
+        .from("sales_orders")
+        .select("*")
+        .eq("buyer_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (libErr) {
+        console.error("Fetch Library Orders Error:", libErr.message);
+      }
+
+      const libOrders: LibraryOrder[] = (libData || []).map((o: Omit<LibraryOrder, "type">) => ({
+        ...o,
+        type: "library" as const,
+      }));
+
+      const merged = [...printOrders, ...libOrders].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setOrders(merged);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
+    triggerToast(t("orders_toast_refreshed"));
+  };
+
+  const openOrderDetail = useCallback(
+    (order: UnifiedOrder) => {
+      router.push(`/dashboard/orders/${order.id}` as any);
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    if (orders.length === 0 || deepLinkHandled.current) return;
+
+    const deepId = orderId
+      ? String(Array.isArray(orderId) ? orderId[0] : orderId)
+      : highlight
+      ? String(Array.isArray(highlight) ? highlight[0] : highlight).toUpperCase()
+      : null;
+
+    if (!deepId) return;
+
+    const match = orders.find(
+      (o) =>
+        o.id === deepId || o.id.slice(0, 8).toUpperCase() === deepId.toUpperCase()
+    );
+    if (match) {
+      deepLinkHandled.current = true;
+      if (match.type === "library") setFilter("library");
+      else if (match.type === "print") setFilter("print");
+      openOrderDetail(match);
+    }
+  }, [highlight, orderId, orders, openOrderDetail]);
+
+  useEffect(() => {
+    fetchOrders();
+
+    const loadPrices = async () => {
+      try {
+        const { data: settings } = await supabase
+          .from("site_settings")
+          .select("key, value")
+          .in("key", ["bw_page_price", "color_page_price"]);
+
+        if (settings) {
+          for (const s of settings) {
+            if (s.key === "bw_page_price") setBwPrice(Number(s.value) || 0);
+            if (s.key === "color_page_price") setColorPrice(Number(s.value) || 0);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadPrices();
+
+    const printChannel = createRealtimeChannel("student-orders-realtime-rn")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            const updated = payload.new as Record<string, unknown>;
+            setOrders((prev) =>
+              prev.map((order) =>
+                order.id === updated.id
+                  ? ({ ...order, ...updated, type: "print" as const } as PrintOrder)
+                  : order
+              )
+            );
+            const newStatus = String(updated.status || "");
+            triggerToast(
+              t("orders_toast_print_status", {
+                status: getPrintStatusLabelLocal(newStatus),
+              })
+            );
+          } else if (payload.eventType === "INSERT") {
+            fetchOrders();
+          }
+        }
+      )
+      .subscribe();
+
+    const libChannel = createRealtimeChannel("my-purchases-rt-rn")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "sales_orders" },
+        (payload) => {
+          const updated = payload.new as Record<string, unknown>;
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === updated.id
+                ? ({ ...o, ...updated, type: "library" as const } as LibraryOrder)
+                : o
+            )
+          );
+          triggerToast(t("orders_toast_library_updated"));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      teardownRealtimeChannel(printChannel);
+      teardownRealtimeChannel(libChannel);
+    };
+  }, [t, getPrintStatusLabelLocal]);
+
+  const filteredOrders = useMemo(() => {
+    return filter === "all" ? orders : orders.filter((o) => o.type === filter);
+  }, [orders, filter]);
+
+  const printCount = useMemo(() => orders.filter((o) => o.type === "print").length, [orders]);
+  const libCount = useMemo(() => orders.filter((o) => o.type === "library").length, [orders]);
+
+  const getOrderPrice = (item: UnifiedOrder) => {
+    if (item.type === "library") {
+      return `${item.total.toLocaleString()} ${t("currency")}`;
+    }
+    return `${getPrintTotal(item, bwPrice, colorPrice).toLocaleString()} ${t("currency")}`;
+  };
+
+  const getOrderStatus = (item: UnifiedOrder) => {
+    if (item.type === "print") return getPrintStatusLabel(item.status, t);
+    return getLibraryStatusLabel(item.status, t);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ea580c" />
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {successMsg && (
+        <View style={styles.toastSuccess}>
+          <Text style={styles.toastText}>{successMsg}</Text>
+        </View>
+      )}
+
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleRefresh} disabled={refreshing} style={styles.refreshButton}>
+          <Feather name="refresh-cw" size={16} color={themeColors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={[styles.title, { color: themeColors.text }]}>{t("my_orders")}</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textMuted }]}>{t("my_orders_desc")}</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabsRow}
+      >
+        <TouchableOpacity
+          onPress={() => setFilter("all")}
+          style={[styles.tabButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }, filter === "all" && styles.tabButtonActive]}
+        >
+          <Feather name="filter" size={12} color={filter === "all" ? "#ffffff" : themeColors.textMuted} style={styles.tabIcon} />
+          <Text style={[styles.tabText, { color: themeColors.textMuted }, filter === "all" && styles.tabTextActive]}>
+            {t("all")} ({orders.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setFilter("print")}
+          style={[styles.tabButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }, filter === "print" && styles.tabButtonActivePrint]}
+        >
+          <Feather name="printer" size={12} color={filter === "print" ? "#ffffff" : themeColors.textMuted} style={styles.tabIcon} />
+          <Text style={[styles.tabText, { color: themeColors.textMuted }, filter === "print" && styles.tabTextActive]}>
+            {t("printing_services")} ({printCount})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setFilter("library")}
+          style={[styles.tabButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }, filter === "library" && styles.tabButtonActiveLib]}
+        >
+          <Feather name="shopping-bag" size={12} color={filter === "library" ? "#ffffff" : themeColors.textMuted} style={styles.tabIcon} />
+          <Text style={[styles.tabText, { color: themeColors.textMuted }, filter === "library" && styles.tabTextActive]}>
+            {t("my_purchases")} ({libCount})
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {filteredOrders.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Feather name="package" size={64} color={themeColors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: themeColors.text }]}>{t("no_orders")}</Text>
+          <Text style={[styles.emptySubtitle, { color: themeColors.textMuted }]}>
+            {filter === "print"
+              ? t("no_print_orders")
+              : filter === "library"
+              ? t("no_library_orders")
+              : t("orders_empty_hint")}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredOrders}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => {
+            const isPrint = item.type === "print";
+            const updatedAt = item.updated_at || item.created_at;
+
+            return (
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => openOrderDetail(item)}
+                style={[styles.orderCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
+              >
+                <View style={styles.cardTop}>
+                  <View style={styles.cardTopLeft}>
+                    {isPrint ? (
+                      <View style={styles.printTag}>
+                        <Feather name="printer" size={10} color="#60a5fa" />
+                        <Text style={styles.printTagText}>{t("print_order")}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.libTag}>
+                        <Feather name="shopping-bag" size={10} color="#34d399" />
+                        <Text style={styles.libTagText}>{t("library_purchase")}</Text>
+                      </View>
+                    )}
+                    {isPrint ? (
+                      <StatusBadge status={item.status} />
+                    ) : (
+                      <View style={styles.libStatusPill}>
+                        <Text style={styles.libStatusText}>{getOrderStatus(item)}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Feather
+                    name={rtl ? "chevron-left" : "chevron-right"}
+                    size={20}
+                    color={themeColors.textMuted}
+                    style={styles.chevron}
+                  />
+                </View>
+
+                <Text style={[styles.orderNumber, { color: themeColors.text }]}>
+                  {displayOrderId(item.id)}
+                </Text>
+
+                <View style={styles.metaGrid}>
+                  <View style={styles.metaItem}>
+                    <Text style={[styles.metaLabel, { color: themeColors.textMuted }]}>
+                      {t("order_detail_price")}
+                    </Text>
+                    <Text style={[styles.metaValue, { color: "#ea580c" }]}>{getOrderPrice(item)}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Text style={[styles.metaLabel, { color: themeColors.textMuted }]}>
+                      {t("order_list_status")}
+                    </Text>
+                    <Text style={[styles.metaValue, { color: themeColors.text }]}>
+                      {getOrderStatus(item)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.datesRow}>
+                  <View style={styles.dateCol}>
+                    <Text style={[styles.dateLabel, { color: themeColors.textMuted }]}>
+                      {t("order_detail_created")}
+                    </Text>
+                    <Text style={[styles.dateValue, { color: themeColors.text }]}>
+                      {formatOrderDate(item.created_at, i18n.language)}
+                    </Text>
+                  </View>
+                  <View style={styles.dateCol}>
+                    <Text style={[styles.dateLabel, { color: themeColors.textMuted }]}>
+                      {t("orders_list_updated")}
+                    </Text>
+                    <Text style={[styles.dateValue, { color: themeColors.text }]}>
+                      {formatOrderDate(updatedAt, i18n.language)}
+                    </Text>
+                  </View>
+                </View>
+
+                {isPrint && item.status === "Rejected" && (
+                  <View style={styles.rejectedNotice}>
+                    <Text style={styles.rejectedNoticeText}>{t("order_rejected_note")}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
+    </SafeAreaView>
+  );
+}
+
+const getStyles = (themeColors: { background: string; cardBg: string; cardBorder: string; text: string; textMuted: string }, isDark: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: themeColors.background },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    toastSuccess: {
+      backgroundColor: "rgba(52, 211, 153, 0.1)",
+      borderColor: "rgba(52, 211, 153, 0.2)",
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 14,
+      marginHorizontal: 20,
+      marginTop: 10,
+    },
+    toastText: { color: themeColors.text, fontSize: 13, textAlign: "center" },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 12,
+    },
+    refreshButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: themeColors.cardBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerText: { alignItems: "flex-end" },
+    title: { fontSize: 24, fontWeight: "bold" },
+    subtitle: { fontSize: 12, marginTop: 4 },
+    tabsRow: {
+      flexDirection: "row-reverse",
+      paddingHorizontal: 20,
+      gap: 8,
+      height: 46,
+      marginBottom: 16,
+    },
+    tabButton: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 38,
+    },
+    tabButtonActive: { backgroundColor: "#ea580c", borderColor: "#ea580c" },
+    tabButtonActivePrint: { backgroundColor: "#3b82f6", borderColor: "#3b82f6" },
+    tabButtonActiveLib: { backgroundColor: "#10b981", borderColor: "#10b981" },
+    tabIcon: { marginLeft: 6 },
+    tabText: { fontSize: 12, fontWeight: "bold" },
+    tabTextActive: { color: "#ffffff" },
+    emptyCard: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
+    emptyTitle: { fontSize: 16, fontWeight: "bold", marginTop: 16, marginBottom: 8 },
+    emptySubtitle: { fontSize: 13, textAlign: "center", lineHeight: 18 },
+    listContent: { paddingHorizontal: 20, paddingBottom: 40 },
+    orderCard: {
+      borderWidth: 1,
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 14,
+    },
+    cardTop: {
+      flexDirection: "row-reverse",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    cardTopLeft: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 8,
+      flex: 1,
+    },
+    chevron: { marginRight: 4 },
+    printTag: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: "rgba(96, 165, 250, 0.1)",
+      borderColor: "rgba(96, 165, 250, 0.2)",
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    printTagText: { color: "#60a5fa", fontSize: 10, fontWeight: "bold" },
+    libTag: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: "rgba(52, 211, 153, 0.1)",
+      borderColor: "rgba(52, 211, 153, 0.2)",
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    libTagText: { color: "#34d399", fontSize: 10, fontWeight: "bold" },
+    libStatusPill: {
+      backgroundColor: isDark ? "rgba(52,211,153,0.1)" : "rgba(52,211,153,0.08)",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    libStatusText: { color: "#34d399", fontSize: 10, fontWeight: "600" },
+    orderNumber: {
+      fontSize: 17,
+      fontWeight: "700",
+      fontFamily: "monospace",
+      textAlign: "right",
+      marginBottom: 12,
+    },
+    metaGrid: {
+      flexDirection: "row-reverse",
+      gap: 12,
+      marginBottom: 12,
+    },
+    metaItem: { flex: 1, alignItems: "flex-end" },
+    metaLabel: { fontSize: 10, marginBottom: 2 },
+    metaValue: { fontSize: 13, fontWeight: "700" },
+    datesRow: {
+      flexDirection: "row-reverse",
+      gap: 12,
+      borderTopWidth: 1,
+      borderTopColor: themeColors.cardBorder,
+      paddingTop: 10,
+    },
+    dateCol: { flex: 1, alignItems: "flex-end" },
+    dateLabel: { fontSize: 10, marginBottom: 2 },
+    dateValue: { fontSize: 11, fontWeight: "500" },
+    rejectedNotice: {
+      backgroundColor: "rgba(239, 68, 68, 0.1)",
+      borderColor: "rgba(239, 68, 68, 0.2)",
+      borderWidth: 1,
+      borderRadius: 10,
+      padding: 10,
+      marginTop: 10,
+    },
+    rejectedNoticeText: { color: "#ef4444", fontSize: 11, textAlign: "center" },
+  });

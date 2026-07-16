@@ -16,6 +16,7 @@ import { Slot, useRouter, usePathname } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import AdminPushProvider from "../../../components/AdminPushProvider";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { isPrimaryAdminEmail, resolveAuthEmail } from "../../../lib/adminAccess";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
@@ -59,20 +60,18 @@ export default function AdminLayout() {
           return;
         }
 
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("full_name, role, email")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        const isUserAdmin = profileData?.role === "admin";
-
-        if (!isUserAdmin) {
+        if (!isPrimaryAdminEmail(resolveAuthEmail(session.user))) {
           if (active) {
             router.replace("/dashboard" as any);
           }
           return;
         }
+
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("full_name, role, email")
+          .eq("id", session.user.id)
+          .maybeSingle();
 
         if (active) {
           setProfile(profileData);

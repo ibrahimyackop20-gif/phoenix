@@ -1,5 +1,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
+import i18n from "../i18n";
+import { useAppTheme } from "./ThemeProvider";
 
 interface Props {
   children: ReactNode;
@@ -8,6 +10,28 @@ interface Props {
 interface State {
   hasError: boolean;
   message: string;
+}
+
+function ErrorFallbackUI({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  const { themeColors } = useAppTheme();
+  const styles = getStyles(themeColors);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>{i18n.t("err_startup_title")}</Text>
+      <Text style={styles.body}>{i18n.t("err_startup_body")}</Text>
+      {!!message && <Text style={styles.detail}>{message}</Text>}
+      <Pressable style={styles.button} onPress={onRetry}>
+        <Text style={styles.buttonText}>{i18n.t("err_retry")}</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 /**
@@ -20,7 +44,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromError(error: Error): State {
     return {
       hasError: true,
-      message: error?.message || "Unexpected startup error",
+      message: error?.message || i18n.t("err_unexpected"),
     };
   }
 
@@ -35,18 +59,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <View style={styles.container}>
-          <Text style={styles.title}>تعذر تشغيل التطبيق</Text>
-          <Text style={styles.body}>
-            حدث خطأ أثناء بدء التشغيل. يمكنك إعادة المحاولة دون إغلاق التطبيق.
-          </Text>
-          {!!this.state.message && (
-            <Text style={styles.detail}>{this.state.message}</Text>
-          )}
-          <Pressable style={styles.button} onPress={this.handleRetry}>
-            <Text style={styles.buttonText}>إعادة المحاولة</Text>
-          </Pressable>
-        </View>
+        <ErrorFallbackUI message={this.state.message} onRetry={this.handleRetry} />
       );
     }
 
@@ -54,43 +67,45 @@ export default class AppErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#09090b",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  title: {
-    color: "#f97316",
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  body: {
-    color: "#a1a1aa",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  detail: {
-    color: "#71717a",
-    fontSize: 11,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: "#ea580c",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-});
+const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    title: {
+      color: "#f97316",
+      fontSize: 20,
+      fontWeight: "700",
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    body: {
+      color: themeColors.textMuted,
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 22,
+      marginBottom: 16,
+    },
+    detail: {
+      color: themeColors.textMuted,
+      fontSize: 11,
+      textAlign: "center",
+      marginBottom: 20,
+      opacity: 0.8,
+    },
+    button: {
+      backgroundColor: "#ea580c",
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    buttonText: {
+      color: "#fff",
+      fontWeight: "700",
+      fontSize: 15,
+    },
+  });

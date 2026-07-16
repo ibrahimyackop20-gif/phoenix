@@ -1,42 +1,54 @@
 import React, { useEffect, useRef } from "react";
 import { StyleSheet, Text, View, Animated } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface StatusBadgeProps {
   status: string;
 }
 
-const statusConfig: Record<
+const STATUS_KEYS: Record<string, string> = {
+  Pending: "badge_pending",
+  Printing: "badge_printing",
+  Completed: "badge_completed",
+  Rejected: "badge_rejected",
+  "Out for Delivery": "badge_out_delivery",
+};
+
+const statusColors: Record<
   string,
-  { label: string; color: string; bg: string; border: string }
+  { color: string; bg: string; border: string }
 > = {
   Pending: {
-    label: "قيد الانتظار",
-    color: "#fbbf24", // text-amber-400
-    bg: "rgba(251, 191, 36, 0.1)", // bg-amber-400/10
-    border: "rgba(251, 191, 36, 0.2)", // border-amber-400/20
+    color: "#fbbf24",
+    bg: "rgba(251, 191, 36, 0.1)",
+    border: "rgba(251, 191, 36, 0.2)",
   },
   Printing: {
-    label: "جاري الطباعة",
-    color: "#60a5fa", // text-blue-400
-    bg: "rgba(96, 165, 250, 0.1)", // bg-blue-400/10
-    border: "rgba(96, 165, 250, 0.2)", // border-blue-400/20
+    color: "#60a5fa",
+    bg: "rgba(96, 165, 250, 0.1)",
+    border: "rgba(96, 165, 250, 0.2)",
   },
   Completed: {
-    label: "مكتمل",
-    color: "#34d399", // text-emerald-400
-    bg: "rgba(52, 211, 153, 0.1)", // bg-emerald-400/10
-    border: "rgba(52, 211, 153, 0.2)", // border-emerald-400/20
+    color: "#34d399",
+    bg: "rgba(52, 211, 153, 0.1)",
+    border: "rgba(52, 211, 153, 0.2)",
   },
   Rejected: {
-    label: "مرفوض",
-    color: "#f87171", // text-red-400
-    bg: "rgba(248, 113, 113, 0.1)", // bg-red-400/10
-    border: "rgba(248, 113, 113, 0.2)", // border-red-400/20
+    color: "#f87171",
+    bg: "rgba(248, 113, 113, 0.1)",
+    border: "rgba(248, 113, 113, 0.2)",
+  },
+  "Out for Delivery": {
+    color: "#a78bfa",
+    bg: "rgba(167, 139, 250, 0.1)",
+    border: "rgba(167, 139, 250, 0.2)",
   },
 };
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status] || statusConfig.Pending;
+  const { t } = useTranslation();
+  const colors = statusColors[status] || statusColors.Pending;
+  const labelKey = STATUS_KEYS[status] || STATUS_KEYS.Pending;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -67,8 +79,8 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
       style={[
         styles.badge,
         {
-          backgroundColor: config.bg,
-          borderColor: config.border,
+          backgroundColor: colors.bg,
+          borderColor: colors.border,
         },
       ]}
     >
@@ -76,12 +88,12 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
         style={[
           styles.dot,
           {
-            backgroundColor: config.color,
+            backgroundColor: colors.color,
             opacity: status === "Pending" ? pulseAnim : 1,
           },
         ]}
       />
-      <Text style={[styles.text, { color: config.color }]}>{config.label}</Text>
+      <Text style={[styles.text, { color: colors.color }]}>{t(labelKey)}</Text>
     </View>
   );
 }

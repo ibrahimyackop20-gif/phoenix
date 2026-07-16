@@ -4,15 +4,24 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../lib/realtimeChannel";
+import { resolveAuthEmail } from "../lib/adminAccess";
 
 interface ProfileContextType {
   fullName: string;
   avatarUrl: string | null;
   role: string;
+  email: string;
   balance: number;
+  profileReady: boolean;
   refreshProfile: () => Promise<void>;
 }
 
@@ -20,7 +29,9 @@ const ProfileContext = createContext<ProfileContextType>({
   fullName: "",
   avatarUrl: null,
   role: "",
+  email: "",
   balance: 0,
+  profileReady: false,
   refreshProfile: async () => {},
 });
 
@@ -33,7 +44,9 @@ interface ProfileProviderProps {
   initialName: string;
   initialAvatar: string | null;
   initialRole: string;
+  initialEmail?: string;
   initialBalance?: number;
+  profileReady?: boolean;
 }
 
 export default function ProfileProvider({
@@ -41,17 +54,26 @@ export default function ProfileProvider({
   initialName,
   initialAvatar,
   initialRole,
+  initialEmail = "",
   initialBalance = 0,
+  profileReady = false,
 }: ProfileProviderProps) {
-  console.log("Entering ProfileProvider");
   const [fullName, setFullName] = useState(initialName);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatar);
   const [role, setRole] = useState(initialRole);
+  const [email, setEmail] = useState(initialEmail);
   const [balance, setBalance] = useState(initialBalance);
+  const [ready, setReady] = useState(profileReady);
 
+  // Keep state in sync if parent re-provides initials after auth fetch
   useEffect(() => {
-    console.log("Provider initialized: ProfileProvider");
-  }, []);
+    setFullName(initialName);
+    setAvatarUrl(initialAvatar);
+    setRole(initialRole);
+    setEmail(initialEmail);
+    setBalance(initialBalance);
+    setReady(profileReady);
+  }, [initialName, initialAvatar, initialRole, initialEmail, initialBalance, profileReady]);
 
   const refreshProfile = useCallback(async () => {
     try {
@@ -59,6 +81,8 @@ export default function ProfileProvider({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      setEmail(resolveAuthEmail(user));
 
       const { data, error } = await supabase
         .from("profiles")
@@ -76,27 +100,35 @@ export default function ProfileProvider({
         setAvatarUrl(data.avatar_url || null);
         setBalance(data.balance ?? 0);
         if (typeof data.role === "string") setRole(data.role);
+        setReady(true);
       }
     } catch (err) {
       console.error("❌ ProfileProvider refreshProfile exception:", err);
     }
   }, []);
 
-  // Real-time balance subscription
+  // Real-time profile/balance — channel → on → subscribe; never .on() after .subscribe()
   useEffect(() => {
-    let userId: string | null = null;
-    let channel: any = null;
+    let cancelled = false;
+    let channel: RealtimeChannel | null = null;
 
-    const setupSub = async () => {
+    const teardown = () => {
+      teardownRealtimeChannel(channel);
+      channel = null;
+    };
+
+    const setup = async () => {
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) return;
-        userId = user.id;
+        if (!user || cancelled) {
+          teardown();
+          return;
+        }
 
-        channel = supabase
-          .channel("profile-balance-rt-rn")
+        // Replace any prior topic, then bind handlers before subscribe
+        channel = createRealtimeChannel("profile-balance-rt-rn")
           .on(
             "postgres_changes",
             {
@@ -121,26 +153,41 @@ export default function ProfileProvider({
             }
           )
           .subscribe();
+
+        if (cancelled) teardown();
       } catch (err) {
         console.error("❌ ProfileProvider real-time setup error:", err);
       }
     };
 
-    setupSub();
+    void setup();
+
+    const { data: authSub } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_OUT" || !session?.user) {
+          setEmail("");
+          teardown();
+          return;
+        }
+        setEmail(resolveAuthEmail(session.user));
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          void setup();
+        }
+      }
+    );
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      cancelled = true;
+      authSub.subscription.unsubscribe();
+      teardown();
     };
   }, []);
 
   const value = useMemo(
-    () => ({ fullName, avatarUrl, role, balance, refreshProfile }),
-    [fullName, avatarUrl, role, balance, refreshProfile]
+    () => ({ fullName, avatarUrl, role, email, balance, profileReady: ready, refreshProfile }),
+    [fullName, avatarUrl, role, email, balance, ready, refreshProfile]
   );
 
-  console.log("Leaving ProfileProvider");
   return (
     <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>
   );

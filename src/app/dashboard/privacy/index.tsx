@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -15,17 +15,83 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/../components/ThemeProvider";
 import * as ExpoPrint from "expo-print";
 import * as ExpoSharing from "expo-sharing";
+import { useTranslation } from "react-i18next";
 
 export default function PrivacyCenter() {
   const router = useRouter();
   const { themeColors } = useAppTheme();
+  const { t, i18n } = useTranslation();
   const [downloading, setDownloading] = useState(false);
+
+  const menuItems = useMemo(
+    () => [
+      {
+        title: t("privacy_menu_policy_title"),
+        description: t("privacy_menu_policy_desc"),
+        icon: "shield",
+        route: "/dashboard/privacy/policy",
+        color: "#ea580c",
+      },
+      {
+        title: t("privacy_menu_terms_title"),
+        description: t("privacy_menu_terms_desc"),
+        icon: "file-text",
+        route: "/dashboard/privacy/terms",
+        color: "#ea580c",
+      },
+      {
+        title: t("privacy_menu_permissions_title"),
+        description: t("privacy_menu_permissions_desc"),
+        icon: "key",
+        route: "/dashboard/privacy/permissions",
+        color: "#ea580c",
+      },
+      {
+        title: t("privacy_menu_support_title"),
+        description: t("privacy_menu_support_desc"),
+        icon: "help-circle",
+        route: "/dashboard/privacy/support",
+        color: "#ea580c",
+      },
+      {
+        title: t("privacy_menu_about_title"),
+        description: t("privacy_menu_about_desc"),
+        icon: "info",
+        route: "/dashboard/privacy/about",
+        color: "#ea580c",
+      },
+    ],
+    [t, i18n.language]
+  );
 
   const handleDownloadData = async () => {
     setDownloading(true);
     try {
+      const dateLocale = i18n.language === "ar" ? "ar-EG" : "en-US";
+      const htmlDir = i18n.language === "ar" ? "rtl" : "ltr";
+      const htmlLang = i18n.language === "ar" ? "ar" : "en";
+
+      const mapOrderStatus = (status: string) => {
+        switch (status) {
+          case "Pending":
+            return t("privacy_export_status_pending");
+          case "Printing":
+            return t("privacy_export_status_printing");
+          case "Completed":
+            return t("privacy_export_status_completed");
+          default:
+            return t("privacy_export_status_cancelled");
+        }
+      };
+
+      const mapRole = (role: string | undefined) => {
+        if (role === "student") return t("privacy_export_role_student");
+        if (role === "admin") return t("privacy_export_role_admin");
+        return t("privacy_export_role_library");
+      };
+
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("لم يتم العثور على جلسة مستخدم نشطة");
+      if (!user) throw new Error(t("privacy_export_no_session"));
 
       // Fetch Profile
       const { data: profile } = await supabase
@@ -48,7 +114,7 @@ export default function PrivacyCenter() {
 
       // Generate HTML Template
       const htmlContent = `
-        <html dir="rtl" lang="ar">
+        <html dir="${htmlDir}" lang="${htmlLang}">
           <head>
             <meta charset="utf-8">
             <style>
@@ -64,32 +130,32 @@ export default function PrivacyCenter() {
             </style>
           </head>
           <body>
-            <h1>تقرير البيانات الشخصية - تطبيق Phoenix Print</h1>
-            <div class="meta">تم تصدير هذا التقرير بتاريخ: ${new Date().toLocaleDateString('ar-EG')}</div>
+            <h1>${t("privacy_export_report_title")}</h1>
+            <div class="meta">${t("privacy_export_report_date", { date: new Date().toLocaleDateString(dateLocale) })}</div>
             
             <div class="section">
-              <h2>1. بيانات الملف الشخصي الأساسية</h2>
+              <h2>${t("privacy_export_section_profile")}</h2>
               <table>
-                <tr><th>معرف المستخدم الفريد (UUID)</th><td>${user.id}</td></tr>
-                <tr><th>البريد الإلكتروني</th><td>${user.email || "غير متوفر"}</td></tr>
-                <tr><th>الاسم الكامل</th><td>${profile?.full_name || "غير متوفر"}</td></tr>
-                <tr><th>رقم الهاتف</th><td>${profile?.phone_number || "غير متوفر"}</td></tr>
-                <tr><th>فئة الحساب</th><td>${profile?.role === "student" ? "طالب" : profile?.role === "admin" ? "مسؤول" : "عضو المكتبة"}</td></tr>
-                <tr><th>الرصيد الحالي</th><td>${profile?.balance || 0} د.ع</td></tr>
-                <tr><th>تاريخ الانضمام</th><td>${profile?.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : "غير معروف"}</td></tr>
+                <tr><th>${t("privacy_export_uuid")}</th><td>${user.id}</td></tr>
+                <tr><th>${t("privacy_export_email")}</th><td>${user.email || t("privacy_export_na")}</td></tr>
+                <tr><th>${t("privacy_export_full_name")}</th><td>${profile?.full_name || t("privacy_export_na")}</td></tr>
+                <tr><th>${t("privacy_export_phone")}</th><td>${profile?.phone_number || t("privacy_export_na")}</td></tr>
+                <tr><th>${t("privacy_export_role")}</th><td>${mapRole(profile?.role)}</td></tr>
+                <tr><th>${t("privacy_export_balance")}</th><td>${profile?.balance || 0} ${t("currency")}</td></tr>
+                <tr><th>${t("privacy_export_joined")}</th><td>${profile?.created_at ? new Date(profile.created_at).toLocaleDateString(dateLocale) : t("privacy_export_unknown")}</td></tr>
               </table>
             </div>
 
             <div class="section">
-              <h2>2. العناوين الجغرافية المسجلة للتوصيل</h2>
+              <h2>${t("privacy_export_section_addresses")}</h2>
               ${addresses && addresses.length > 0 ? `
                 <table>
                   <thead>
                     <tr>
-                      <th>اسم العنوان</th>
-                      <th>المنطقة</th>
-                      <th>أقرب نقطة دالة</th>
-                      <th>رقم الهاتف للتوصيل</th>
+                      <th>${t("privacy_export_addr_title")}</th>
+                      <th>${t("privacy_export_addr_area")}</th>
+                      <th>${t("privacy_export_addr_landmark")}</th>
+                      <th>${t("privacy_export_addr_phone")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -97,43 +163,43 @@ export default function PrivacyCenter() {
                       <tr>
                         <td><strong>${a.title}</strong></td>
                         <td>${a.area}</td>
-                        <td>${a.nearby_landmark || "لا يوجد"}</td>
+                        <td>${a.nearby_landmark || t("privacy_export_no_landmark")}</td>
                         <td>${a.phone_number}</td>
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
-              ` : '<p style="color: #71717a; font-style: italic;">لم تقم بإضافة أي عناوين جغرافية مسجلة بعد.</p>'}
+              ` : `<p style="color: #71717a; font-style: italic;">${t("privacy_export_no_addresses")}</p>`}
             </div>
 
             <div class="section">
-              <h2>3. سجل طلبات الطباعة والخدمات</h2>
+              <h2>${t("privacy_export_section_orders")}</h2>
               ${orders && orders.length > 0 ? `
                 <table>
                   <thead>
                     <tr>
-                      <th>رقم الطلب</th>
-                      <th>حالة الطلب</th>
-                      <th>تاريخ تقديم الطلب</th>
-                      <th>التكلفة الكلية</th>
+                      <th>${t("privacy_export_order_id")}</th>
+                      <th>${t("privacy_export_order_status")}</th>
+                      <th>${t("privacy_export_order_date")}</th>
+                      <th>${t("privacy_export_order_total")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${orders.map((o: any) => `
                       <tr>
                         <td><code>${o.id.substring(0, 8)}...</code></td>
-                        <td>${o.status === "Pending" ? "قيد الانتظار" : o.status === "Printing" ? "جاري الطباعة" : o.status === "Completed" ? "مكتمل" : "ملغي"}</td>
-                        <td>${new Date(o.created_at).toLocaleDateString('ar-EG')}</td>
-                        <td>${o.total_price || 0} د.ع</td>
+                        <td>${mapOrderStatus(o.status)}</td>
+                        <td>${new Date(o.created_at).toLocaleDateString(dateLocale)}</td>
+                        <td>${o.total_price || 0} ${t("currency")}</td>
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
-              ` : '<p style="color: #71717a; font-style: italic;">لا توجد أي طلبات طباعة مسجلة في حسابك.</p>'}
+              ` : `<p style="color: #71717a; font-style: italic;">${t("privacy_export_no_orders")}</p>`}
             </div>
 
             <div class="footer">
-              تطبيق Phoenix Print للطباعة الذكية للطلاب • كافة البيانات مشفرة وتخضع لسياسات اللائحة العامة لحماية البيانات (GDPR)
+              ${t("privacy_export_footer")}
             </div>
           </body>
         </html>
@@ -145,55 +211,17 @@ export default function PrivacyCenter() {
       // Share PDF
       await ExpoSharing.shareAsync(uri, {
         mimeType: "application/pdf",
-        dialogTitle: "تنزيل تقرير بياناتي",
+        dialogTitle: t("privacy_export_dialog_title"),
         UTI: "com.adobe.pdf"
       });
 
     } catch (err: any) {
       console.error(err);
-      Alert.alert("خطأ", "حدث خطأ أثناء إعداد وتصدير بياناتك الشخصية: " + err.message);
+      Alert.alert(t("privacy_export_error_title"), t("privacy_export_error_prefix") + err.message);
     } finally {
       setDownloading(false);
     }
   };
-
-  const menuItems = [
-    {
-      title: "سياسة الخصوصية",
-      description: "اقرأ بالتفصيل البيانات التي نجمعها وكيف نؤمنها.",
-      icon: "shield",
-      route: "/dashboard/privacy/policy",
-      color: "#ea580c",
-    },
-    {
-      title: "شروط الاستخدام والخدمة",
-      description: "الضوابط القانونية والمسؤوليات الخاصة باستخدام التطبيق.",
-      icon: "file-text",
-      route: "/dashboard/privacy/terms",
-      color: "#ea580c",
-    },
-    {
-      title: "إدارة تراخيص صلاحيات الجهاز",
-      description: "فحص وتعديل صلاحيات الوصول مثل الملفات والإشعارات.",
-      icon: "key",
-      route: "/dashboard/privacy/permissions",
-      color: "#ea580c",
-    },
-    {
-      title: "الدعم والمساعدة التقنية",
-      description: "تواصل معنا مباشرة عبر البريد الإلكتروني أو تليجرام أو واتساب.",
-      icon: "help-circle",
-      route: "/dashboard/privacy/support",
-      color: "#ea580c",
-    },
-    {
-      title: "معلومات وتراخيص التطبيق",
-      description: "رقم الإصدار، تفاصيل المطور وتراخيص المصادر المفتوحة.",
-      icon: "info",
-      route: "/dashboard/privacy/about",
-      color: "#ea580c",
-    },
-  ];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -201,13 +229,13 @@ export default function PrivacyCenter() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-right" size={22} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>مركز الخصوصية والأمان</Text>
+        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>{t("privacy_center_title")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionDesc, { color: themeColors.textMuted }]}>
-          ندير بياناتك الشخصية بكل شفافية وموثوقية عالية. يمكنك من هنا قراءة السياسات، تعديل تراخيص الوصول، أو تصدير وحذف حسابك بالكامل.
+          {t("privacy_center_desc")}
         </Text>
 
         <View style={styles.listContainer}>
@@ -240,9 +268,9 @@ export default function PrivacyCenter() {
               <Feather name="chevron-left" size={16} color={themeColors.textMuted} />
             )}
             <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: themeColors.text }]}>تصدير وتنزيل كافة بياناتي</Text>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("privacy_export_title")}</Text>
               <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
-                تحميل نسخة شاملة من ملفك الشخصي وعناوينك وطلباتك بصيغة PDF.
+                {t("privacy_export_desc")}
               </Text>
             </View>
             <View style={[styles.iconWrapper, { backgroundColor: "rgba(34, 197, 94, 0.08)" }]}>
@@ -257,9 +285,9 @@ export default function PrivacyCenter() {
           >
             <Feather name="chevron-left" size={16} color="#ef4444" />
             <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: "#ef4444" }]}>حذف الحساب نهائياً</Text>
+              <Text style={[styles.cardTitle, { color: "#ef4444" }]}>{t("privacy_delete_menu_title")}</Text>
               <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
-                مسح ملفك الشخصي وعناوينك وطلباتك وملفاتك نهائياً وبلا رجعة.
+                {t("privacy_delete_menu_desc")}
               </Text>
             </View>
             <View style={[styles.iconWrapper, { backgroundColor: "rgba(239, 68, 68, 0.08)" }]}>

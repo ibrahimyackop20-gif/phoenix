@@ -50,7 +50,13 @@ export default function TabTwoScreen() {
                 <ThemedText type="link">Expo documentation</ThemedText>
                 <SymbolView
                   tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
+                  name={
+                    Platform.select({
+                      ios: 'arrow.up.right.square',
+                      android: 'link',
+                      default: 'link',
+                    }) as 'arrow.up.right.square'
+                  }
                   size={12}
                 />
               </ThemedView>

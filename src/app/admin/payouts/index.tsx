@@ -10,6 +10,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../../lib/realtimeChannel";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 
 interface WithdrawalRequest {
@@ -67,15 +71,14 @@ export default function AdminPayoutsScreen() {
   useEffect(() => {
     fetchRequests();
 
-    const channel = supabase
-      .channel("admin-withdrawals-rt")
+    const channel = createRealtimeChannel("admin-withdrawals-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "withdrawals" }, () => {
         fetchRequests();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      teardownRealtimeChannel(channel);
     };
   }, []);
 

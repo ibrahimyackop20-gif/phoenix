@@ -17,100 +17,17 @@ import { pickDocumentWithPermission } from "../../../lib/filePermissions";
 import { supabase } from "../../../lib/supabaseClient";
 import FileUploader from "../../../components/FileUploader";
 import LocationPickerModal from "../../../components/LocationPickerModal";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons, FontAwesome } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
 
-// PDF page count is parsed fully on-device (no network round trip). Earlier this
-// data flowed through a local dev-only "/api/pdf-pages" route reached over a
-// hardcoded http://<ip>:8081 URL; that request only ever worked by coincidence
-// (Metro must run on port 8081, and Android must allow cleartext HTTP to a LAN
-// IP, which it doesn't by default) and doesn't exist at all in production
-// builds. Parsing locally removes that failure point entirely.
-const fallbackParsePagesCount = (text: string): number => {
-  // Strategy 1: Traverse PDF structure Trailer -> Root -> Pages -> Count
-  try {
-    const rootRegex = /\/Root\s*(\d+)\s*0\s*R/i;
-    const rootMatch = rootRegex.exec(text);
-    if (rootMatch) {
-      const rootObjNum = rootMatch[1];
-      const rootObjRegex = new RegExp(`${rootObjNum}\\s+0\\s+obj\\s*[<<]?[\\s\\S]*?endobj`, "i");
-      const rootObjMatch = rootObjRegex.exec(text);
-      if (rootObjMatch) {
-        const rootObjText = rootObjMatch[0];
-        const pagesRefRegex = /\/Pages\s*(\d+)\s*0\s*R/i;
-        const pagesRefMatch = pagesRefRegex.exec(rootObjText);
-        if (pagesRefMatch) {
-          const pagesObjNum = pagesRefMatch[1];
-          const pagesObjRegex = new RegExp(`${pagesObjNum}\\s+0\\s+obj\\s*[<<]?[\\s\\S]*?endobj`, "i");
-          const pagesObjMatch = pagesObjRegex.exec(text);
-          if (pagesObjMatch) {
-            const pagesObjText = pagesObjMatch[0];
-            const countRegex = /\/Count\s*(\d+)/i;
-            const countMatch = countRegex.exec(pagesObjText);
-            if (countMatch) {
-              return parseInt(countMatch[1], 10);
-            }
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("PDF structural traversal failed, using fallback regex strategies:", err);
-  }
-
-  // Strategy 2: Search for Count directly under /Type /Pages
-  const pagesPattern1 = /\/Type\s*\/Pages[\s\S]*?\/Count\s*(\d+)/g;
-  const pagesPattern2 = /\/Count\s*(\d+)[\s\S]*?\/Type\s*\/Pages/g;
-
-  let match = pagesPattern1.exec(text);
-  if (match && match[1]) {
-    return parseInt(match[1], 10);
-  }
-
-  match = pagesPattern2.exec(text);
-  if (match && match[1]) {
-    return parseInt(match[1], 10);
-  }
-
-  // Strategy 3: Find the maximum /Count value in structural objects
-  const countPattern = /\/Count\s*(\d+)/g;
-  let maxPages = 0;
-  let countMatch;
-  while ((countMatch = countPattern.exec(text)) !== null) {
-    const val = parseInt(countMatch[1], 10);
-    if (val > maxPages) {
-      maxPages = val;
-    }
-  }
-  if (maxPages > 0) {
-    return maxPages;
-  }
-
-  // Strategy 4: Count instances of individual /Type /Page objects
-  const pagePattern = /\/Type\s*\/Page\b/g;
-  const matches = text.match(pagePattern);
-  if (matches && matches.length > 0) {
-    return matches.length;
-  }
-
-  return 1;
-};
-
-const countPdfPages = async (fileUri: string): Promise<number> => {
-  try {
-    const response = await fetch(fileUri);
-    const text = await response.text();
-    const pages = fallbackParsePagesCount(text);
-    if (pages > 0) {
-      return pages;
-    }
-    throw new Error("لم يتم العثور على أي صفحات في الملف");
-  } catch (err: any) {
-    console.error("PDF parsing error:", err);
-    throw new Error(`فشل قراءة صفحات ملف PDF: ${err.message}`);
-  }
-};
+import { countPdfPagesFromUri } from "../../../lib/pdfPageCount";
+import { isPdfFile } from "../../../lib/normalizeDocumentAsset";
+import {
+  TELEGRAM_BOT_USERNAME,
+  openTelegramBot,
+  notifyTelegramAdmin,
+} from "../../../lib/telegramApi";
 
 interface PricingRow {
   id: string;
@@ -178,6 +95,12 @@ export default function NewOrderScreen() {
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "wallet" | "electronic">("cod");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [analyzingFile, setAnalyzingFile] = useState(false);
+  const [largeFileModal, setLargeFileModal] = useState<{
+    visible: boolean;
+    fileName?: string;
+    sizeMB?: number;
+  }>({ visible: false });
 
   // Roll states
   const [paperWidth, setPaperWidth] = useState<90 | 180>(90);
@@ -233,6 +156,16 @@ export default function NewOrderScreen() {
     setTimeout(() => setToastMsg(null), 3000);
   }, []);
 
+  const getAddressTitleLabel = useCallback(
+    (title: string) => {
+      if (title === "المنزل") return t("home");
+      if (title === "العمل") return t("work");
+      if (title === "الجامعة") return t("university");
+      return t("other");
+    },
+    [t]
+  );
+
   const loadData = async () => {
     try {
       // 1. Fetch pricing configurations (Ungated)
@@ -242,7 +175,6 @@ export default function NewOrderScreen() {
         .order("category", { ascending: true });
 
       if (pricingData && pricingData.length > 0) {
-        console.log("Downloaded raw pricing records count:", pricingData.length);
         const mappedPrices: PricingRow[] = pricingData.map((p: {
           id: number | string;
           paper_name: string | null;
@@ -259,11 +191,9 @@ export default function NewOrderScreen() {
           double_price: Number(p.double_price) || 0,
           label: p.display_name_ar || "",
         }));
-        console.log("Mapped pricing records:", mappedPrices);
         setAllPrices(mappedPrices);
         const firstA4 = mappedPrices.find((p) => p.category === "A4");
         if (firstA4) {
-          console.log("Setting default selectedPaperTypeId:", firstA4.id);
           setSelectedPaperTypeId(firstA4.id);
         }
       } else {
@@ -396,38 +326,7 @@ export default function NewOrderScreen() {
     return Math.max(0, printSubtotal - couponDiscount) + deliveryFee;
   }, [printSubtotal, couponDiscount, deliveryFee]);
 
-  // Dynamic pricing calculation step logger
-  useEffect(() => {
-    if (pricesLoaded) {
-      console.log("[Pricing Calculation Flow Log]");
-      console.log("- Selected Paper Name (Type):", selectedPaper?.paper_type || "None");
-      console.log("- Selected Paper Size (Category):", orderMode === "a4" ? "A4" : "Roll");
-      console.log("- Selected Color Mode:", orderMode === "a4" ? colorMode : "N/A (Roll)");
-      console.log("- Selected Sided Option:", orderMode === "a4" ? printSides : "N/A (Roll)");
-      console.log("- Copies Count:", numCopies);
-      console.log("- Detected PDF Pages Count (Telegram):", numPages);
-      console.log("- File Mode Uploaded Files details:", uploadedFiles.map(f => ({ name: f.name, pages: f.numPages })));
-      console.log("- Single page/meter rate:", selectedPriceIqd);
-      console.log("- A4 page resolved rate:", a4PricePerPage);
-      console.log("- Calculated Subtotal Price:", printSubtotal);
-      console.log("- Calculated Grand Total Price:", totalPrice);
-    }
-  }, [
-    pricesLoaded,
-    selectedPaper,
-    orderMode,
-    colorMode,
-    printSides,
-    numCopies,
-    numPages,
-    uploadedFiles,
-    selectedPriceIqd,
-    a4PricePerPage,
-    printSubtotal,
-    totalPrice
-  ]);
-
-  // Extract page count numbers from Telegram bots code
+  // Extract page count from Telegram bot code (same rules as web)
   const handleTelegramCodeChange = (val: string) => {
     setExternalFileLink(val);
     const trimmed = val.trim();
@@ -436,7 +335,9 @@ export default function NewOrderScreen() {
       return;
     }
 
-    if (trimmed.startsWith("http")) return;
+    if (trimmed.startsWith("http")) {
+      return;
+    }
 
     if (trimmed.includes("_")) {
       const parts = trimmed.split("_");
@@ -456,22 +357,28 @@ export default function NewOrderScreen() {
       }
     } else {
       setNumPages(1);
+      showToast(t("no_bot_code_incomplete"), "error");
     }
   };
 
   const handleFileSelect = async (selectedFile: any) => {
-    if (!selectedFile) return;
+    if (!selectedFile || analyzingFile) return;
 
-    const isPdf = selectedFile.type === "application/pdf" || selectedFile.name.toLowerCase().endsWith(".pdf");
+    const isPdf = isPdfFile({
+      name: String(selectedFile.name || ""),
+      type: String(selectedFile.type || ""),
+    });
     let pages = 1;
 
     if (isPdf) {
-      showToast("جاري تحليل صفحات الملف...");
+      setAnalyzingFile(true);
       try {
-        pages = await countPdfPages(selectedFile.uri);
+        pages = await countPdfPagesFromUri(selectedFile.uri);
       } catch (err: any) {
-        showToast(err.message || "فشل قراءة صفحات ملف PDF", "error");
+        showToast(err?.message || t("analyzing_file_error"), "error");
         return;
+      } finally {
+        setAnalyzingFile(false);
       }
     }
 
@@ -487,12 +394,26 @@ export default function NewOrderScreen() {
     };
 
     setUploadedFiles((prev) => [...prev, newFile]);
-    showToast("تمت إضافة الملف بنجاح");
+    showToast(t("no_file_added"));
+  };
+
+  const handleOversizedFile = (fileName: string, sizeMB: number) => {
+    setLargeFileModal({ visible: true, fileName, sizeMB });
+  };
+
+  const handleOpenBotFromLargeFile = () => {
+    setLargeFileModal({ visible: false });
+    setFileMode("telegram");
+    openTelegramBot().catch(() => showToast(t("no_open_telegram_failed"), "error"));
   };
 
   const updateFilePages = (id: string, pages: number) => {
     setUploadedFiles((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, numPages: Math.max(1, pages) } : f))
+      prev.map((f) => {
+        // PDF page counts come from the app — never allow manual edits
+        if (f.id !== id || f.isPdf) return f;
+        return { ...f, numPages: Math.max(1, pages) };
+      })
     );
   };
 
@@ -515,25 +436,25 @@ export default function NewOrderScreen() {
         .maybeSingle();
 
       if (error || !data) {
-        setPromoError("كود الخصم هذا غير صالح أو منتهي الصلاحية");
+        setPromoError(t("no_coupon_invalid"));
         setPromoLoading(false);
         return;
       }
 
       if (data.target_type !== "printing") {
-        setPromoError("هذا الكوبون غير صالح لطلبات الطباعة");
+        setPromoError(t("no_coupon_not_print"));
         setPromoLoading(false);
         return;
       }
 
       if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
-        setPromoError("الكوبون منتهي الصلاحية");
+        setPromoError(t("no_coupon_expired"));
         setPromoLoading(false);
         return;
       }
 
       if (data.min_order_amount && printSubtotal < data.min_order_amount) {
-        setPromoError(`الحد الأدنى للاستفادة من الكوبون هو ${data.min_order_amount} د.ع`);
+        setPromoError(t("no_coupon_min", { amount: data.min_order_amount }));
         setPromoLoading(false);
         return;
       }
@@ -544,10 +465,10 @@ export default function NewOrderScreen() {
         discount_type: data.discount_type,
       });
       setPromoError("");
-      showToast("تم تطبيق الكوبون بنجاح!");
+      showToast(t("no_coupon_ok"));
     } catch (err) {
       console.error(err);
-      setPromoError("فشل التحقق من الكوبون");
+      setPromoError(t("no_coupon_check_fail"));
     } finally {
       setPromoLoading(false);
     }
@@ -555,7 +476,7 @@ export default function NewOrderScreen() {
 
   const copyPaymentNumber = (num: string) => {
     Clipboard.setString(num);
-    showToast("تم نسخ الرقم إلى الحافظة");
+    showToast(t("no_copied"));
   };
 
   const handleReceiptPicker = async () => {
@@ -585,7 +506,7 @@ export default function NewOrderScreen() {
         });
 
       if (upErr) {
-        showToast("فشل رفع إيصال الدفع الإلكتروني", "error");
+        showToast(t("no_receipt_upload_fail"), "error");
         setUploadingReceipt(false);
         return;
       }
@@ -595,10 +516,10 @@ export default function NewOrderScreen() {
         .getPublicUrl(filePath);
 
       setReceiptUrl(urlData.publicUrl);
-      showToast("تم رفع إيصال التحويل بنجاح");
+      showToast(t("no_receipt_upload_ok"));
     } catch (err) {
       console.error(err);
-      showToast("فشل اختيار صورة الإيصال", "error");
+      showToast(t("no_receipt_pick_fail"), "error");
     } finally {
       setUploadingReceipt(false);
     }
@@ -607,12 +528,12 @@ export default function NewOrderScreen() {
   // Create new delivery address
   const handleCreateAddress = async () => {
     if (!newArea.trim() || !newPhone.trim()) {
-      showToast("الرجاء إدخال المنطقة ورقم الهاتف", "error");
+      showToast(t("no_address_fields_required"), "error");
       return;
     }
 
     if (!IRAQI_PHONE_REGEX.test(newPhone.trim())) {
-      showToast("يرجى إدخال رقم هاتف عراقي صالح (مثال: 07701234567)", "error");
+      showToast(t("no_phone_iraq_invalid"), "error");
       return;
     }
 
@@ -634,7 +555,7 @@ export default function NewOrderScreen() {
         .single();
 
       if (error) {
-        showToast(`فشل إضافة العنوان: ${error.message}`, "error");
+        showToast(t("no_address_add_fail", { message: error.message }), "error");
       } else {
         setAddresses((prev) => [data, ...prev]);
         setSelectedAddressId(data.id);
@@ -644,7 +565,7 @@ export default function NewOrderScreen() {
         setNewPhone("");
         setNewLat(null);
         setNewLng(null);
-        showToast("تمت إضافة عنوان التوصيل بنجاح");
+        showToast(t("no_address_add_ok"));
       }
     } catch (err) {
       console.error(err);
@@ -655,30 +576,30 @@ export default function NewOrderScreen() {
 
   // Submit print order
   const handleSubmitOrder = async () => {
-    if (submitting) return;
+    if (submitting || analyzingFile) return;
 
     if (fileMode === "file" && uploadedFiles.length === 0) {
-      showToast("يرجى اختيار ملف الطباعة أولاً", "error");
+      showToast(t("no_need_file"), "error");
       return;
     }
 
     if (fileMode === "telegram" && !externalFileLink.trim()) {
-      showToast("يرجى إدخال كود التليجرام الخاص بالملف", "error");
+      showToast(t("no_need_telegram"), "error");
       return;
     }
 
     if (deliveryOption === "delivery" && !selectedAddressId) {
-      showToast("يرجى اختيار أو إضافة عنوان توصيل", "error");
+      showToast(t("no_need_address"), "error");
       return;
     }
 
     if (paymentMethod === "electronic" && !receiptUrl) {
-      showToast("يرجى رفع صورة إيصال التحويل لإتمام الدفع", "error");
+      showToast(t("no_need_receipt"), "error");
       return;
     }
 
     if (paymentMethod === "wallet" && balance < totalPrice) {
-      showToast("رصيدك الحالي غير كافٍ لإتمام الدفع من المحفظة", "error");
+      showToast(t("no_wallet_low"), "error");
       return;
     }
 
@@ -703,7 +624,7 @@ export default function NewOrderScreen() {
           try {
             response = await fetch(uf.uri);
           } catch (fetchErr: any) {
-            showToast(`فشل قراءة الملف من الجهاز: ${fetchErr?.message}`, "error");
+            showToast(t("no_read_file_fail", { message: fetchErr?.message || "" }), "error");
             setSubmitting(false);
             return;
           }
@@ -723,7 +644,7 @@ export default function NewOrderScreen() {
             });
 
           if (upErr) {
-            showToast(`فشل رفع ملف الطباعة (${uf.name}): ${upErr.message}`, "error");
+            showToast(t("no_upload_print_fail", { name: uf.name, message: upErr.message }), "error");
             setSubmitting(false);
             return;
           }
@@ -806,7 +727,7 @@ export default function NewOrderScreen() {
         .maybeSingle();
 
       if (insertError) {
-        showToast(`فشل إرسال الطلب: ${insertError.message}`, "error");
+        showToast(t("no_order_fail", { message: insertError.message }), "error");
         setSubmitting(false);
         return;
       }
@@ -825,21 +746,41 @@ export default function NewOrderScreen() {
           .eq("id", currentUser.id);
       }
 
-      // Send admin notification
+      // Send in-app notification
       await supabase.from("notifications").insert({
         user_id: currentUser.id,
-        title: "تم استلام طلبك للطباعة 🖨️",
-        message: `تم تقديم طلب الطباعة الجديد بنجاح بقيمة ${totalPrice.toLocaleString()} د.ع وجاري التحقق من تفاصيل الملف.`,
+        title: t("no_notif_title"),
+        message: t("no_notif_body", { amount: totalPrice.toLocaleString() }),
         is_read: false,
       });
 
-      showToast("تم إرسال طلب الطباعة الخاص بك بنجاح!");
+      // Notify admin via Telegram (same as web — fire-and-forget)
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+      notifyTelegramAdmin({
+        studentName:
+          profileRow?.full_name ||
+          currentUser.user_metadata?.full_name ||
+          currentUser.email ||
+          "غير معروف",
+        totalPrice,
+        fileSource:
+          (fileMode === "telegram" ? externalFileLink.trim() : "") ||
+          finalFileUrl ||
+          "ملف مرفوع",
+        orderType: orderMode === "roll" ? "roll_print" : "a4_print",
+      });
+
+      showToast(t("no_order_ok"));
       setTimeout(() => {
         router.push("/dashboard/orders" as any);
       }, 1500);
     } catch (err) {
       console.error(err);
-      showToast("حدث خطأ غير متوقع", "error");
+      showToast(t("no_unexpected"), "error");
     } finally {
       setSubmitting(false);
     }
@@ -860,63 +801,63 @@ export default function NewOrderScreen() {
             <View style={styles.modalHeader}>
               <TouchableOpacity
                 onPress={() => {
-                  console.log("[Map Modal Flow Log] Address Modal Close Icon Pressed");
-                  console.log("- Reason for closing: User cancelled address creation form");
                   setShowAddressModal(false);
                   setShowMap(false);
                 }}
               >
                 <Feather name="x" size={20} color="#a1a1aa" />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>إضافة عنوان توصيل جديد</Text>
+              <Text style={styles.modalTitle}>{t("no_add_address_title")}</Text>
             </View>
 
             <ScrollView style={styles.modalScroll}>
-              <Text style={styles.inputLabel}>نوع العنوان</Text>
+              <Text style={styles.inputLabel}>{t("no_address_type")}</Text>
               <View style={styles.titlesRow}>
-                {ADDRESS_TITLES.map((t) => (
+                {ADDRESS_TITLES.map((titleVal) => (
                   <TouchableOpacity
-                    key={t}
-                    onPress={() => setNewTitle(t)}
-                    style={[styles.titleTab, newTitle === t && styles.titleTabActive]}
+                    key={titleVal}
+                    onPress={() => setNewTitle(titleVal)}
+                    style={[styles.titleTab, newTitle === titleVal && styles.titleTabActive]}
                   >
-                    <Text style={[styles.titleTabText, newTitle === t && styles.titleTabTextActive]}>{t}</Text>
+                    <Text style={[styles.titleTabText, newTitle === titleVal && styles.titleTabTextActive]}>
+                      {getAddressTitleLabel(titleVal)}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>المنطقة والشارع *</Text>
+                <Text style={styles.inputLabel}>{t("no_area_street")}</Text>
                 <TextInput
                   value={newArea}
                   onChangeText={setNewArea}
-                  placeholder="مثال: الكرادة، شارع العرصات"
-                  placeholderTextColor="#71717a"
+                  placeholder={t("no_area_placeholder")}
+                  placeholderTextColor={themeColors.textMuted}
                   style={styles.modalInput}
                   textAlign="right"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>أقرب نقطة دالة *</Text>
+                <Text style={styles.inputLabel}>{t("no_landmark")}</Text>
                 <TextInput
                   value={newLandmark}
                   onChangeText={setNewLandmark}
-                  placeholder="مثال: قرب صيدلية النخبة"
-                  placeholderTextColor="#71717a"
+                  placeholder={t("no_landmark_placeholder")}
+                  placeholderTextColor={themeColors.textMuted}
                   style={styles.modalInput}
                   textAlign="right"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>رقم هاتف مستلم الطلب *</Text>
+                <Text style={styles.inputLabel}>{t("no_recipient_phone")}</Text>
                 <TextInput
                   value={newPhone}
                   onChangeText={setNewPhone}
                   keyboardType="phone-pad"
                   placeholder="07XXXXXXXXX"
-                  placeholderTextColor="#71717a"
+                  placeholderTextColor={themeColors.textMuted}
                   style={styles.modalInput}
                   textAlign="right"
                 />
@@ -928,9 +869,7 @@ export default function NewOrderScreen() {
                 style={styles.mapToggleButton}
               >
                 <Feather name="map-pin" size={14} color="#ea580c" style={styles.buttonIcon} />
-                <Text style={styles.mapToggleButtonText}>
-                  {newLat ? "🗺️ تغيير موقع التسليم" : "🗺️ اختيار موقع التسليم"}
-                </Text>
+                <Text style={styles.mapToggleButtonText}>🗺️ {t("no_choose_address")}</Text>
               </TouchableOpacity>
               {newLat && (newLandmark || newArea) ? (
                 <Text style={styles.selectedLocationHint} numberOfLines={2}>
@@ -959,7 +898,7 @@ export default function NewOrderScreen() {
                 {savingAddress ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.buttonTextCompact}>حفظ العنوان</Text>
+                  <Text style={styles.buttonTextCompact}>{t("no_save_address")}</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -967,26 +906,33 @@ export default function NewOrderScreen() {
         </View>
       </Modal>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={!analyzingFile}
+        pointerEvents={analyzingFile ? "none" : "auto"}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>طلب طباعة جديد</Text>
-          <Text style={styles.subtitle}>ارفع ملفك أو أدخل رمز البوت الخاص بك لتجهيز الطباعة</Text>
+          <Text style={styles.title}>{t("no_title")}</Text>
+          <Text style={styles.subtitle}>{t("no_subtitle")}</Text>
         </View>
 
         {/* Mode Selector */}
         <View style={styles.modeToggleRow}>
           <TouchableOpacity
             onPress={() => setOrderMode("roll")}
-            style={[styles.modeButton, orderMode === "roll" && styles.modeButtonActive]}
+            disabled={analyzingFile}
+            style={[styles.modeButton, orderMode === "roll" && styles.modeButtonActive, analyzingFile && styles.controlDisabled]}
           >
-            <Text style={[styles.modeButtonText, orderMode === "roll" && styles.modeButtonTextActive]}>رول (مخططات/بوسترات)</Text>
+            <Text style={[styles.modeButtonText, orderMode === "roll" && styles.modeButtonTextActive]}>{t("no_mode_roll")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setOrderMode("a4")}
-            style={[styles.modeButton, orderMode === "a4" && styles.modeButtonActive]}
+            disabled={analyzingFile}
+            style={[styles.modeButton, orderMode === "a4" && styles.modeButtonActive, analyzingFile && styles.controlDisabled]}
           >
-            <Text style={[styles.modeButtonText, orderMode === "a4" && styles.modeButtonTextActive]}>مستندات (A4)</Text>
+            <Text style={[styles.modeButtonText, orderMode === "a4" && styles.modeButtonTextActive]}>{t("no_mode_a4")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -994,15 +940,17 @@ export default function NewOrderScreen() {
         <View style={styles.modeToggleRow}>
           <TouchableOpacity
             onPress={() => setFileMode("telegram")}
-            style={[styles.modeButton, fileMode === "telegram" && styles.modeButtonActive]}
+            disabled={analyzingFile}
+            style={[styles.modeButton, fileMode === "telegram" && styles.modeButtonActive, analyzingFile && styles.controlDisabled]}
           >
-            <Text style={[styles.modeButtonText, fileMode === "telegram" && styles.modeButtonTextActive]}>رمز التليجرام Bot Code</Text>
+            <Text style={[styles.modeButtonText, fileMode === "telegram" && styles.modeButtonTextActive]}>{t("no_mode_telegram")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setFileMode("file")}
-            style={[styles.modeButton, fileMode === "file" && styles.modeButtonActive]}
+            disabled={analyzingFile}
+            style={[styles.modeButton, fileMode === "file" && styles.modeButtonActive, analyzingFile && styles.controlDisabled]}
           >
-            <Text style={[styles.modeButtonText, fileMode === "file" && styles.modeButtonTextActive]}>رفع ملف مباشر</Text>
+            <Text style={[styles.modeButtonText, fileMode === "file" && styles.modeButtonTextActive]}>{t("no_mode_file")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -1013,10 +961,12 @@ export default function NewOrderScreen() {
               <FileUploader
                 file={null}
                 onFileSelect={handleFileSelect}
+                onOversizedFile={handleOversizedFile}
+                onError={(msg) => showToast(msg, "error")}
               />
               {uploadedFiles.length > 0 && (
                 <View style={styles.filesListContainer}>
-                  <Text style={styles.filesListTitle}>الملفات المرفوعة ({uploadedFiles.length})</Text>
+                  <Text style={styles.filesListTitle}>{t("no_files_uploaded", { count: uploadedFiles.length })}</Text>
                   {uploadedFiles.map((uf) => {
                     const filePrice = a4PricePerPage;
                     const fileSubtotal = filePrice * uf.numPages * numCopies;
@@ -1033,23 +983,26 @@ export default function NewOrderScreen() {
                         
                         <View style={styles.fileDetailsRow}>
                           <View style={styles.fileDetailCol}>
-                            <Text style={styles.fileDetailLabel}>سعر الصفحة</Text>
+                            <Text style={styles.fileDetailLabel}>{t("no_page_price")}</Text>
                             <Text style={styles.fileDetailValue}>
-                              {filePrice.toLocaleString()} د.ع
+                              {filePrice.toLocaleString()} {t("currency")}
                             </Text>
                           </View>
                           
                           <View style={styles.fileDetailCol}>
-                            <Text style={styles.fileDetailLabel}>النسخ</Text>
+                            <Text style={styles.fileDetailLabel}>{t("no_copies_label")}</Text>
                             <Text style={styles.fileDetailValue}>{numCopies}</Text>
                           </View>
                           
                           <View style={styles.fileDetailCol}>
-                            <Text style={styles.fileDetailLabel}>الصفحات</Text>
+                            <Text style={styles.fileDetailLabel}>{t("no_pages_label")}</Text>
                             {uf.isPdf ? (
-                              <View style={styles.readOnlyPagesBadge}>
-                                <Text style={styles.readOnlyPagesText}>{uf.numPages}</Text>
-                                <Feather name="lock" size={10} color="#71717a" style={{ marginRight: 4 }} />
+                              <View style={styles.lockedPagesCol}>
+                                <View style={styles.readOnlyPagesBadge}>
+                                  <Text style={styles.readOnlyPagesText}>{uf.numPages}</Text>
+                                  <Feather name="lock" size={10} color="#71717a" style={{ marginRight: 4 }} />
+                                </View>
+                                <Text style={styles.pagesAutoNote}>{t("pages_detected_auto")}</Text>
                               </View>
                             ) : (
                               <View style={styles.editablePagesRow}>
@@ -1081,9 +1034,9 @@ export default function NewOrderScreen() {
                         </View>
 
                         <View style={styles.fileListItemFooter}>
-                          <Text style={styles.fileSubtotalLabel}>المجموع الفرعي:</Text>
+                          <Text style={styles.fileSubtotalLabel}>{t("no_subtotal")}</Text>
                           <Text style={styles.fileSubtotalValue}>
-                            {fileSubtotal.toLocaleString()} د.ع
+                            {fileSubtotal.toLocaleString()} {t("currency")}
                           </Text>
                         </View>
                       </View>
@@ -1094,55 +1047,83 @@ export default function NewOrderScreen() {
             </View>
           ) : (
             <View style={styles.telegramBlock}>
-              <Text style={styles.blockTitle}>كود بوت التليجرام</Text>
-              <Text style={styles.blockSubtitle}>
-                أدخل الكود أو الرابط المستلم من بوت تليجرام phoenix_print_bot
+              <Text style={styles.blockTitle}>{t("no_telegram_title")}</Text>
+              <Text style={styles.blockSubtitle}>{t("no_telegram_subtitle")}</Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  openTelegramBot().catch(() =>
+                    showToast(t("no_open_telegram_failed"), "error")
+                  );
+                }}
+                style={styles.telegramBotBtn}
+              >
+                <FontAwesome name="telegram" size={18} color="#29b6f6" />
+                <Text style={styles.telegramBotBtnText}>
+                  {t("no_telegram_open", { bot: TELEGRAM_BOT_USERNAME })}
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.telegramHint}>
+                {t("no_telegram_hint", { bot: TELEGRAM_BOT_USERNAME })}
               </Text>
+
               <TextInput
                 value={externalFileLink}
                 onChangeText={handleTelegramCodeChange}
-                placeholder="مثال: phoenix_12345_pg_32"
-                placeholderTextColor="#71717a"
+                placeholder={t("no_telegram_placeholder")}
+                placeholderTextColor={themeColors.textMuted}
                 style={styles.telegramInput}
-                textAlign="right"
+                textAlign="left"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
+              {externalFileLink.trim() ? (
+                <Text style={styles.telegramCodeOk}>
+                  {externalFileLink.trim().startsWith("http")
+                    ? t("no_telegram_link_ok")
+                    : t("no_telegram_code_ok")}
+                </Text>
+              ) : null}
             </View>
           )}
 
           {/* Description */}
           <View style={styles.inputGroupSpacer}>
-            <Text style={styles.inputLabel}>ملاحظات أو تفاصيل إضافية</Text>
+            <Text style={styles.inputLabel}>{t("no_notes_label")}</Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
-              placeholder="مثال: تغليف حلزوني، طباعة غلاف كرتوني..."
-              placeholderTextColor="#71717a"
+              placeholder={t("no_notes_placeholder")}
+              placeholderTextColor={themeColors.textMuted}
               multiline
               numberOfLines={3}
               style={styles.descriptionInput}
               textAlign="right"
+              editable={!analyzingFile}
             />
           </View>
         </View>
 
         {/* Paper Dimensions Parameters */}
         <View style={styles.glassCard}>
-          <Text style={styles.cardHeaderTitle}>خيارات الطباعة والورق</Text>
+          <Text style={styles.cardHeaderTitle}>{t("no_print_options")}</Text>
 
           {/* Paper Type Grid */}
-          <Text style={styles.inputLabel}>نوع الورق</Text>
+          <Text style={styles.inputLabel}>{t("no_paper_type")}</Text>
           {pricesLoaded ? (
             <View style={styles.paperList}>
               {activePaperTypes.map((p) => (
                 <TouchableOpacity
                   key={p.id}
-                  onPress={() => setSelectedPaperTypeId(p.id)}
+                  onPress={() => !analyzingFile && setSelectedPaperTypeId(p.id)}
+                  disabled={analyzingFile}
                   style={[styles.paperItem, selectedPaperTypeId === p.id && styles.paperItemActive]}
                 >
                   <Text style={[styles.paperLabel, selectedPaperTypeId === p.id && styles.paperLabelActive]}>
                     {p.display_name_ar}
                   </Text>
-                  <Text style={styles.paperPriceText}>{p.price_per_meter} د.ع / صفحة</Text>
+                  <Text style={styles.paperPriceText}>{p.price_per_meter} {t("currency")} / {t("no_pages_label")}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1154,73 +1135,83 @@ export default function NewOrderScreen() {
           {orderMode === "a4" && (
             <View style={styles.a4Params}>
               <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>الطباعة على الوجهين</Text>
+                <Text style={styles.paramLabel}>{t("no_duplex")}</Text>
                 <View style={styles.toggleGroup}>
                   <TouchableOpacity
-                    onPress={() => setPrintSides("double")}
+                    onPress={() => !analyzingFile && setPrintSides("double")}
+                    disabled={analyzingFile}
                     style={[styles.toggleBtn, printSides === "double" && styles.toggleBtnActive]}
                   >
-                    <Text style={[styles.toggleBtnText, printSides === "double" && styles.toggleBtnTextActive]}>وجهين</Text>
+                    <Text style={[styles.toggleBtnText, printSides === "double" && styles.toggleBtnTextActive]}>{t("no_duplex_double")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setPrintSides("single")}
+                    onPress={() => !analyzingFile && setPrintSides("single")}
+                    disabled={analyzingFile}
                     style={[styles.toggleBtn, printSides === "single" && styles.toggleBtnActive]}
                   >
-                    <Text style={[styles.toggleBtnText, printSides === "single" && styles.toggleBtnTextActive]}>وجه واحد</Text>
+                    <Text style={[styles.toggleBtnText, printSides === "single" && styles.toggleBtnTextActive]}>{t("no_duplex_single")}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>الألوان</Text>
+                <Text style={styles.paramLabel}>{t("no_colors")}</Text>
                 <View style={styles.toggleGroup}>
                   <TouchableOpacity
-                    onPress={() => setColorMode("color")}
+                    onPress={() => !analyzingFile && setColorMode("color")}
+                    disabled={analyzingFile}
                     style={[styles.toggleBtn, colorMode === "color" && styles.toggleBtnActive]}
                   >
-                    <Text style={[styles.toggleBtnText, colorMode === "color" && styles.toggleBtnTextActive]}>ملون</Text>
+                    <Text style={[styles.toggleBtnText, colorMode === "color" && styles.toggleBtnTextActive]}>{t("no_color")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setColorMode("bw")}
+                    onPress={() => !analyzingFile && setColorMode("bw")}
+                    disabled={analyzingFile}
                     style={[styles.toggleBtn, colorMode === "bw" && styles.toggleBtnActive]}
                   >
-                    <Text style={[styles.toggleBtnText, colorMode === "bw" && styles.toggleBtnTextActive]}>أسود وأبيض</Text>
+                    <Text style={[styles.toggleBtnText, colorMode === "bw" && styles.toggleBtnTextActive]}>{t("no_bw")}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               {fileMode === "telegram" ? (
                 <View style={styles.paramRow}>
-                  <Text style={styles.paramLabel}>عدد الصفحات الكلي</Text>
-                  <View style={styles.counterRow}>
-                    <TouchableOpacity onPress={() => setNumPages(Math.max(1, numPages - 1))} style={styles.counterBtn}>
-                      <Feather name="minus" size={14} color="#f4f4f5" />
-                    </TouchableOpacity>
-                    <Text style={styles.counterValue}>{numPages}</Text>
-                    <TouchableOpacity onPress={() => setNumPages(numPages + 1)} style={styles.counterBtn}>
-                      <Feather name="plus" size={14} color="#f4f4f5" />
-                    </TouchableOpacity>
+                  <Text style={styles.paramLabel}>{t("no_total_pages")}</Text>
+                  <View style={styles.lockedPagesCol}>
+                    <View style={styles.readOnlyPagesBadgeGlobal}>
+                      <Feather name="lock" size={12} color="#71717a" style={{ marginLeft: 6 }} />
+                      <Text style={styles.readOnlyPagesTextGlobal}>{numPages}</Text>
+                    </View>
+                    <Text style={styles.pagesAutoNote}>{t("pages_detected_auto")}</Text>
                   </View>
                 </View>
               ) : (
                 <View style={styles.paramRow}>
-                  <Text style={styles.paramLabel}>إجمالي عدد الصفحات</Text>
+                  <Text style={styles.paramLabel}>{t("no_total_pages_sum")}</Text>
                   <View style={styles.readOnlyPagesBadgeGlobal}>
                     <Text style={styles.readOnlyPagesTextGlobal}>
-                      {uploadedFiles.reduce((sum, f) => sum + f.numPages, 0)} صفحة
+                      {t("no_pages_unit", { count: uploadedFiles.reduce((sum, f) => sum + f.numPages, 0) })}
                     </Text>
                   </View>
                 </View>
               )}
 
               <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>عدد النسخ المطلوبة</Text>
+                <Text style={styles.paramLabel}>{t("no_copies_needed")}</Text>
                 <View style={styles.counterRow}>
-                  <TouchableOpacity onPress={() => setNumCopies(Math.max(1, numCopies - 1))} style={styles.counterBtn}>
+                  <TouchableOpacity
+                    onPress={() => !analyzingFile && setNumCopies(Math.max(1, numCopies - 1))}
+                    disabled={analyzingFile}
+                    style={styles.counterBtn}
+                  >
                     <Feather name="minus" size={14} color="#f4f4f5" />
                   </TouchableOpacity>
                   <Text style={styles.counterValue}>{numCopies}</Text>
-                  <TouchableOpacity onPress={() => setNumCopies(numCopies + 1)} style={styles.counterBtn}>
+                  <TouchableOpacity
+                    onPress={() => !analyzingFile && setNumCopies(numCopies + 1)}
+                    disabled={analyzingFile}
+                    style={styles.counterBtn}
+                  >
                     <Feather name="plus" size={14} color="#f4f4f5" />
                   </TouchableOpacity>
                 </View>
@@ -1232,7 +1223,7 @@ export default function NewOrderScreen() {
           {orderMode === "roll" && (
             <View style={styles.rollParams}>
               <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>عرض الرول</Text>
+                <Text style={styles.paramLabel}>{t("no_roll_width")}</Text>
                 <View style={styles.toggleGroup}>
                   <TouchableOpacity
                     onPress={() => setPaperWidth(180)}
@@ -1250,7 +1241,7 @@ export default function NewOrderScreen() {
               </View>
 
               <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>الطول بالمتر</Text>
+                <Text style={styles.paramLabel}>{t("no_roll_length")}</Text>
                 <View style={styles.counterRow}>
                   <TouchableOpacity onPress={() => setLength(Math.max(1, length - 1))} style={styles.counterBtn}>
                     <Feather name="minus" size={14} color="#f4f4f5" />
@@ -1267,14 +1258,14 @@ export default function NewOrderScreen() {
 
         {/* Delivery Options */}
         <View style={styles.glassCard}>
-          <Text style={styles.cardHeaderTitle}>طريقة الاستلام</Text>
+          <Text style={styles.cardHeaderTitle}>{t("no_delivery_method")}</Text>
           <View style={styles.modeToggleRow}>
             <TouchableOpacity
               onPress={() => setDeliveryOption("delivery")}
               style={[styles.modeButton, deliveryOption === "delivery" && styles.modeButtonActive]}
             >
               <Text style={[styles.modeButtonText, deliveryOption === "delivery" && styles.modeButtonTextActive]}>
-                توصيل للمنزل
+                {t("no_delivery")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1282,7 +1273,7 @@ export default function NewOrderScreen() {
               style={[styles.modeButton, deliveryOption === "pickup" && styles.modeButtonActive]}
             >
               <Text style={[styles.modeButtonText, deliveryOption === "pickup" && styles.modeButtonTextActive]}>
-                استلام من المكتب
+                {t("no_pickup")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1290,7 +1281,7 @@ export default function NewOrderScreen() {
           {deliveryOption === "delivery" && (
             <View style={styles.deliverySection}>
               {/* Region fee selector */}
-              <Text style={styles.inputLabel}>منطقة التوصيل</Text>
+              <Text style={styles.inputLabel}>{t("no_delivery_zone")}</Text>
               <View style={styles.feeSelectorRow}>
                 {deliveryFees.map((f) => (
                   <TouchableOpacity
@@ -1299,7 +1290,7 @@ export default function NewOrderScreen() {
                     style={[styles.feeSelectorBox, selectedFeeId === f.id && styles.feeSelectorBoxActive]}
                   >
                     <Text style={styles.feeAreaName}>{f.area_name}</Text>
-                    <Text style={styles.feeAmountText}>{f.fee_amount} د.ع</Text>
+                    <Text style={styles.feeAmountText}>{f.fee_amount} {t("currency")}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -1308,13 +1299,13 @@ export default function NewOrderScreen() {
               <View style={styles.addressSelectHeader}>
                 <TouchableOpacity onPress={() => setShowAddressModal(true)} style={styles.addAddressBtn}>
                   <Feather name="plus" size={12} color="#ea580c" style={styles.buttonIcon} />
-                  <Text style={styles.addAddressBtnText}>عنوان جديد</Text>
+                  <Text style={styles.addAddressBtnText}>{t("no_new_address")}</Text>
                 </TouchableOpacity>
-                <Text style={styles.inputLabel}>اختر عنوان التوصيل</Text>
+                <Text style={styles.inputLabel}>{t("no_choose_address")}</Text>
               </View>
 
               {addresses.length === 0 ? (
-                <Text style={styles.noAddressText}>لا توجد عناوين مسجلة، يرجى إضافة عنوان جديد</Text>
+                <Text style={styles.noAddressText}>{t("no_no_addresses")}</Text>
               ) : (
                 <View style={styles.addressList}>
                   {addresses.map((a) => (
@@ -1323,7 +1314,7 @@ export default function NewOrderScreen() {
                       onPress={() => setSelectedAddressId(a.id)}
                       style={[styles.addressItem, selectedAddressId === a.id && styles.addressItemActive]}
                     >
-                      <Text style={styles.addressItemTitle}>{a.title}</Text>
+                      <Text style={styles.addressItemTitle}>{getAddressTitleLabel(a.title)}</Text>
                       <Text style={styles.addressItemDetail}>
                         {a.area} — {a.nearby_landmark}
                       </Text>
@@ -1338,20 +1329,20 @@ export default function NewOrderScreen() {
 
         {/* Coupon Discount code */}
         <View style={styles.glassCard}>
-          <Text style={styles.cardHeaderTitle}>كود خصم (كوبون)</Text>
+          <Text style={styles.cardHeaderTitle}>{t("no_coupon_title")}</Text>
           <View style={styles.promoFormRow}>
             <TouchableOpacity onPress={validateCoupon} disabled={promoLoading} style={styles.promoButton}>
               {promoLoading ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.promoButtonText}>تطبيق</Text>
+                <Text style={styles.promoButtonText}>{t("no_coupon_apply")}</Text>
               )}
             </TouchableOpacity>
             <TextInput
               value={promoCode}
               onChangeText={setPromoCode}
-              placeholder="مثال: OFF50"
-              placeholderTextColor="#71717a"
+              placeholder={t("no_coupon_placeholder")}
+              placeholderTextColor={themeColors.textMuted}
               style={styles.promoInput}
               textAlign="right"
               autoCapitalize="characters"
@@ -1361,46 +1352,46 @@ export default function NewOrderScreen() {
           {appliedCoupon ? (
             <View style={styles.appliedCouponTag}>
               <Feather name="check" size={12} color="#34d399" />
-              <Text style={styles.appliedCouponText}>تم تطبيق الكوبون {appliedCoupon.code}</Text>
+              <Text style={styles.appliedCouponText}>{t("no_coupon_applied", { code: appliedCoupon.code })}</Text>
             </View>
           ) : null}
         </View>
 
         {/* Pricing calculations details */}
         <View style={styles.glassCard}>
-          <Text style={styles.cardHeaderTitle}>تفاصيل الفاتورة</Text>
+          <Text style={styles.cardHeaderTitle}>{t("no_invoice_title")}</Text>
           <View style={styles.billingRow}>
-            <Text style={styles.billingValue}>{printSubtotal.toLocaleString()} د.ع</Text>
-            <Text style={styles.billingLabel}>تكلفة الطباعة</Text>
+            <Text style={styles.billingValue}>{printSubtotal.toLocaleString()} {t("currency")}</Text>
+            <Text style={styles.billingLabel}>{t("no_print_cost")}</Text>
           </View>
           {couponDiscount > 0 ? (
             <View style={styles.billingRow}>
-              <Text style={[styles.billingValue, { color: "#34d399" }]}>-{couponDiscount.toLocaleString()} د.ع</Text>
-              <Text style={styles.billingLabel}>خصم الكوبون</Text>
+              <Text style={[styles.billingValue, { color: "#34d399" }]}>-{couponDiscount.toLocaleString()} {t("currency")}</Text>
+              <Text style={styles.billingLabel}>{t("no_coupon_discount")}</Text>
             </View>
           ) : null}
           {deliveryOption === "delivery" ? (
             <View style={styles.billingRow}>
-              <Text style={styles.billingValue}>{deliveryFee.toLocaleString()} د.ع</Text>
-              <Text style={styles.billingLabel}>رسوم التوصيل</Text>
+              <Text style={styles.billingValue}>{deliveryFee.toLocaleString()} {t("currency")}</Text>
+              <Text style={styles.billingLabel}>{t("no_shipping_fee")}</Text>
             </View>
           ) : null}
           <View style={[styles.billingRow, styles.billingTotalRow]}>
-            <Text style={styles.billingTotalValue}>{totalPrice.toLocaleString()} د.ع</Text>
-            <Text style={styles.billingTotalLabel}>المجموع الكلي</Text>
+            <Text style={styles.billingTotalValue}>{totalPrice.toLocaleString()} {t("currency")}</Text>
+            <Text style={styles.billingTotalLabel}>{t("no_grand_total")}</Text>
           </View>
         </View>
 
         {/* Payment Methods */}
         <View style={styles.glassCard}>
-          <Text style={styles.cardHeaderTitle}>طريقة الدفع</Text>
+          <Text style={styles.cardHeaderTitle}>{t("no_payment_method")}</Text>
           <View style={styles.paymentMethodsRow}>
             <TouchableOpacity
               onPress={() => setPaymentMethod("electronic")}
               style={[styles.paymentMethodBox, paymentMethod === "electronic" && styles.paymentMethodActive]}
             >
               <Feather name="credit-card" size={20} color={paymentMethod === "electronic" ? "#ea580c" : "#71717a"} />
-              <Text style={[styles.paymentMethodLabel, paymentMethod === "electronic" && styles.paymentMethodTextActive]}>دفع إلكتروني</Text>
+              <Text style={[styles.paymentMethodLabel, paymentMethod === "electronic" && styles.paymentMethodTextActive]}>{t("no_pay_electronic")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1408,7 +1399,7 @@ export default function NewOrderScreen() {
               style={[styles.paymentMethodBox, paymentMethod === "wallet" && styles.paymentMethodActive]}
             >
               <Ionicons name="wallet-outline" size={20} color={paymentMethod === "wallet" ? "#ea580c" : "#71717a"} />
-              <Text style={[styles.paymentMethodLabel, paymentMethod === "wallet" && styles.paymentMethodTextActive]}>رصيد المحفظة</Text>
+              <Text style={[styles.paymentMethodLabel, paymentMethod === "wallet" && styles.paymentMethodTextActive]}>{t("no_pay_wallet")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1416,32 +1407,32 @@ export default function NewOrderScreen() {
               style={[styles.paymentMethodBox, paymentMethod === "cod" && styles.paymentMethodActive]}
             >
               <Feather name="dollar-sign" size={20} color={paymentMethod === "cod" ? "#ea580c" : "#71717a"} />
-              <Text style={[styles.paymentMethodLabel, paymentMethod === "cod" && styles.paymentMethodTextActive]}>الدفع عند الاستلام</Text>
+              <Text style={[styles.paymentMethodLabel, paymentMethod === "cod" && styles.paymentMethodTextActive]}>{t("no_pay_cod")}</Text>
             </TouchableOpacity>
           </View>
 
           {paymentMethod === "wallet" && (
             <View style={styles.walletDetails}>
-              <Text style={styles.walletDetailsText}>رصيد محفظتك الحالي: {balance.toLocaleString()} د.ع</Text>
+              <Text style={styles.walletDetailsText}>{t("no_wallet_balance", { balance: balance.toLocaleString() })}</Text>
               {balance < totalPrice ? (
-                <Text style={styles.walletDetailsError}>رصيدك الحالي غير كافٍ لتغطية تكلفة الطلب</Text>
+                <Text style={styles.walletDetailsError}>{t("no_wallet_insufficient")}</Text>
               ) : (
-                <Text style={styles.walletDetailsSuccess}>رصيدك كافٍ لإتمام الدفع</Text>
+                <Text style={styles.walletDetailsSuccess}>{t("no_wallet_enough")}</Text>
               )}
             </View>
           )}
 
           {paymentMethod === "electronic" && (
             <View style={styles.electronicDetails}>
-              <Text style={styles.detailsTitle}>التحويل الإلكتروني</Text>
-              <Text style={styles.detailsDesc}>يرجى التحويل إلى أحد الأرقام التالية وإرسال صورة إيصال التحويل:</Text>
+              <Text style={styles.detailsTitle}>{t("transfer_instructions")}</Text>
+              <Text style={styles.detailsDesc}>{t("send_invoice_amount")}</Text>
 
               {zaincashNum ? (
                 <View style={styles.paymentAccountRow}>
                   <TouchableOpacity onPress={() => copyPaymentNumber(zaincashNum)} style={styles.copyBtn}>
                     <Feather name="copy" size={14} color="#ea580c" />
                   </TouchableOpacity>
-                  <Text style={styles.paymentAccountText}>زين كاش: {zaincashNum}</Text>
+                  <Text style={styles.paymentAccountText}>{t("no_zaincash")}: {zaincashNum}</Text>
                 </View>
               ) : null}
 
@@ -1450,7 +1441,7 @@ export default function NewOrderScreen() {
                   <TouchableOpacity onPress={() => copyPaymentNumber(asiaNum)} style={styles.copyBtn}>
                     <Feather name="copy" size={14} color="#ea580c" />
                   </TouchableOpacity>
-                  <Text style={styles.paymentAccountText}>آسيا حوالة: {asiaNum}</Text>
+                  <Text style={styles.paymentAccountText}>{t("no_asia")}: {asiaNum}</Text>
                 </View>
               ) : null}
 
@@ -1458,7 +1449,7 @@ export default function NewOrderScreen() {
               {receiptUrl ? (
                 <View style={styles.receiptPreviewWrapper}>
                   <Feather name="image" size={18} color="#34d399" />
-                  <Text style={styles.receiptUploadedText}>تم رفع إيصال الدفع الإلكتروني بنجاح ✓</Text>
+                  <Text style={styles.receiptUploadedText}>{t("no_receipt_ok")}</Text>
                   <TouchableOpacity onPress={() => setReceiptUrl("")} style={styles.receiptRemoveBtn}>
                     <Feather name="x" size={14} color="#ef4444" />
                   </TouchableOpacity>
@@ -1470,7 +1461,7 @@ export default function NewOrderScreen() {
                   ) : (
                     <View style={styles.buttonInner}>
                       <Feather name="upload" size={16} color="#71717a" style={styles.buttonIcon} />
-                      <Text style={styles.receiptPickerBtnText}>إرفاق صورة إيصال التحويل</Text>
+                      <Text style={styles.receiptPickerBtnText}>{t("no_attach_receipt")}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -1480,17 +1471,77 @@ export default function NewOrderScreen() {
         </View>
 
         {/* Submit */}
-        <TouchableOpacity onPress={handleSubmitOrder} disabled={submitting} style={styles.submitOrderButton}>
+        <TouchableOpacity
+          onPress={handleSubmitOrder}
+          disabled={submitting || analyzingFile}
+          style={[
+            styles.submitOrderButton,
+            (submitting || analyzingFile) && styles.submitOrderButtonDisabled,
+          ]}
+        >
           {submitting ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
             <View style={styles.buttonInner}>
               <Feather name="check" size={18} color="#ffffff" style={styles.buttonIcon} />
-              <Text style={styles.submitOrderButtonText}>تأكيد وإرسال طلب الطباعة</Text>
+              <Text style={styles.submitOrderButtonText}>{t("no_submit")}</Text>
             </View>
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Large file → Telegram bot modal */}
+      <Modal
+        visible={largeFileModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLargeFileModal({ visible: false })}
+      >
+        <View style={styles.uxModalOverlay}>
+          <View style={styles.uxModalCard}>
+            <View style={styles.uxModalIconWrap}>
+              <Feather name="alert-triangle" size={28} color="#ea580c" />
+            </View>
+            <Text style={styles.uxModalTitle}>{t("large_file_title")}</Text>
+            <Text style={styles.uxModalBody}>{t("large_file_body")}</Text>
+            {largeFileModal.sizeMB != null ? (
+              <Text style={styles.uxModalMeta}>
+                {largeFileModal.fileName ? `${largeFileModal.fileName} · ` : ""}
+                {largeFileModal.sizeMB} MB
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              style={styles.uxModalPrimaryBtn}
+              onPress={handleOpenBotFromLargeFile}
+            >
+              <FontAwesome name="telegram" size={18} color="#ffffff" />
+              <Text style={styles.uxModalPrimaryBtnText}>{t("large_file_open_bot")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.uxModalSecondaryBtn}
+              onPress={() => setLargeFileModal({ visible: false })}
+            >
+              <Text style={styles.uxModalSecondaryBtnText}>{t("large_file_cancel")}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Full-screen lock while parsing PDF pages */}
+      <Modal visible={analyzingFile} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.analyzingOverlay} pointerEvents="auto">
+          <View style={styles.analyzingCard}>
+            <ActivityIndicator size="large" color="#ea580c" />
+            <Text style={styles.analyzingTitle}>{t("analyzing_file_title")}</Text>
+            <View style={styles.analyzingSteps}>
+              <Text style={styles.analyzingStep}>• {t("analyzing_file_step_pages")}</Text>
+              <Text style={styles.analyzingStep}>• {t("analyzing_file_step_prepare")}</Text>
+              <Text style={styles.analyzingStep}>• {t("analyzing_file_step_price")}</Text>
+            </View>
+            <Text style={styles.analyzingWait}>{t("analyzing_file_wait")}</Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1709,6 +1760,39 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 11,
     color: themeColors.textMuted,
     marginBottom: 12,
+    textAlign: "right",
+  },
+  telegramBotBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    width: "100%",
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "rgba(0, 136, 204, 0.15)",
+    borderWidth: 2,
+    borderColor: "rgba(0, 136, 204, 0.3)",
+    marginBottom: 10,
+  },
+  telegramBotBtnText: {
+    color: "#29b6f6",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  telegramHint: {
+    width: "100%",
+    textAlign: "center",
+    color: "#29b6f6",
+    fontSize: 11,
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: "rgba(0, 136, 204, 0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 136, 204, 0.15)",
+    overflow: "hidden",
   },
   telegramInput: {
     backgroundColor: themeColors.background,
@@ -1720,6 +1804,14 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: 12,
     color: themeColors.text,
     fontSize: 14,
+  },
+  telegramCodeOk: {
+    marginTop: 8,
+    width: "100%",
+    textAlign: "right",
+    color: "#10b981",
+    fontSize: 12,
+    fontWeight: "600",
   },
   inputGroupSpacer: {
     marginTop: 16,
@@ -2116,6 +2208,129 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     marginTop: 8,
     marginBottom: 20,
   },
+  submitOrderButtonDisabled: {
+    opacity: 0.55,
+  },
+  controlDisabled: {
+    opacity: 0.45,
+  },
+  uxModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  uxModalCard: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#18181b",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#27272a",
+    padding: 24,
+    alignItems: "center",
+  },
+  uxModalIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "rgba(234, 88, 12, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  uxModalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#f4f4f5",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  uxModalBody: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: "#a1a1aa",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  uxModalMeta: {
+    fontSize: 12,
+    color: "#71717a",
+    textAlign: "center",
+    marginBottom: 18,
+  },
+  uxModalPrimaryBtn: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#0088cc",
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginBottom: 10,
+  },
+  uxModalPrimaryBtnText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  uxModalSecondaryBtn: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#3f3f46",
+  },
+  uxModalSecondaryBtnText: {
+    color: "#d4d4d8",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  analyzingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(9, 9, 11, 0.88)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  analyzingCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#18181b",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#27272a",
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: "center",
+  },
+  analyzingTitle: {
+    marginTop: 18,
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#f4f4f5",
+    textAlign: "center",
+  },
+  analyzingSteps: {
+    marginTop: 18,
+    width: "100%",
+    gap: 8,
+  },
+  analyzingStep: {
+    fontSize: 13,
+    color: "#a1a1aa",
+    textAlign: "center",
+  },
+  analyzingWait: {
+    marginTop: 20,
+    fontSize: 12,
+    color: "#71717a",
+    textAlign: "center",
+  },
   submitOrderButtonText: {
     color: "#ffffff",
     fontSize: 14,
@@ -2197,6 +2412,16 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
+  lockedPagesCol: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  pagesAutoNote: {
+    fontSize: 10,
+    color: "#71717a",
+    textAlign: "right",
+    maxWidth: 180,
+  },
   readOnlyPagesText: {
     fontSize: 11,
     fontWeight: "bold",
@@ -2245,6 +2470,8 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     color: "#ea580c",
   },
   readOnlyPagesBadgeGlobal: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
     backgroundColor: themeColors.cardBg,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,

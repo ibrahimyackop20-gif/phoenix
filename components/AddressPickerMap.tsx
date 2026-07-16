@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
-  Dimensions,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { getCurrentLocationWithPermission } from "../lib/locationPermissions";
+import { useAppTheme } from "./ThemeProvider";
+import i18n from "../i18n";
 
 interface LocationData {
   lat: number;
@@ -26,23 +28,20 @@ interface AddressPickerMapProps {
   initialLng?: number;
 }
 
-// Default: Basra, Iraq
 const DEFAULT_LAT = 30.5085;
 const DEFAULT_LNG = 47.7834;
 
-// Nominatim reverse geocode (free, no API key)
-async function reverseGeocode(lat: number, lng: number): Promise<{
-  area: string;
-  formattedAddress: string;
-}> {
+async function reverseGeocode(
+  lat: number,
+  lng: number,
+  lang: string
+): Promise<{ area: string; formattedAddress: string }> {
   try {
-    console.log("🗺️ Reverse geocoding:", lat, lng);
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar&zoom=18`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${lang}&zoom=18`,
       { headers: { "User-Agent": "PhoenixPrint/1.0" } }
     );
     const data = await res.json();
-    console.log("🗺️ Nominatim response:", data);
     const addr = data.address || {};
     const area =
       addr.suburb ||
@@ -52,25 +51,23 @@ async function reverseGeocode(lat: number, lng: number): Promise<{
       addr.city ||
       addr.state ||
       "";
-    const result = {
+    return {
       area,
       formattedAddress: data.display_name || "",
     };
-    console.log("🗺️ Parsed result:", result);
-    return result;
   } catch (err) {
     console.error("🗺️ Reverse geocode error:", err);
     return { area: "", formattedAddress: "" };
   }
 }
 
-// Nominatim forward search
-async function searchPlace(query: string): Promise<
-  Array<{ lat: number; lng: number; display_name: string }>
-> {
+async function searchPlace(
+  query: string,
+  lang: string
+): Promise<Array<{ lat: number; lng: number; display_name: string }>> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=iq&accept-language=ar&limit=5`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=iq&accept-language=${lang}&limit=5`,
       { headers: { "User-Agent": "PhoenixPrint/1.0" } }
     );
     const data = await res.json();
@@ -89,6 +86,10 @@ export default function AddressPickerMap({
   initialLat,
   initialLng,
 }: AddressPickerMapProps) {
+  const { t } = useTranslation();
+  const { themeColors, isDark } = useAppTheme();
+  const styles = getStyles(themeColors, isDark);
+
   const webViewRef = useRef<WebView>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
   onLocationSelectRef.current = onLocationSelect;
@@ -103,20 +104,16 @@ export default function AddressPickerMap({
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    console.log("[AddressPickerMap Component Log] Mounted");
-    return () => {
-      console.log("[AddressPickerMap Component Log] Unmounted");
-    };
-  }, []);
-
   const lat = initialLat || DEFAULT_LAT;
   const lng = initialLng || DEFAULT_LNG;
+  const mapBg = isDark ? "#111827" : "#f3f4f6";
+  const tileUrl = isDark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
   const updateLocation = async (latitude: number, longitude: number) => {
     setGeocoding(true);
-    const geo = await reverseGeocode(latitude, longitude);
-    console.log("📍 Calling onLocationSelect with:", { lat: latitude, lng: longitude, ...geo });
+    const geo = await reverseGeocode(latitude, longitude, i18n.language);
     onLocationSelectRef.current({
       lat: latitude,
       lng: longitude,
@@ -138,7 +135,6 @@ export default function AddressPickerMap({
 
       const { latitude, longitude } = coords;
 
-      // Update position inside Leaflet WebView
       webViewRef.current?.postMessage(
         JSON.stringify({
           type: "UPDATE_POSITION",
@@ -150,7 +146,7 @@ export default function AddressPickerMap({
       await updateLocation(latitude, longitude);
     } catch (err) {
       console.error(err);
-      setError("تعذر تحديد موقعك — تأكد من تفعيل GPS");
+      setError(t("map_gps_error"));
     } finally {
       setGpsLoading(false);
     }
@@ -158,7 +154,7 @@ export default function AddressPickerMap({
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-    const results = await searchPlace(searchQuery);
+    const results = await searchPlace(searchQuery, i18n.language);
     setSearchResults(results);
     setShowResults(true);
   };
@@ -180,7 +176,6 @@ export default function AddressPickerMap({
     setSearchQuery("");
   };
 
-  // Map html source rendered dynamically from CDN inside the WebView
   const leafletHtml = `
     <!DOCTYPE html>
     <html>
@@ -189,8 +184,8 @@ export default function AddressPickerMap({
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style>
-        body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #09090b; }
-        .leaflet-container { background: #09090b; }
+        body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: ${mapBg}; }
+        .leaflet-container { background: ${mapBg}; }
       </style>
     </head>
     <body>
@@ -209,7 +204,7 @@ export default function AddressPickerMap({
             attributionControl: false
           });
 
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          L.tileLayer('${tileUrl}', {
             maxZoom: 19,
             subdomains: 'abcd'
           }).addTo(map);
@@ -237,8 +232,6 @@ export default function AddressPickerMap({
             marker.setLatLng(e.latlng);
             sendCoordinates(e.latlng.lat, e.latlng.lng);
           });
-
-          // Do NOT auto-report / reverse-geocode on open — wait for user action.
         }
 
         function updateMarkerPosition(lat, lng) {
@@ -256,10 +249,8 @@ export default function AddressPickerMap({
           }));
         }
 
-        // Initialize immediately
         initMap();
 
-        // Listen for messages from RN
         window.addEventListener('message', function(event) {
           try {
             var data = JSON.parse(event.data);
@@ -286,22 +277,20 @@ export default function AddressPickerMap({
 
   return (
     <View style={styles.container}>
-      {/* Search bar */}
       <View style={styles.searchContainer}>
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSubmitEditing={handleSearch}
-          placeholder="ابحث عن منطقتك..."
-          placeholderTextColor="#71717a"
+          placeholder={t("map_search_placeholder")}
+          placeholderTextColor={themeColors.textMuted}
           style={styles.searchInput}
           textAlign="right"
         />
         <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-          <Feather name="search" size={16} color="#71717a" />
+          <Feather name="search" size={16} color={themeColors.textMuted} />
         </TouchableOpacity>
 
-        {/* Search results dropdown */}
         {showResults && searchResults.length > 0 && (
           <View style={styles.dropdown}>
             <FlatList
@@ -325,39 +314,38 @@ export default function AddressPickerMap({
 
         {showResults && searchResults.length === 0 && (
           <View style={styles.dropdown}>
-            <Text style={styles.noResultsText}>لا توجد نتائج</Text>
+            <Text style={styles.noResultsText}>{t("map_no_results")}</Text>
           </View>
         )}
       </View>
 
-      {/* Current location — only requests permission when pressed */}
       <TouchableOpacity
         onPress={handleGPS}
         disabled={gpsLoading || !mapLoaded}
         style={styles.useMyLocationButton}
         accessibilityRole="button"
-        accessibilityLabel="استخدم موقعي الحالي"
+        accessibilityLabel={t("map_use_my_location")}
       >
         {gpsLoading ? (
           <ActivityIndicator size="small" color="#ffffff" />
         ) : (
           <Feather name="navigation" size={16} color="#ffffff" />
         )}
-        <Text style={styles.useMyLocationButtonText}>📍 استخدم موقعي الحالي</Text>
+        <Text style={styles.useMyLocationButtonText}>📍 {t("map_use_my_location")}</Text>
       </TouchableOpacity>
 
-      {/* Map container */}
       <View style={styles.mapBorder}>
         <View style={styles.mapWrapper}>
           <WebView
+            key={isDark ? "dark-map" : "light-map"}
             ref={webViewRef}
             originWhitelist={["*"]}
             source={{ html: leafletHtml }}
             onLoadEnd={() => setMapLoaded(true)}
             onMessage={onWebViewMessage}
             style={styles.webview}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
+            javaScriptEnabled
+            domStorageEnabled
           />
         </View>
 
@@ -367,11 +355,10 @@ export default function AddressPickerMap({
           </View>
         )}
 
-        {/* Geocoding loading indicator */}
         {geocoding && (
           <View style={styles.geocodingIndicator}>
             <ActivityIndicator size="small" color="#f97316" style={styles.spinner} />
-            <Text style={styles.geocodingText}>جاري تحديد العنوان...</Text>
+            <Text style={styles.geocodingText}>{t("map_geocoding")}</Text>
           </View>
         )}
       </View>
@@ -382,160 +369,159 @@ export default function AddressPickerMap({
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : (
-        <Text style={styles.infoText}>
-          اسحب المؤشر أو اضغط على الخريطة لتحديد موقعك بدقة
-        </Text>
+        <Text style={styles.infoText}>{t("map_drag_hint")}</Text>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: 8,
-    gap: 8,
-  },
-  searchContainer: {
-    position: "relative",
-    zIndex: 10,
-  },
-  searchInput: {
-    backgroundColor: "#18181b",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingRight: 40,
-    height: 48,
-    color: "#f4f4f5",
-    fontSize: 14,
-  },
-  searchButton: {
-    position: "absolute",
-    right: 12,
-    top: 14,
-    zIndex: 11,
-  },
-  dropdown: {
-    position: "absolute",
-    top: 52,
-    left: 0,
-    right: 0,
-    backgroundColor: "#18181b",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
-    maxHeight: 180,
-    overflow: "hidden",
-    zIndex: 100,
-  },
-  dropdownList: {
-    paddingVertical: 4,
-  },
-  dropdownItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomColor: "#27272a",
-    borderBottomWidth: 0.5,
-  },
-  dropdownText: {
-    color: "#e4e4e7",
-    fontSize: 12,
-    textAlign: "right",
-  },
-  noResultsText: {
-    color: "#71717a",
-    fontSize: 12,
-    padding: 12,
-    textAlign: "center",
-  },
-  mapBorder: {
-    height: 250,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#27272a",
-    overflow: "hidden",
-    position: "relative",
-  },
-  mapWrapper: {
-    flex: 1,
-    backgroundColor: "#09090b",
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: "#09090b",
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#09090b",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  geocodingIndicator: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 1000,
-    backgroundColor: "rgba(24, 24, 27, 0.9)",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-  },
-  spinner: {
-    transform: [{ scale: 0.8 }],
-  },
-  geocodingText: {
-    fontSize: 10,
-    color: "#a1a1aa",
-  },
-  useMyLocationButton: {
-    backgroundColor: "#ea580c",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  useMyLocationButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#ffffff",
-    textAlign: "center",
-  },
-  infoText: {
-    fontSize: 10,
-    color: "#71717a",
-    textAlign: "center",
-    marginTop: 4,
-  },
-  errorBanner: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderColor: "rgba(239, 68, 68, 0.3)",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  errorIcon: {
-    marginLeft: 4,
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#ef4444",
-  },
-});
+const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      marginVertical: 8,
+      gap: 8,
+    },
+    searchContainer: {
+      position: "relative",
+      zIndex: 10,
+    },
+    searchInput: {
+      backgroundColor: themeColors.inputBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingRight: 40,
+      height: 48,
+      color: themeColors.text,
+      fontSize: 14,
+    },
+    searchButton: {
+      position: "absolute",
+      right: 12,
+      top: 14,
+      zIndex: 11,
+    },
+    dropdown: {
+      position: "absolute",
+      top: 52,
+      left: 0,
+      right: 0,
+      backgroundColor: themeColors.cardBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 12,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.3 : 0.08,
+      shadowRadius: 6,
+      elevation: 5,
+      maxHeight: 180,
+      overflow: "hidden",
+      zIndex: 100,
+    },
+    dropdownList: {
+      paddingVertical: 4,
+    },
+    dropdownItem: {
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderBottomColor: themeColors.cardBorder,
+      borderBottomWidth: 0.5,
+    },
+    dropdownText: {
+      color: themeColors.text,
+      fontSize: 12,
+      textAlign: "right",
+    },
+    noResultsText: {
+      color: themeColors.textMuted,
+      fontSize: 12,
+      padding: 12,
+      textAlign: "center",
+    },
+    mapBorder: {
+      height: 250,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: themeColors.cardBorder,
+      overflow: "hidden",
+      position: "relative",
+    },
+    mapWrapper: {
+      flex: 1,
+      backgroundColor: isDark ? "#111827" : "#f3f4f6",
+    },
+    webview: {
+      flex: 1,
+      backgroundColor: isDark ? "#111827" : "#f3f4f6",
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: isDark ? "#111827" : "#f3f4f6",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    geocodingIndicator: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      zIndex: 1000,
+      backgroundColor: isDark ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.95)",
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 6,
+    },
+    spinner: {
+      transform: [{ scale: 0.8 }],
+    },
+    geocodingText: {
+      fontSize: 10,
+      color: themeColors.textMuted,
+    },
+    useMyLocationButton: {
+      backgroundColor: "#ea580c",
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    useMyLocationButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: "#ffffff",
+      textAlign: "center",
+    },
+    infoText: {
+      fontSize: 10,
+      color: themeColors.textMuted,
+      textAlign: "center",
+      marginTop: 4,
+    },
+    errorBanner: {
+      backgroundColor: "rgba(239, 68, 68, 0.1)",
+      borderColor: "rgba(239, 68, 68, 0.3)",
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 12,
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    errorIcon: {
+      marginLeft: 4,
+    },
+    errorText: {
+      fontSize: 12,
+      color: "#ef4444",
+    },
+  });

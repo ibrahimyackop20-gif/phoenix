@@ -137,7 +137,7 @@ export default function PaymentScreen() {
 
   const handleScreenshotPicker = async () => {
     if (!topupAmount || Number(topupAmount) <= 0) {
-      triggerToast("يرجى إدخال مبلغ شحن صحيح أولاً", "error");
+      triggerToast(t("pay_enter_topup_first"), "error");
       return;
     }
 
@@ -156,13 +156,14 @@ export default function PaymentScreen() {
       const file = res.assets[0];
       const { data: session } = await supabase.auth.getSession();
       if (!session || !session.session?.user) {
-        triggerToast("أنت غير مسجل الدخول", "error");
+        triggerToast(t("pay_not_logged_in"), "error");
         return;
       }
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${session.session.user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `receipts/${fileName}`;
+      const fileExt = (file.name?.split(".").pop() || "jpg").toLowerCase();
+      const userId = session.session.user.id;
+      // Path must start with auth uid so Storage RLS + delete-account cleanup match
+      const filePath = `${userId}/receipt-${Date.now()}.${fileExt}`;
 
       const response = await fetch(file.uri);
       const arrayBuffer = await response.arrayBuffer();
@@ -179,12 +180,12 @@ export default function PaymentScreen() {
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(filePath);
       const pubUrl = urlData.publicUrl;
 
-      // Insert topup request into supabase
-      const { error: dbError } = await supabase.from("wallet_requests").insert({
-        user_id: session.session.user.id,
+      // Insert top-up request (table is wallet_topups; column is receipt_url)
+      const { error: dbError } = await supabase.from("wallet_topups").insert({
+        user_id: userId,
         amount: Number(topupAmount),
-        screenshot_url: pubUrl,
-        status: "Pending",
+        receipt_url: pubUrl,
+        status: "pending",
       });
 
       if (dbError) {
@@ -193,11 +194,11 @@ export default function PaymentScreen() {
 
       setScreenshotUrl(pubUrl);
       setUploadSuccess(true);
-      triggerToast("تم رفع إثبات الدفع بنجاح");
+      triggerToast(t("pay_receipt_uploaded"));
       setTopupAmount("");
       loadData();
     } catch (err: any) {
-      triggerToast(err.message || "فشل رفع الملف", "error");
+      triggerToast(err.message || t("pay_upload_failed"), "error");
     } finally {
       setUploading(false);
     }
@@ -209,9 +210,9 @@ export default function PaymentScreen() {
   };
 
   const paymentLabels: Record<string, string> = {
-    "Zain Cash": "زين كاش",
-    AsiaHawala: "آسيا حوالة",
-    COD: "الدفع عند الاستلام",
+    "Zain Cash": t("pay_zaincash"),
+    AsiaHawala: t("pay_asia"),
+    COD: t("pay_cod_short"),
   };
 
   if (loading) {

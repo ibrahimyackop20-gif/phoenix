@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -10,41 +10,46 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAppTheme } from "@/../components/ThemeProvider";
+import { useTranslation } from "react-i18next";
 
 export default function TermsOfService() {
   const router = useRouter();
   const { themeColors } = useAppTheme();
+  const { t, i18n } = useTranslation();
 
-  const sections = [
-    {
-      title: "1. قبول الشروط والأحكام",
-      content: "باستخدامك لتطبيق Phoenix Print، فإنك توافق بشكل كامل وصريح على الشروط والأحكام المذكورة هنا. إذا كنت لا توافق على أي بند من هذه الشروط، يرجى التوقف عن استخدام الخدمة فوراً.",
-    },
-    {
-      title: "2. مسؤولية المستخدم وحسابه",
-      content: "أنت مسؤول مسؤولية تامة عن الحفاظ على سرية رمز الدخول وحسابك الشخصي. تلتزم بتقديم معلومات صحيحة ودقيقة مثل الاسم الكامل، رقم الهاتف النشط، والعنوان الجغرافي لتفادي أي مشاكل في تسليم الطلبات أو الاتصال.",
-    },
-    {
-      title: "3. قواعد وضوابط رفع المستندات للطباعة",
-      content: "يُحظر رفع أي مستندات تخالف القوانين السائدة في بلدك أو تحتوي على إساءة، بذاءة، تحريض على العنف أو الكراهية، أو أي محتوى سياسي حساس. يقع على عاتقك بالكامل ضمان ألا تنتهك هذه الملفات خصوصية أو أمان أي فرد آخر.",
-    },
-    {
-      title: "4. حقوق النشر والملكية الفكرية",
-      content: "يجب أن تكون المالك الشرعي للمستندات والملفات التي تطلب طباعتها، أو تملك ترخيصاً كتابياً يعطيك الحق في نسخها وتداولها. تطبيق Phoenix Print لا يتحمل أي مسؤولية قانونية عن انتهاك المستخدم لحقوق الملكية الفكرية أو الطبع والنشر للمطبوعات.",
-    },
-    {
-      title: "5. شروط خدمات الطباعة والتسعير",
-      content: "يتم تحديد أسعار خدمات الطباعة (سعر الصفحة، الألوان، التغليف، الخ) وتكاليف التوصيل بوضوح في شاشات الحساب وسلة المشتريات. يحق للتطبيق تعديل الأسعار مستقبلاً حسب تكلفة المواد الأولية، ولكن لا تسري التغييرات على الطلبات النشطة التي تم دفعها بالفعل.",
-    },
-    {
-      title: "6. طرق الدفع وسياسات الإلغاء",
-      content: "تتم تسوية مدفوعات الطلبات عن طريق الدفع النقدي عند الاستلام (COD)، أو الدفع المسبق عبر المحافظ الإلكترونية المعتمدة وإرفاق إيصال التحويل. نظراً لطبيعة الخدمة المخصصة، لا يمكن إلغاء طلبات الطباعة أو استرداد قيمتها بعد دخولها مرحلة جاري الطباعة (Printing).",
-    },
-    {
-      title: "7. تعليق وإنهاء الحسابات",
-      content: "يحتفظ تطبيق Phoenix Print بالحق الكامل في تعليق حسابك أو حظره نهائياً في حال مخالفة أي بند من شروط الخدمة، أو تكرار تقديم طلبات وهمية، أو عند الاشتباه في وجود نشاط احتيالي دون الحاجة لإنذار مسبق.",
-    },
-  ];
+  const sections = useMemo(
+    () => [
+      {
+        title: t("privacy_terms_s1_title"),
+        content: t("privacy_terms_s1_body"),
+      },
+      {
+        title: t("privacy_terms_s2_title"),
+        content: t("privacy_terms_s2_body"),
+      },
+      {
+        title: t("privacy_terms_s3_title"),
+        content: t("privacy_terms_s3_body"),
+      },
+      {
+        title: t("privacy_terms_s4_title"),
+        content: t("privacy_terms_s4_body"),
+      },
+      {
+        title: t("privacy_terms_s5_title"),
+        content: t("privacy_terms_s5_body"),
+      },
+      {
+        title: t("privacy_terms_s6_title"),
+        content: t("privacy_terms_s6_body"),
+      },
+      {
+        title: t("privacy_terms_s7_title"),
+        content: t("privacy_terms_s7_body"),
+      },
+    ],
+    [t, i18n.language]
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -52,7 +57,7 @@ export default function TermsOfService() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-right" size={22} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>شروط الخدمة والاستخدام</Text>
+        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>{t("privacy_terms_appbar")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -61,8 +66,8 @@ export default function TermsOfService() {
           <View style={styles.iconWrapper}>
             <Feather name="file-text" size={32} color="#ea580c" />
           </View>
-          <Text style={[styles.introTitle, { color: themeColors.text }]}>شروط وضوابط استخدام الخدمة</Text>
-          <Text style={[styles.introDate, { color: themeColors.textMuted }]}>آخر تحديث: يوليو 2026</Text>
+          <Text style={[styles.introTitle, { color: themeColors.text }]}>{t("privacy_terms_intro")}</Text>
+          <Text style={[styles.introDate, { color: themeColors.textMuted }]}>{t("privacy_terms_updated")}</Text>
         </View>
 
         <View style={styles.contentBody}>

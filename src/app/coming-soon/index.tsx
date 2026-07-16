@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   StyleSheet,
   View,
@@ -7,16 +7,38 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+
+const FEATURE_TITLE_KEYS = new Set(["library", "my_store"]);
 
 export default function ComingSoonScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams<{ feature?: string | string[] }>();
   const shimmerAnim = useRef(new Animated.Value(0.3)).current;
 
+  const featureKey = useMemo(() => {
+    const raw = Array.isArray(params.feature)
+      ? params.feature[0]
+      : params.feature;
+    // Contact Us is live — send legacy Coming Soon Contact links there.
+    if (!raw || raw === "contact_us") {
+      return null;
+    }
+    if (FEATURE_TITLE_KEYS.has(raw)) return raw;
+    return "library";
+  }, [params.feature]);
+
   useEffect(() => {
+    if (featureKey === null) {
+      router.replace("/dashboard/contact" as any);
+    }
+  }, [featureKey, router]);
+
+  useEffect(() => {
+    if (featureKey === null) return;
     Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
@@ -31,17 +53,27 @@ export default function ComingSoonScreen() {
         }),
       ])
     ).start();
-  }, [shimmerAnim]);
+  }, [featureKey, shimmerAnim]);
 
   const shimmerWidth = shimmerAnim.interpolate({
     inputRange: [0.3, 0.7],
     outputRange: ["30%", "70%"],
   });
 
+  if (featureKey === null) {
+    return null;
+  }
+
+  const pageTitle = t(featureKey);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Phoenix Logo Glow */}
+        {/* Screen header title — feature-specific (Library vs Contact) */}
+        <Text style={styles.screenHeader} accessibilityRole="header">
+          {pageTitle}
+        </Text>
+
         <View style={styles.logoOuter}>
           <View style={styles.logoGlow} />
           <View style={styles.logoBadge}>
@@ -49,45 +81,37 @@ export default function ComingSoonScreen() {
           </View>
         </View>
 
-        {/* Floating Sparkles */}
         <View style={styles.sparklesRow}>
           <Ionicons name="sparkles" size={16} color="#fbbf24" />
-          <Text style={styles.badgeText}>قريباً</Text>
+          <Text style={styles.badgeText}>{t("soon")}</Text>
           <Ionicons name="sparkles" size={16} color="#fbbf24" />
         </View>
 
-        {/* Title */}
-        <Text style={styles.titleText}>قسم قيد التطوير</Text>
+        <Text style={styles.titleText}>{t("coming_soon_heading")}</Text>
 
-        {/* Description */}
         <Text style={styles.descriptionText}>
-          هذا القسم قيد التطوير حالياً.. انتظرونا قريباً في مكتبة {t("brand_name")}
+          {t("coming_soon_body", { section: pageTitle, brand: t("brand_name") })}
         </Text>
 
-        {/* Progress Bar */}
         <View style={styles.progressBarBg}>
           <Animated.View
-            style={[
-              styles.progressBarFill,
-              { width: shimmerWidth },
-            ]}
+            style={[styles.progressBarFill, { width: shimmerWidth }]}
           />
         </View>
 
-        {/* Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => router.push("/dashboard" as any)}
           >
-            <Text style={styles.primaryButtonText}>العودة للوحة التحكم</Text>
+            <Text style={styles.primaryButtonText}>{t("back_to_dashboard")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push("/dashboard/new-order" as any)}
           >
-            <Text style={styles.secondaryButtonText}>طلب طباعة</Text>
+            <Text style={styles.secondaryButtonText}>{t("new_order")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -98,13 +122,21 @@ export default function ComingSoonScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#09090b", // zinc-950
+    backgroundColor: "#09090b",
   },
   container: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
+  },
+  screenHeader: {
+    position: "absolute",
+    top: 16,
+    alignSelf: "center",
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#f4f4f5",
   },
   logoOuter: {
     position: "relative",
@@ -119,7 +151,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(234, 88, 12, 0.15)", // Primary glow
+    backgroundColor: "rgba(234, 88, 12, 0.15)",
   },
   logoBadge: {
     width: 112,
@@ -150,17 +182,17 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#fbbf24", // amber-400
+    color: "#fbbf24",
   },
   titleText: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#f97316", // primary gradient representation
+    color: "#f97316",
     marginBottom: 16,
   },
   descriptionText: {
     fontSize: 15,
-    color: "#a1a1aa", // zinc-400
+    color: "#a1a1aa",
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 32,
@@ -170,9 +202,9 @@ const styles = StyleSheet.create({
     width: 256,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#18181b", // zinc-900
+    backgroundColor: "#18181b",
     borderWidth: 1,
-    borderColor: "#27272a", // zinc-800
+    borderColor: "#27272a",
     overflow: "hidden",
     marginBottom: 32,
   },

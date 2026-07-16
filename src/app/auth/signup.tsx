@@ -12,22 +12,26 @@ import {
 } from "react-native";
 import { useRouter, Link } from "expo-router";
 import { supabase } from "@/lib/supabaseClient";
+import { isPrimaryAdminEmail, resolveAuthEmail } from "@/lib/adminAccess";
 import OtpInput from "@/../components/OtpInput";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import { useAppTheme } from "../../../components/ThemeProvider";
 
 type Step = "register" | "verify";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { themeColors, isDark } = useAppTheme();
+  const styles = getStyles(themeColors, isDark);
 
-  // Registration form fields
   const [fullName, setFullName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("+964");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Flow control states
   const [step, setStep] = useState<Step>("register");
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -35,7 +39,6 @@ export default function SignupPage() {
   const [otpError, setOtpError] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Resend Countdown
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
@@ -46,14 +49,13 @@ export default function SignupPage() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Submit registration form
   const handleRegister = async () => {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
-      setError("يرجى ملء جميع الحقول المطلوبة");
+      setError(t("auth_fill_required"));
       return;
     }
     if (password.length < 6) {
-      setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+      setError(t("auth_password_min"));
       return;
     }
 
@@ -73,27 +75,33 @@ export default function SignupPage() {
       });
 
       if (signUpError) {
-        setError(
-          signUpError.message === "User already registered"
-            ? "هذا البريد الإلكتروني مسجل مسبقاً"
-            : "حدث خطأ أثناء التسجيل، يرجى المحاولة مرة أخرى"
-        );
+        console.error("[Signup] signUp failed:", signUpError.message, {
+          status: signUpError.status,
+          code: (signUpError as any).code,
+        });
+        if (signUpError.message === "User already registered") {
+          setError(t("auth_email_exists"));
+        } else if (
+          /Error sending confirmation email/i.test(signUpError.message)
+        ) {
+          setError(t("auth_smtp_error"));
+        } else {
+          setError(t("auth_signup_failed", { message: signUpError.message }));
+        }
         setLoading(false);
         return;
       }
 
-      // Move to verification step and start timer
       setStep("verify");
       setCountdown(60);
     } catch (err) {
       console.error(err);
-      setError("حدث خطأ غير متوقع أثناء إنشاء الحساب");
+      setError(t("auth_unexpected"));
     } finally {
       setLoading(false);
     }
   };
 
-  // Verify OTP
   const handleVerifyOtp = useCallback(
     async (code: string) => {
       setVerifying(true);
@@ -108,46 +116,33 @@ export default function SignupPage() {
         });
 
         if (verifyError) {
-          setError("الكود الذي أدخلته غير صحيح");
+          console.error("[Signup] verifyOtp failed:", verifyError.message);
+          setError(t("auth_signup_failed", { message: verifyError.message }));
           setOtpError(true);
           setVerifying(false);
           return;
         }
 
-        // Verification successful
         setSuccess(true);
         setError("");
 
         let destination = "/dashboard";
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user?.id) {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .maybeSingle();
-          if (profileData?.role === "admin") {
-            destination = "/admin";
-          }
+        if (isPrimaryAdminEmail(resolveAuthEmail(null, email.trim()))) {
+          destination = "/admin";
         }
 
         setTimeout(() => {
-          console.log(`[Navigation] Component: Signup, Current Route: /auth/signup, Target Route: ${destination}, Auth State: Authenticated (${email}). Executing replace...`);
           router.replace(destination as any);
-          console.log(`[Navigation] Component: Signup, Current Route: /auth/signup, Target Route: ${destination}, Done.`);
         }, 1800);
       } catch (err) {
         console.error(err);
-        setError("حدث خطأ أثناء التحقق من الكود");
+        setError(t("auth_unexpected"));
         setVerifying(false);
       }
     },
-    [email, router]
+    [email, router, t]
   );
 
-  // Resend OTP
   const handleResendCode = async () => {
     setError("");
     setOtpError(false);
@@ -159,14 +154,14 @@ export default function SignupPage() {
       });
 
       if (resendError) {
-        setError("فشل إعادة إرسال الكود. يرجى المحاولة لاحقاً");
+        setError(t("auth_unexpected"));
         return;
       }
 
       setCountdown(60);
     } catch (err) {
       console.error(err);
-      setError("فشل إعادة إرسال الكود.");
+      setError(t("auth_unexpected"));
     }
   };
 
@@ -177,12 +172,11 @@ export default function SignupPage() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
-          {/* ── REGISTRATION FORM ──────────────────────────── */}
           {step === "register" && (
             <View style={styles.cardWrapper}>
               <View style={styles.header}>
-                <Text style={styles.title}>إنشاء حساب جديد</Text>
-                <Text style={styles.subtitle}>سجّل الآن للبدء بطلبات الطباعة</Text>
+                <Text style={styles.title}>{t("auth_signup_title")}</Text>
+                <Text style={styles.subtitle}>{t("auth_signup_subtitle")}</Text>
               </View>
 
               <View style={styles.glassCard}>
@@ -192,69 +186,65 @@ export default function SignupPage() {
                   </View>
                 ) : null}
 
-                {/* Full Name */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>الاسم الكامل</Text>
+                  <Text style={styles.inputLabel}>{t("auth_full_name")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Feather name="user" size={16} color="#71717a" style={styles.inputIcon} />
+                    <Feather name="user" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
                     <TextInput
                       value={fullName}
                       onChangeText={setFullName}
-                      placeholder="محمد أحمد"
-                      placeholderTextColor="#71717a"
+                      placeholder={t("auth_full_name_placeholder")}
+                      placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="right"
                     />
                   </View>
                 </View>
 
-                {/* Phone */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>رقم الهاتف</Text>
+                  <Text style={styles.inputLabel}>{t("auth_phone")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Feather name="phone" size={16} color="#71717a" style={styles.inputIcon} />
+                    <Feather name="phone" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
                     <TextInput
                       value={phoneNumber}
                       onChangeText={setPhoneNumber}
                       keyboardType="phone-pad"
-                      placeholder="+249912345678"
-                      placeholderTextColor="#71717a"
+                      placeholder={t("auth_phone_placeholder")}
+                      placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="left"
                     />
                   </View>
                 </View>
 
-                {/* Email */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>البريد الإلكتروني</Text>
+                  <Text style={styles.inputLabel}>{t("auth_email")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Feather name="mail" size={16} color="#71717a" style={styles.inputIcon} />
+                    <Feather name="mail" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
                     <TextInput
                       value={email}
                       onChangeText={setEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      placeholder="example@email.com"
-                      placeholderTextColor="#71717a"
+                      placeholder={t("auth_email_placeholder")}
+                      placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="left"
                     />
                   </View>
                 </View>
 
-                {/* Password */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>كلمة المرور</Text>
+                  <Text style={styles.inputLabel}>{t("auth_password")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Feather name="lock" size={16} color="#71717a" style={styles.inputIcon} />
+                    <Feather name="lock" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
                     <TextInput
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
-                      placeholder="6 أحرف على الأقل"
-                      placeholderTextColor="#71717a"
+                      placeholder={t("auth_password_placeholder")}
+                      placeholderTextColor={themeColors.textMuted}
                       style={[styles.textInput, styles.passwordInput]}
                       textAlign="left"
                     />
@@ -265,7 +255,7 @@ export default function SignupPage() {
                       <Feather
                         name={showPassword ? "eye-off" : "eye"}
                         size={16}
-                        color="#71717a"
+                        color={themeColors.textMuted}
                       />
                     </TouchableOpacity>
                   </View>
@@ -281,24 +271,23 @@ export default function SignupPage() {
                   ) : (
                     <View style={styles.buttonInner}>
                       <Feather name="user-plus" size={16} color="#ffffff" style={styles.buttonIcon} />
-                      <Text style={styles.buttonText}>إنشاء حساب</Text>
+                      <Text style={styles.buttonText}>{t("auth_create_account")}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
               </View>
 
               <View style={styles.footerRow}>
-                <Text style={styles.footerText}>لديك حساب بالفعل؟ </Text>
+                <Text style={styles.footerText}>{t("auth_have_account")} </Text>
                 <Link href={"/auth/login" as any} asChild>
                   <TouchableOpacity>
-                    <Text style={styles.linkText}>تسجيل الدخول</Text>
+                    <Text style={styles.linkText}>{t("auth_login_link")}</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
             </View>
           )}
 
-          {/* ── OTP VERIFICATION OVERLAY ───────────────────── */}
           {step === "verify" && (
             <View style={styles.cardWrapper}>
               {success ? (
@@ -306,10 +295,8 @@ export default function SignupPage() {
                   <View style={styles.successBadge}>
                     <Feather name="check-circle" size={48} color="#22c55e" />
                   </View>
-                  <Text style={styles.successTitle}>تم التحقق بنجاح!</Text>
-                  <Text style={styles.successSubtitle}>
-                    جاري تحويلك إلى لوحة التحكم...
-                  </Text>
+                  <Text style={styles.successTitle}>{t("auth_reset_success")}</Text>
+                  <Text style={styles.successSubtitle}>{t("auth_callback_verifying")}</Text>
                   <View style={styles.sparklesRow}>
                     <Ionicons name="sparkles" size={18} color="#22c55e" style={styles.sparkleIcon} />
                     <Ionicons name="sparkles" size={12} color="rgba(34, 197, 94, 0.6)" style={styles.sparkleIcon} />
@@ -322,10 +309,8 @@ export default function SignupPage() {
                     <View style={styles.shieldIconBadge}>
                       <Feather name="shield" size={24} color="#ffffff" />
                     </View>
-                    <Text style={styles.title}>أدخل رمز التحقق</Text>
-                    <Text style={styles.subtitle}>
-                      تم إرسال كود مكون من 6 أرقام إلى
-                    </Text>
+                    <Text style={styles.title}>{t("auth_verify_title")}</Text>
+                    <Text style={styles.subtitle}>{t("auth_verify_subtitle")}</Text>
                     <Text style={styles.emailHighlight}>{email}</Text>
                   </View>
 
@@ -336,7 +321,6 @@ export default function SignupPage() {
                       </View>
                     ) : null}
 
-                    {/* OtpInput Component */}
                     <View style={styles.otpWrapper}>
                       <OtpInput
                         onComplete={handleVerifyOtp}
@@ -348,22 +332,18 @@ export default function SignupPage() {
                     {verifying && (
                       <View style={styles.verifyingIndicator}>
                         <ActivityIndicator size="small" color="#ea580c" />
-                        <Text style={styles.verifyingText}>جاري التحقق...</Text>
+                        <Text style={styles.verifyingText}>{t("auth_callback_verifying")}</Text>
                       </View>
                     )}
 
-                    {/* Divider */}
                     <View style={styles.divider} />
 
-                    {/* Resend options */}
                     <View style={styles.resendSection}>
-                      <Text style={styles.resendLabel}>لم تستلم الكود؟</Text>
                       {countdown > 0 ? (
                         <View style={styles.resendTimer}>
-                          <Feather name="refresh-cw" size={12} color="#71717a" />
+                          <Feather name="refresh-cw" size={12} color={themeColors.textMuted} />
                           <Text style={styles.resendTimerText}>
-                            إعادة إرسال الكود بعد{" "}
-                            <Text style={styles.timerHighlight}>{countdown}</Text> ثانية
+                            {t("auth_resend_in", { sec: countdown })}
                           </Text>
                         </View>
                       ) : (
@@ -372,7 +352,7 @@ export default function SignupPage() {
                           style={styles.resendButton}
                         >
                           <Feather name="refresh-cw" size={12} color="#ea580c" style={styles.resendButtonIcon} />
-                          <Text style={styles.resendButtonText}>إعادة إرسال الكود</Text>
+                          <Text style={styles.resendButtonText}>{t("auth_resend_otp")}</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -386,8 +366,8 @@ export default function SignupPage() {
                       disabled={verifying}
                       style={styles.backButton}
                     >
-                      <Feather name="arrow-right" size={14} color="#71717a" style={styles.backButtonIcon} />
-                      <Text style={styles.backButtonText}>العودة للنموذج</Text>
+                      <Feather name="arrow-right" size={14} color={themeColors.textMuted} style={styles.backButtonIcon} />
+                      <Text style={styles.backButtonText}>{t("auth_signup_title")}</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -400,261 +380,253 @@ export default function SignupPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-    backgroundColor: "#09090b", // zinc 950 base
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  container: {
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  cardWrapper: {
-    width: "100%",
-    maxWidth: 380,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#f4f4f5", // foreground
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#71717a", // muted
-    textAlign: "center",
-  },
-  glassCard: {
-    backgroundColor: "#18181b", // zinc 900 base representation
-    borderColor: "#27272a", // border representation
-    borderWidth: 1,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-    width: "100%",
-  },
-  errorContainer: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderColor: "rgba(239, 68, 68, 0.2)",
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: 12,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#71717a",
-    marginBottom: 8,
-    textAlign: "right",
-  },
-  inputWrapper: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#09090b",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    borderRadius: 12,
-    height: 48,
-    paddingHorizontal: 12,
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  textInput: {
-    flex: 1,
-    color: "#f4f4f5",
-    fontSize: 14,
-  },
-  passwordInput: {
-    paddingRight: 32,
-  },
-  eyeIcon: {
-    position: "absolute",
-    right: 12,
-    top: 14,
-  },
-  primaryButton: {
-    height: 48,
-    backgroundColor: "#ea580c", // primary base
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    shadowColor: "#ea580c",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  buttonInner: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-  },
-  buttonIcon: {
-    marginLeft: 4,
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  footerRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 24,
-  },
-  footerText: {
-    color: "#71717a",
-    fontSize: 13,
-  },
-  linkText: {
-    color: "#fb923c",
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-  shieldIconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: "#ea580c",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  emailHighlight: {
-    color: "#f4f4f5",
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  otpWrapper: {
-    alignItems: "center",
-    marginBottom: 16,
-    width: "100%",
-  },
-  verifyingIndicator: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginVertical: 8,
-  },
-  verifyingText: {
-    color: "#71717a",
-    fontSize: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#27272a",
-    marginVertical: 16,
-  },
-  resendSection: {
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  resendLabel: {
-    fontSize: 12,
-    color: "#71717a",
-    marginBottom: 6,
-  },
-  resendTimer: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-  },
-  resendTimerText: {
-    fontSize: 12,
-    color: "#71717a",
-  },
-  timerHighlight: {
-    color: "#ea580c",
-    fontWeight: "bold",
-  },
-  resendButton: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-  },
-  resendButtonIcon: {
-    marginLeft: 4,
-  },
-  resendButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#ea580c",
-  },
-  backButton: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginTop: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    height: 48,
-    width: "100%",
-  },
-  backButtonIcon: {
-    marginLeft: 4,
-  },
-  backButtonText: {
-    color: "#71717a",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  successCard: {
-    alignItems: "center",
-    padding: 32,
-  },
-  successBadge: {
-    marginBottom: 16,
-  },
-  successTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#22c55e",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  successSubtitle: {
-    fontSize: 13,
-    color: "#71717a",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  sparklesRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  sparkleIcon: {
-    transform: [{ scale: 1 }],
-  },
-});
+const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], isDark: boolean) =>
+  StyleSheet.create({
+    keyboardView: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+    },
+    container: {
+      padding: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+    },
+    cardWrapper: {
+      width: "100%",
+      maxWidth: 380,
+    },
+    header: {
+      alignItems: "center",
+      marginBottom: 24,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "bold",
+      color: themeColors.text,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: themeColors.textMuted,
+      textAlign: "center",
+    },
+    glassCard: {
+      backgroundColor: themeColors.cardBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 24,
+      padding: 24,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.3 : 0.08,
+      shadowRadius: 10,
+      elevation: 8,
+      width: "100%",
+    },
+    errorContainer: {
+      backgroundColor: "rgba(239, 68, 68, 0.1)",
+      borderColor: "rgba(239, 68, 68, 0.2)",
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 16,
+    },
+    errorText: {
+      color: "#ef4444",
+      fontSize: 12,
+      textAlign: "center",
+      fontWeight: "600",
+    },
+    inputGroup: {
+      marginBottom: 16,
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: themeColors.textMuted,
+      marginBottom: 8,
+      textAlign: "right",
+    },
+    inputWrapper: {
+      position: "relative",
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: themeColors.inputBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 12,
+      height: 48,
+      paddingHorizontal: 12,
+    },
+    inputIcon: {
+      marginRight: 8,
+    },
+    textInput: {
+      flex: 1,
+      color: themeColors.text,
+      fontSize: 14,
+    },
+    passwordInput: {
+      paddingRight: 32,
+    },
+    eyeIcon: {
+      position: "absolute",
+      right: 12,
+      top: 14,
+    },
+    primaryButton: {
+      height: 48,
+      backgroundColor: "#ea580c",
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+      shadowColor: "#ea580c",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      elevation: 4,
+    },
+    buttonInner: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 8,
+    },
+    buttonIcon: {
+      marginLeft: 4,
+    },
+    buttonText: {
+      color: "#ffffff",
+      fontSize: 14,
+      fontWeight: "bold",
+    },
+    footerRow: {
+      flexDirection: "row-reverse",
+      justifyContent: "center",
+      alignItems: "center",
+      marginTop: 24,
+    },
+    footerText: {
+      color: themeColors.textMuted,
+      fontSize: 13,
+    },
+    linkText: {
+      color: "#fb923c",
+      fontSize: 13,
+      fontWeight: "bold",
+    },
+    shieldIconBadge: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      backgroundColor: "#ea580c",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+    },
+    emailHighlight: {
+      color: themeColors.text,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    otpWrapper: {
+      alignItems: "center",
+      marginBottom: 16,
+      width: "100%",
+    },
+    verifyingIndicator: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginVertical: 8,
+    },
+    verifyingText: {
+      color: themeColors.textMuted,
+      fontSize: 12,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: themeColors.cardBorder,
+      marginVertical: 16,
+    },
+    resendSection: {
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    resendTimer: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 6,
+    },
+    resendTimerText: {
+      fontSize: 12,
+      color: themeColors.textMuted,
+    },
+    resendButton: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 6,
+    },
+    resendButtonIcon: {
+      marginLeft: 4,
+    },
+    resendButtonText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: "#ea580c",
+    },
+    backButton: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      marginTop: 8,
+      borderRadius: 12,
+      backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : themeColors.inputBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      height: 48,
+      width: "100%",
+    },
+    backButtonIcon: {
+      marginLeft: 4,
+    },
+    backButtonText: {
+      color: themeColors.textMuted,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    successCard: {
+      alignItems: "center",
+      padding: 32,
+    },
+    successBadge: {
+      marginBottom: 16,
+    },
+    successTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: "#22c55e",
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    successSubtitle: {
+      fontSize: 13,
+      color: themeColors.textMuted,
+      textAlign: "center",
+      marginBottom: 16,
+    },
+    sparklesRow: {
+      flexDirection: "row",
+      gap: 6,
+    },
+    sparkleIcon: {
+      transform: [{ scale: 1 }],
+    },
+  });

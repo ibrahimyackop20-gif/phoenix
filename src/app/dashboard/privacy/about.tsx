@@ -10,10 +10,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAppTheme } from "@/../components/ThemeProvider";
+import { useTranslation } from "react-i18next";
 
 export default function AboutApp() {
   const router = useRouter();
   const { themeColors } = useAppTheme();
+  const { t } = useTranslation();
 
   const licenses = [
     { name: "React & React Native", license: "MIT License" },
@@ -30,7 +32,7 @@ export default function AboutApp() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-right" size={22} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>معلومات حول التطبيق</Text>
+        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>{t("privacy_about_appbar")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -41,7 +43,7 @@ export default function AboutApp() {
           </View>
           <Text style={[styles.appName, { color: themeColors.text }]}>Phoenix Print</Text>
           <Text style={[styles.appSlogan, { color: themeColors.textMuted }]}>
-            منصة الطباعة الذكية والمتكاملة للطلاب والجامعات
+            {t("privacy_about_slogan")}
           </Text>
         </View>
 
@@ -49,24 +51,24 @@ export default function AboutApp() {
         <View style={[styles.card, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <View style={styles.infoRow}>
             <Text style={[styles.infoValue, { color: themeColors.text }]}>1.0.0</Text>
-            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>إصدار التطبيق (Version)</Text>
+            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>{t("privacy_about_version")}</Text>
           </View>
           <View style={[styles.infoRow, styles.rowBorder, { borderTopColor: themeColors.cardBorder }]}>
             <Text style={[styles.infoValue, { color: themeColors.text }]}>104</Text>
-            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>رقم البناء (Build Number)</Text>
+            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>{t("privacy_about_build")}</Text>
           </View>
           <View style={[styles.infoRow, styles.rowBorder, { borderTopColor: themeColors.cardBorder }]}>
             <Text style={[styles.infoValue, { color: themeColors.text }]}>Phoenix Team</Text>
-            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>المطور المسؤول (Developer)</Text>
+            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>{t("privacy_about_developer")}</Text>
           </View>
           <View style={[styles.infoRow, styles.rowBorder, { borderTopColor: themeColors.cardBorder }]}>
-            <Text style={[styles.infoValue, { color: themeColors.text }]}>العراق، بغداد</Text>
-            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>المقر الإداري</Text>
+            <Text style={[styles.infoValue, { color: themeColors.text }]}>{t("privacy_about_hq_value")}</Text>
+            <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>{t("privacy_about_hq")}</Text>
           </View>
         </View>
 
         {/* Open Source Licenses Section */}
-        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>تراخيص البرمجيات مفتوحة المصدر</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>{t("privacy_about_licenses")}</Text>
         <View style={[styles.card, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           {licenses.map((lic, idx) => (
             <View
@@ -84,7 +86,7 @@ export default function AboutApp() {
         </View>
 
         <Text style={[styles.copyrightText, { color: themeColors.textMuted }]}>
-          حقوق الطبع والنشر © 2026 Phoenix Print. جميع الحقوق محفوظة.
+          {t("privacy_about_copyright")}
         </Text>
       </ScrollView>
     </SafeAreaView>

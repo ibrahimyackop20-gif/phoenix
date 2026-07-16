@@ -3,17 +3,13 @@ import { StyleSheet, View, ActivityIndicator } from "react-native";
 import { Slot, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import Navbar from "../../../components/Navbar";
-import ProfileProvider from "../../../components/ProfileProvider";
-import CartProvider from "../../../components/CartProvider";
-import NotificationProvider from "../../../components/NotificationProvider";
-import ChatProvider from "../../../components/ChatProvider";
-
+import { useProfile } from "../../../components/ProfileProvider";
 import { useAppTheme } from "../../../components/ThemeProvider";
 
 export default function DashboardLayout() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const { role, profileReady } = useProfile();
   const { themeColors } = useAppTheme();
 
   useEffect(() => {
@@ -32,16 +28,7 @@ export default function DashboardLayout() {
           return;
         }
 
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("full_name, role, avatar_url, balance")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        if (active) {
-          setProfile(profileData);
-          setLoading(false);
-        }
+        if (active) setSessionChecked(true);
       } catch (err) {
         console.error("Layout session check error:", err);
         if (active) {
@@ -57,7 +44,7 @@ export default function DashboardLayout() {
     };
   }, [router]);
 
-  if (loading) {
+  if (!sessionChecked || !profileReady) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
         <ActivityIndicator size="large" color="#ea580c" />
@@ -66,38 +53,25 @@ export default function DashboardLayout() {
   }
 
   return (
-    <ProfileProvider
-      initialName={profile?.full_name || ""}
-      initialAvatar={profile?.avatar_url || null}
-      initialRole={profile?.role || "student"}
-      initialBalance={profile?.balance || 0}
-    >
-      <CartProvider>
-        <NotificationProvider>
-          <ChatProvider>
-            <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-              <Navbar role={profile?.role} />
-              <View style={styles.main}>
-                <Slot />
-              </View>
-            </View>
-          </ChatProvider>
-        </NotificationProvider>
-      </CartProvider>
-    </ProfileProvider>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <Navbar role={role} />
+      <View style={styles.main}>
+        <Slot />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#09090b", // zinc-950
+    backgroundColor: "#09090b",
     alignItems: "center",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    backgroundColor: "#09090b", // zinc-950
+    backgroundColor: "#09090b",
   },
   main: {
     flex: 1,

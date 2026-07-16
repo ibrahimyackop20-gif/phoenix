@@ -12,6 +12,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../../lib/realtimeChannel";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 
 interface Profile {
@@ -65,15 +69,14 @@ export default function AdminUsersScreen() {
   useEffect(() => {
     fetchUsers();
 
-    const channel = supabase
-      .channel("admin-users-rt")
+    const channel = createRealtimeChannel("admin-users-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
         fetchUsers();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      teardownRealtimeChannel(channel);
     };
   }, []);
 

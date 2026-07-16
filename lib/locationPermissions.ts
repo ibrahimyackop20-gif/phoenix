@@ -15,7 +15,7 @@ export type LocationCoords = {
 };
 
 function isGranted(status: Location.PermissionStatus): boolean {
-  return status === Location.PermissionStatus.GRANTED || status === "granted";
+  return status === Location.PermissionStatus.GRANTED;
 }
 
 function isPermanentlyDenied(

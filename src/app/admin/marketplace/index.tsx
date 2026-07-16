@@ -11,6 +11,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../../lib/realtimeChannel";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 
 interface Category {
@@ -98,8 +102,7 @@ export default function AdminMarketplaceScreen() {
   useEffect(() => {
     fetchData();
 
-    const channel = supabase
-      .channel("admin-sales-rt")
+    const channel = createRealtimeChannel("admin-sales-rt")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "sales_orders" }, () => {
         fetchData();
         showToast("🔔 طلب مبيعات جديد!");
@@ -107,7 +110,7 @@ export default function AdminMarketplaceScreen() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      teardownRealtimeChannel(channel);
     };
   }, []);
 

@@ -2,6 +2,11 @@ import { useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import { supabase } from "../lib/supabaseClient";
 import { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../lib/realtimeChannel";
+import { isAdminUser, resolveAuthEmail } from "../lib/adminAccess";
 
 /**
  * AdminPushProvider (React Native)
@@ -10,44 +15,38 @@ import { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
  * - Shows native system alerts for new orders
  */
 export default function AdminPushProvider() {
-  console.log("Entering AdminPushProvider");
-  const initialized = useRef(false);
+  const channelRef = useRef<ReturnType<typeof createRealtimeChannel> | null>(
+    null
+  );
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    console.log("Provider initialized: AdminPushProvider");
+    let cancelled = false;
 
     const setup = async () => {
       try {
-        // 1. Check if user is authenticated
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user || cancelled) return;
 
-        // 2. Check if user is an admin
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
 
-        if (profile?.role !== "admin") return;
+        if (!isAdminUser({ role: profile?.role, email: resolveAuthEmail(user) }) || cancelled) return;
 
-        console.log("🔔 AdminPushProvider: Admin verified. Listening for real-time orders...");
-
-        // 3. Listen for new print orders in real-time
-        const channel = supabase
-          .channel("admin-new-orders-rn")
+        // channel → on → on → subscribe
+        const channel = createRealtimeChannel("admin-new-orders-rn")
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "orders" },
-            (payload: RealtimePostgresInsertPayload<Record<string, unknown>>) => {
+            (
+              payload: RealtimePostgresInsertPayload<Record<string, unknown>>
+            ) => {
               const order = payload.new;
               const fileName = (order.file_name as string) || "ملف";
-
-              console.log("📦 New print order received:", fileName);
 
               Alert.alert(
                 "📦 طلب طباعة جديد!",
@@ -59,48 +58,46 @@ export default function AdminPushProvider() {
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "sales_orders" },
-            (payload: RealtimePostgresInsertPayload<Record<string, unknown>>) => {
+            (
+              payload: RealtimePostgresInsertPayload<Record<string, unknown>>
+            ) => {
               const order = payload.new;
               const orderType = order.order_type as string;
 
-              const title = orderType === "print"
-                ? "📦 طلب طباعة جديد!"
-                : "🛒 طلب شراء جديد!";
-              const body = orderType === "print"
-                ? "لديك طلب طباعة جديد — اضغط للمعاينة"
-                : "لديك طلب شراء جديد من المتجر — اضغط للمعاينة";
+              const title =
+                orderType === "print"
+                  ? "📦 طلب طباعة جديد!"
+                  : "🛒 طلب شراء جديد!";
+              const body =
+                orderType === "print"
+                  ? "لديك طلب طباعة جديد — اضغط للمعاينة"
+                  : "لديك طلب شراء جديد من المتجر — اضغط للمعاينة";
 
-              console.log(`📦 New sales order (${orderType}) received`);
-
-              Alert.alert(
-                title,
-                body,
-                [{ text: "موافق", style: "default" }]
-              );
+              Alert.alert(title, body, [
+                { text: "موافق", style: "default" },
+              ]);
             }
           )
           .subscribe();
 
-        return () => {
-          supabase.removeChannel(channel);
-        };
+        if (cancelled) {
+          teardownRealtimeChannel(channel);
+          return;
+        }
+        channelRef.current = channel;
       } catch (err) {
         console.error("❌ AdminPushProvider error:", err);
       }
     };
 
-    let cleanupFn: (() => void) | undefined;
-    setup().then((cleanup) => {
-      cleanupFn = cleanup;
-    });
+    void setup();
 
     return () => {
-      if (cleanupFn) {
-        cleanupFn();
-      }
+      cancelled = true;
+      teardownRealtimeChannel(channelRef.current);
+      channelRef.current = null;
     };
   }, []);
 
-  console.log("Leaving AdminPushProvider");
-  return null; // Headless provider
+  return null;
 }

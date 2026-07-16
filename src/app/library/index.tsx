@@ -12,6 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../lib/realtimeChannel";
 import { useCart } from "../../../components/CartProvider";
 import { Feather, FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -97,11 +101,11 @@ export default function LibraryScreen() {
               .eq("id", user.id)
               .single();
             if (profile?.role !== "admin") {
-              router.replace("/coming-soon" as any);
+              router.replace("/coming-soon?feature=library" as any);
               return;
             }
           } else {
-            router.replace("/coming-soon" as any);
+            router.replace("/coming-soon?feature=library" as any);
             return;
           }
         }
@@ -113,14 +117,13 @@ export default function LibraryScreen() {
     checkAccess();
     fetchStores();
 
-    const channel = supabase
-      .channel("library-stores-rt")
+    const channel = createRealtimeChannel("library-stores-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "stores" }, () => fetchStores())
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => fetchStores())
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      teardownRealtimeChannel(channel);
     };
   }, []);
 

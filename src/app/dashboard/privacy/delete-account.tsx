@@ -15,10 +15,12 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/../lib/supabaseClient";
 import { Feather } from "@expo/vector-icons";
 import { useAppTheme } from "@/../components/ThemeProvider";
+import { useTranslation } from "react-i18next";
 
 export default function DeleteAccount() {
   const router = useRouter();
   const { themeColors } = useAppTheme();
+  const { t } = useTranslation();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [emailInput, setEmailInput] = useState("");
@@ -37,7 +39,7 @@ export default function DeleteAccount() {
     if (!currentUser) return;
 
     if (emailInput.trim().toLowerCase() !== currentUser.email?.toLowerCase()) {
-      setError("البريد الإلكتروني المدخل لا يطابق بريدك الحالي.");
+      setError(t("privacy_delete_email_mismatch"));
       return;
     }
 
@@ -46,11 +48,10 @@ export default function DeleteAccount() {
 
     try {
       // 1. Invoke the secure backend Edge Function 'delete-account'
-      console.log("⚡ Invoking delete-account Edge Function...");
       const { data: edgeData, error: edgeErr } = await supabase.functions.invoke("delete-account");
 
       if (edgeErr) {
-        throw new Error(edgeErr.message || "حدث خطأ غير متوقع في خادم المصادقة.");
+        throw new Error(edgeErr.message || t("privacy_delete_server_error"));
       }
 
       if (edgeData?.error) {
@@ -58,7 +59,6 @@ export default function DeleteAccount() {
       }
 
       // 2. Success! Account and DB data deleted completely
-      console.log("✅ Account deletion completed successfully via Edge Function!");
 
       // 3. Clear local preferences and sign out client-side
       await AsyncStorage.clear();
@@ -66,15 +66,13 @@ export default function DeleteAccount() {
 
       // 4. Show success message and reset navigation
       Alert.alert(
-        "تم حذف الحساب نهائياً",
-        "تم حذف حسابك بالكامل وكافة بياناتك ومستنداتك بنجاح من التطبيق.",
+        t("privacy_delete_success_title"),
+        t("privacy_delete_success_body"),
         [
           {
-            text: "موافق",
+            text: t("privacy_delete_ok"),
             onPress: () => {
-              console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Auth State: Guest. Executing replace...");
               router.replace("/auth/login" as any);
-              console.log("[Navigation] Component: DeleteAccount, Current Route: /dashboard/privacy/delete-account, Target Route: /auth/login, Done.");
             }
           }
         ]
@@ -104,7 +102,7 @@ export default function DeleteAccount() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-right" size={22} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>حذف الحساب نهائياً</Text>
+        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>{t("privacy_delete_appbar")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -112,29 +110,29 @@ export default function DeleteAccount() {
         {/* Warning Card */}
         <View style={styles.warningCard}>
           <Feather name="alert-triangle" size={32} color="#ef4444" style={styles.warningIcon} />
-          <Text style={styles.warningTitle}>تنبيه هام وحرج جداً</Text>
+          <Text style={styles.warningTitle}>{t("privacy_delete_warning_title")}</Text>
           <Text style={styles.warningText}>
-            أنت على وشك حذف حسابك بالكامل من تطبيق Phoenix Print. هذا الإجراء نهائي ولا يمكن التراجع عنه بأي شكل من الأشكال. سيؤدي هذا الإجراء فوراً إلى:
+            {t("privacy_delete_warning_body")}
           </Text>
           <View style={styles.bullets}>
-            <Text style={styles.bulletItem}>• حذف ملفك الشخصي وعناوين التوصيل المسجلة.</Text>
-            <Text style={styles.bulletItem}>• حذف وسحب كافة مستندات وملفات الطباعة المرفوعة من الخوادم.</Text>
-            <Text style={styles.bulletItem}>• مسح سجل إيصالات الدفع وتفاصيل الطلبات السابقة بالكامل.</Text>
-            <Text style={styles.bulletItem}>• تسجيل خروجك من التطبيق وإلغاء صلاحيات حسابك.</Text>
+            <Text style={styles.bulletItem}>{t("privacy_delete_bullet_1")}</Text>
+            <Text style={styles.bulletItem}>{t("privacy_delete_bullet_2")}</Text>
+            <Text style={styles.bulletItem}>{t("privacy_delete_bullet_3")}</Text>
+            <Text style={styles.bulletItem}>{t("privacy_delete_bullet_4")}</Text>
           </View>
         </View>
 
         {/* Input Confirmation */}
         <View style={[styles.formCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <Text style={[styles.formLabel, { color: themeColors.text }]}>
-            لتأكيد الحذف، يرجى كتابة بريدك الإلكتروني الحالي أدناه:
+            {t("privacy_delete_confirm_label")}
           </Text>
           <Text style={styles.currentUserEmail}>{currentUser.email}</Text>
 
           <TextInput
-            style={[styles.textInput, { borderColor: themeColors.cardBorder, color: themeColors.text }]}
-            placeholder="أدخل بريدك الإلكتروني لتأكيد الحذف"
-            placeholderTextColor="#71717a"
+            style={[styles.textInput, { backgroundColor: themeColors.inputBg, borderColor: themeColors.cardBorder, color: themeColors.text }]}
+            placeholder={t("privacy_delete_placeholder")}
+            placeholderTextColor={themeColors.textMuted}
             value={emailInput}
             onChangeText={setEmailInput}
             autoCapitalize="none"
@@ -154,7 +152,7 @@ export default function DeleteAccount() {
             ) : (
               <>
                 <Feather name="trash-2" size={16} color="#ffffff" style={{ marginLeft: 6 }} />
-                <Text style={styles.deleteButtonText}>نعم، احذف حسابي وبياناتي نهائياً</Text>
+                <Text style={styles.deleteButtonText}>{t("privacy_delete_button")}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -164,7 +162,7 @@ export default function DeleteAccount() {
         <View style={[styles.noteCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <Feather name="info" size={16} color="#ea580c" style={{ marginLeft: 6 }} />
           <Text style={[styles.noteText, { color: themeColors.textMuted }]}>
-            ملاحظة: يتطلب هذا الإجراء تفعيل دالة `delete_user_account()` ورفع دالة Deno Edge Function `delete-account` في مشروع Supabase الخاص بك.
+            {t("privacy_delete_note")}
           </Text>
         </View>
       </ScrollView>
@@ -266,7 +264,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     textAlign: "right",
     fontSize: 13,
-    backgroundColor: "#09090b",
     marginBottom: 12,
   },
   errorText: {

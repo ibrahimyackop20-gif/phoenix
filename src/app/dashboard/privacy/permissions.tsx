@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -6,26 +6,29 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAppTheme } from "@/../components/ThemeProvider";
 import * as Location from "expo-location";
+import { useTranslation } from "react-i18next";
+
+type PermStatus = "checking" | "granted" | "denied" | "unavailable" | "system";
 
 export default function PermissionsCenter() {
   const router = useRouter();
   const { themeColors } = useAppTheme();
+  const { t, i18n } = useTranslation();
   
-  const [locationPerm, setLocationPerm] = useState<string>("checking");
+  const [locationPerm, setLocationPerm] = useState<PermStatus>("checking");
 
   const checkPermissions = async () => {
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
-      setLocationPerm(status === "granted" ? "مسموح" : "مرفوض");
+      setLocationPerm(status === "granted" ? "granted" : "denied");
     } catch (e) {
-      setLocationPerm("غير متوفر");
+      setLocationPerm("unavailable");
     }
   };
 
@@ -37,36 +40,54 @@ export default function PermissionsCenter() {
     Linking.openSettings();
   };
 
-  const permissionItems = [
-    {
-      title: "صلاحية موقع الجهاز (Location)",
-      description: "تستخدم لتحديد موقعك الجغرافي بدقة على الخارطة عند إضافة عنوان جديد للطلبات، لضمان توصيل المطبوعات للمكان الصحيح دون أي تأخير.",
-      icon: "map-pin",
-      status: locationPerm,
-      color: locationPerm === "مسموح" ? "#22c55e" : "#ea580c",
-    },
-    {
-      title: "صلاحية الوصول للملفات ومساحة التخزين (Storage)",
-      description: "تسمح للتطبيق بالوصول إلى مستنداتك وملفاتك (مثل PDF و Word) لتمكينك من اختيارها ورفعها للطباعة عبر خيار رفع الملفات.",
-      icon: "folder",
-      status: "مدار من النظام",
-      color: "#3b82f6",
-    },
-    {
-      title: "صلاحية معرض الصور والكاميرا (Photos/Camera)",
-      description: "تستخدم لاختيار صورتك الشخصية للملف الشخصي، أو لالتقاط ورفع لقطة الشاشة الخاصة بإيصال تحويل الدفع الإلكتروني لإثبات الدفع المالي.",
-      icon: "camera",
-      status: "مدار من النظام",
-      color: "#a855f7",
-    },
-    {
-      title: "صلاحية إشعارات الهاتف الفورية (Notifications)",
-      description: "تُستخدم لإرسال تنبيهات هامة ومباشرة لتبسيط تتبع حالة طلبات الطباعة (مثال: اكتمال الطباعة، بدء توصيل الطلب، أو استلام الدعم الفني).",
-      icon: "bell",
-      status: "مدار من النظام",
-      color: "#ec4899",
-    },
-  ];
+  const getStatusLabel = (status: PermStatus) => {
+    switch (status) {
+      case "granted":
+        return t("privacy_perm_status_granted");
+      case "denied":
+        return t("privacy_perm_status_denied");
+      case "unavailable":
+        return t("privacy_perm_status_unavailable");
+      case "checking":
+        return t("privacy_perm_status_checking");
+      case "system":
+        return t("privacy_perm_status_system");
+    }
+  };
+
+  const permissionItems = useMemo(
+    () => [
+      {
+        title: t("privacy_perm_location_title"),
+        description: t("privacy_perm_location_desc"),
+        icon: "map-pin",
+        status: locationPerm,
+        color: locationPerm === "granted" ? "#22c55e" : "#ea580c",
+      },
+      {
+        title: t("privacy_perm_storage_title"),
+        description: t("privacy_perm_storage_desc"),
+        icon: "folder",
+        status: "system" as PermStatus,
+        color: "#3b82f6",
+      },
+      {
+        title: t("privacy_perm_camera_title"),
+        description: t("privacy_perm_camera_desc"),
+        icon: "camera",
+        status: "system" as PermStatus,
+        color: "#a855f7",
+      },
+      {
+        title: t("privacy_perm_notif_title"),
+        description: t("privacy_perm_notif_desc"),
+        icon: "bell",
+        status: "system" as PermStatus,
+        color: "#ec4899",
+      },
+    ],
+    [t, i18n.language, locationPerm]
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -74,13 +95,13 @@ export default function PermissionsCenter() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-right" size={22} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>إدارة صلاحيات الجهاز</Text>
+        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>{t("privacy_perm_appbar")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionDesc, { color: themeColors.textMuted }]}>
-          يطلب التطبيق بعض صلاحيات الوصول الخاصة بالجهاز لتمكين الميزات الأساسية مثل رفع الملفات وتتبع الموقع الجغرافي للمندوب. يمكنك التحكم الكامل بهذه الصلاحيات من خلال إعدادات جهازك.
+          {t("privacy_perm_desc")}
         </Text>
 
         <View style={styles.listContainer}>
@@ -88,7 +109,7 @@ export default function PermissionsCenter() {
             <View key={idx} style={[styles.permCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
               <View style={styles.cardHeader}>
                 <View style={[styles.badge, { backgroundColor: item.color + "10" }]}>
-                  <Text style={[styles.badgeText, { color: item.color }]}>{item.status}</Text>
+                  <Text style={[styles.badgeText, { color: item.color }]}>{getStatusLabel(item.status)}</Text>
                 </View>
                 <View style={styles.headerTitleRow}>
                   <Text style={[styles.permTitle, { color: themeColors.text }]}>{item.title}</Text>
@@ -104,7 +125,7 @@ export default function PermissionsCenter() {
 
         <TouchableOpacity onPress={handleOpenSettings} style={styles.settingsButton}>
           <Feather name="settings" size={16} color="#ffffff" style={styles.btnIcon} />
-          <Text style={styles.settingsButtonText}>فتح إعدادات النظام للتحكم بالصلاحيات</Text>
+          <Text style={styles.settingsButtonText}>{t("privacy_perm_open_settings")}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

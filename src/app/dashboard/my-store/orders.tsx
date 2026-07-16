@@ -13,6 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
 import { supabase } from "../../../../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../../lib/realtimeChannel";
 import { Feather } from "@expo/vector-icons";
 
 interface OrderItem {
@@ -119,8 +123,7 @@ export default function SellerOrdersScreen() {
   useEffect(() => {
     fetchOrders();
 
-    const channel = supabase
-      .channel("seller-orders-rt-rn")
+    const channel = createRealtimeChannel("seller-orders-rt-rn")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sales_orders" },
@@ -131,7 +134,7 @@ export default function SellerOrdersScreen() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      teardownRealtimeChannel(channel);
     };
   }, []);
 

@@ -10,6 +10,10 @@ import { supabase } from "../lib/supabaseClient";
 import type {
   RealtimePostgresChangesPayload,
 } from "@supabase/supabase-js";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../lib/realtimeChannel";
 
 export interface Notification {
   id: string;
@@ -286,12 +290,11 @@ export default function NotificationProvider({
     };
   }, [refreshNotifications]);
 
-  // Realtime — no polling
+  // Realtime — no polling. channel → on → subscribe; tear down on user change.
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`user-notifications-rt-${userId}`)
+    const channel = createRealtimeChannel(`user-notifications-rt-${userId}`)
       .on(
         "postgres_changes",
         {
@@ -349,7 +352,7 @@ export default function NotificationProvider({
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      teardownRealtimeChannel(channel);
     };
   }, [userId]);
 

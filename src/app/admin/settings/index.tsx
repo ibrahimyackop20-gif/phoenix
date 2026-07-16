@@ -276,27 +276,15 @@ export default function AdminSettingsScreen() {
     setSavingCoupon(true);
 
     // Expiry date verification
-    console.log("[Add Coupon Debug Log]");
-    console.log("- cpExpiry value:", cpExpiry);
-    console.log("- typeof cpExpiry:", typeof cpExpiry);
-
     let formattedExpiry: string | null = null;
     if (cpExpiry.trim()) {
-      const d = new Date(cpExpiry.trim());
-      console.log("- Date object:", d.toString());
-      console.log("- getTime():", d.getTime());
-
       const validation = validateAndFormatExpiry(cpExpiry);
       if (!validation.isValid) {
-        console.log("- Validation: INVALID -", validation.error);
         showToast(validation.error || "تاريخ غير صالح", "error");
         setSavingCoupon(false);
         return;
       }
       formattedExpiry = validation.formattedDate;
-      console.log("- ISO string:", formattedExpiry);
-    } else {
-      console.log("- Expiry is empty/permanent coupon");
     }
 
     const payload = {

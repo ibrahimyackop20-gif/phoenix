@@ -65,10 +65,7 @@ export default function NotificationRegistrar({
     }
 
     if (orderId) {
-      router.push({
-        pathname: "/dashboard/orders",
-        params: { orderId },
-      } as any);
+      router.push(`/dashboard/orders/${orderId}` as any);
       return;
     }
 

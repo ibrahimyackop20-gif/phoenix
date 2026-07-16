@@ -13,8 +13,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../lib/supabaseClient";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../lib/realtimeChannel";
 import StatusBadge from "../../../components/StatusBadge";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
+import {
+  downloadTelegramFile,
+  openTelegramBot,
+} from "../../../lib/telegramApi";
 
 interface DeliveryAddressData {
   title: string;
@@ -135,23 +143,21 @@ export default function AdminScreen() {
   useEffect(() => {
     loadAll();
 
-    const ordersChannel = supabase
-      .channel("admin-orders-rt")
+    const ordersChannel = createRealtimeChannel("admin-orders-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
         fetchOrders();
       })
       .subscribe();
 
-    const inquiriesChannel = supabase
-      .channel("admin-inquiries-rt")
+    const inquiriesChannel = createRealtimeChannel("admin-inquiries-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "inquiries" }, () => {
         fetchInquiries();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(ordersChannel);
-      supabase.removeChannel(inquiriesChannel);
+      teardownRealtimeChannel(ordersChannel);
+      teardownRealtimeChannel(inquiriesChannel);
     };
   }, []);
 
@@ -189,10 +195,26 @@ export default function AdminScreen() {
     });
   };
 
-  const handleTelegramDownload = (fileId: string) => {
-    Linking.openURL("https://t.me/PhonixPrint1_bot").catch(() => {
-      showToast("فشل فتح تليجرام", "error");
-    });
+  const handleTelegramDownload = async (fileId: string) => {
+    showToast("جاري تجهيز الرابط...");
+    try {
+      const data = await downloadTelegramFile(fileId);
+
+      if (data.ok && data.download_url) {
+        await Linking.openURL(data.download_url);
+      } else if (data.error === "too_large") {
+        showToast(
+          "الملف أكبر من 20MB — افتح تليجرام لتحميله",
+          "error"
+        );
+        await openTelegramBot();
+      } else {
+        showToast(data.message || "فشل تحميل الملف", "error");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message || "خطأ في الاتصال", "error");
+    }
   };
 
   const handleReply = async (inquiryId: string) => {
@@ -475,10 +497,18 @@ export default function AdminScreen() {
                       ) : order.external_file_link ? (
                         <TouchableOpacity
                           style={[styles.cardActionBtn, styles.telegramActionBtn]}
-                          onPress={() => handleTelegramDownload(order.external_file_link!)}
+                          onPress={() =>
+                            order.external_file_link!.startsWith("http")
+                              ? downloadFile(order.external_file_link!)
+                              : handleTelegramDownload(order.external_file_link!)
+                          }
                         >
                           <FontAwesome name="telegram" size={16} color="#29b6f6" style={styles.btnIcon} />
-                          <Text style={[styles.cardActionBtnText, { color: "#29b6f6" }]}>فتح في تليجرام</Text>
+                          <Text style={[styles.cardActionBtnText, { color: "#29b6f6" }]}>
+                            {order.external_file_link.startsWith("http")
+                              ? "فتح الرابط"
+                              : "تحميل من تليجرام"}
+                          </Text>
                         </TouchableOpacity>
                       ) : (
                         <View style={styles.noFileBadge}>

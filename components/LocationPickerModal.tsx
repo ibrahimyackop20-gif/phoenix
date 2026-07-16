@@ -13,7 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { getCurrentLocationWithPermission } from "../lib/locationPermissions";
+import { useAppTheme } from "./ThemeProvider";
+import i18n from "../i18n";
 
 export type LocationPickerResult = {
   lat: number;
@@ -36,11 +39,12 @@ const DEFAULT_LNG = 47.7834;
 
 async function reverseGeocode(
   lat: number,
-  lng: number
+  lng: number,
+  lang: string
 ): Promise<{ area: string; formattedAddress: string; governorate: string }> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar&zoom=18`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${lang}&zoom=18`,
       { headers: { "User-Agent": "PhoenixPrint/1.0" } }
     );
     const data = await res.json();
@@ -66,11 +70,12 @@ async function reverseGeocode(
 }
 
 async function searchPlace(
-  query: string
+  query: string,
+  lang: string
 ): Promise<Array<{ lat: number; lng: number; display_name: string }>> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=iq&accept-language=ar&limit=5`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=iq&accept-language=${lang}&limit=5`,
       { headers: { "User-Agent": "PhoenixPrint/1.0" } }
     );
     const data = await res.json();
@@ -86,7 +91,7 @@ async function searchPlace(
 
 /**
  * Full-screen delivery location picker (Talabat / Careem style).
- * Location permission is requested only when "استخدم موقعي الحالي" is pressed.
+ * Location permission is requested only when "use my location" is pressed.
  */
 export default function LocationPickerModal({
   visible,
@@ -95,6 +100,10 @@ export default function LocationPickerModal({
   initialLat,
   initialLng,
 }: LocationPickerModalProps) {
+  const { t } = useTranslation();
+  const { themeColors, isDark } = useAppTheme();
+  const styles = getStyles(themeColors, isDark);
+
   const webViewRef = useRef<WebView>(null);
   const geocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -112,6 +121,10 @@ export default function LocationPickerModal({
 
   const lat = initialLat || DEFAULT_LAT;
   const lng = initialLng || DEFAULT_LNG;
+  const mapBg = isDark ? "#111827" : "#f3f4f6";
+  const tileUrl = isDark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
   useEffect(() => {
     if (!visible) {
@@ -127,7 +140,7 @@ export default function LocationPickerModal({
 
   const applyLocation = async (latitude: number, longitude: number) => {
     setGeocoding(true);
-    const geo = await reverseGeocode(latitude, longitude);
+    const geo = await reverseGeocode(latitude, longitude, i18n.language);
     setSelected({
       lat: latitude,
       lng: longitude,
@@ -146,8 +159,6 @@ export default function LocationPickerModal({
   };
 
   const moveMapTo = (latitude: number, longitude: number) => {
-    // Android WebView often ignores RN postMessage → page listeners.
-    // injectJavaScript reliably updates marker + animates the camera.
     const script = `
       (function() {
         try {
@@ -171,7 +182,7 @@ export default function LocationPickerModal({
       moveMapTo(latitude, longitude);
       await applyLocation(latitude, longitude);
     } catch {
-      setError("تعذر تحديد موقعك — تأكد من تفعيل GPS");
+      setError(t("map_gps_error"));
     } finally {
       setGpsLoading(false);
     }
@@ -179,7 +190,7 @@ export default function LocationPickerModal({
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-    const results = await searchPlace(searchQuery);
+    const results = await searchPlace(searchQuery, i18n.language);
     setSearchResults(results);
     setShowResults(true);
   };
@@ -203,8 +214,8 @@ export default function LocationPickerModal({
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style>
-        body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #09090b; }
-        .leaflet-container { background: #09090b; }
+        body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: ${mapBg}; }
+        .leaflet-container { background: ${mapBg}; }
       </style>
     </head>
     <body>
@@ -223,7 +234,7 @@ export default function LocationPickerModal({
             attributionControl: false
           });
 
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          L.tileLayer('${tileUrl}', {
             maxZoom: 19,
             subdomains: 'abcd'
           }).addTo(map);
@@ -311,13 +322,13 @@ export default function LocationPickerModal({
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.headerBtn} hitSlop={12}>
-            <Feather name="x" size={22} color="#f4f4f5" />
+            <Feather name="x" size={22} color={themeColors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>اختيار موقع التسليم</Text>
+          <Text style={styles.headerTitle}>{t("map_pick_title")}</Text>
           <View style={styles.headerBtn} />
         </View>
 
@@ -326,13 +337,13 @@ export default function LocationPickerModal({
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
-            placeholder="ابحث عن منطقتك..."
-            placeholderTextColor="#71717a"
+            placeholder={t("map_search_placeholder")}
+            placeholderTextColor={themeColors.textMuted}
             style={styles.searchInput}
             textAlign="right"
           />
           <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-            <Feather name="search" size={16} color="#71717a" />
+            <Feather name="search" size={16} color={themeColors.textMuted} />
           </TouchableOpacity>
 
           {showResults && searchResults.length > 0 && (
@@ -360,6 +371,7 @@ export default function LocationPickerModal({
         <View style={styles.mapBorder}>
           {visible ? (
             <WebView
+              key={isDark ? "dark-map" : "light-map"}
               ref={webViewRef}
               originWhitelist={["*"]}
               source={{ html: leafletHtml }}
@@ -380,17 +392,16 @@ export default function LocationPickerModal({
           {geocoding && (
             <View style={styles.geocodingIndicator}>
               <ActivityIndicator size="small" color="#f97316" />
-              <Text style={styles.geocodingText}>جاري تحديد العنوان...</Text>
+              <Text style={styles.geocodingText}>{t("map_geocoding")}</Text>
             </View>
           )}
 
-          {/* Material-style My Location FAB — bottom-right over the map */}
           <TouchableOpacity
             onPress={handleGPS}
             disabled={gpsLoading || !mapLoaded}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel="استخدم موقعي الحالي"
+            accessibilityLabel={t("map_use_my_location")}
             style={[
               styles.myLocationFab,
               (gpsLoading || !mapLoaded) && styles.myLocationFabDisabled,
@@ -399,7 +410,7 @@ export default function LocationPickerModal({
             {gpsLoading ? (
               <ActivityIndicator size="small" color="#ea580c" />
             ) : (
-              <Feather name="navigation" size={22} color="#3f3f46" />
+              <Feather name="navigation" size={22} color={isDark ? "#3f3f46" : "#6b7280"} />
             )}
           </TouchableOpacity>
         </View>
@@ -407,14 +418,12 @@ export default function LocationPickerModal({
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.footer}>
-          <Text style={styles.footerLabel}>العنوان المحدد</Text>
+          <Text style={styles.footerLabel}>{t("map_selected_label")}</Text>
           <Text style={styles.footerAddress} numberOfLines={3}>
-            {selected?.formattedAddress ||
-              selected?.area ||
-              "حرّك الخريطة أو استخدم موقعك الحالي لاختيار نقطة التسليم"}
+            {selected?.formattedAddress || selected?.area || t("map_select_hint")}
           </Text>
           {selected?.area ? (
-            <Text style={styles.footerArea}>المنطقة: {selected.area}</Text>
+            <Text style={styles.footerArea}>{t("map_area", { area: selected.area })}</Text>
           ) : null}
 
           <TouchableOpacity
@@ -422,7 +431,7 @@ export default function LocationPickerModal({
             disabled={!selected}
             style={[styles.confirmButton, !selected && styles.confirmButtonDisabled]}
           >
-            <Text style={styles.confirmButtonText}>تأكيد الموقع</Text>
+            <Text style={styles.confirmButtonText}>{t("map_confirm")}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -430,192 +439,193 @@ export default function LocationPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#09090b",
-  },
-  header: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#27272a",
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: "#f4f4f5",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  searchContainer: {
-    marginHorizontal: 12,
-    marginTop: 10,
-    position: "relative",
-    zIndex: 20,
-  },
-  searchInput: {
-    backgroundColor: "#18181b",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingRight: 40,
-    height: 48,
-    color: "#f4f4f5",
-    fontSize: 14,
-  },
-  searchButton: {
-    position: "absolute",
-    right: 12,
-    top: 14,
-    zIndex: 21,
-  },
-  dropdown: {
-    position: "absolute",
-    top: 52,
-    left: 0,
-    right: 0,
-    backgroundColor: "#18181b",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    borderRadius: 12,
-    maxHeight: 180,
-    overflow: "hidden",
-    zIndex: 100,
-    elevation: 6,
-  },
-  dropdownList: {
-    paddingVertical: 4,
-  },
-  dropdownItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomColor: "#27272a",
-    borderBottomWidth: 0.5,
-  },
-  dropdownText: {
-    color: "#e4e4e7",
-    fontSize: 12,
-    textAlign: "right",
-  },
-  myLocationFab: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
-    zIndex: 1100,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.28,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  myLocationFabDisabled: {
-    opacity: 0.7,
-  },
-  mapBorder: {
-    flex: 1,
-    marginHorizontal: 12,
-    marginTop: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#27272a",
-    overflow: "hidden",
-    position: "relative",
-    minHeight: 280,
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: "#09090b",
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#09090b",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  geocodingIndicator: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 1000,
-    backgroundColor: "rgba(24, 24, 27, 0.9)",
-    borderColor: "#27272a",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-  },
-  geocodingText: {
-    fontSize: 10,
-    color: "#a1a1aa",
-  },
-  errorText: {
-    marginHorizontal: 12,
-    marginTop: 6,
-    color: "#ef4444",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  footer: {
-    marginTop: 10,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#27272a",
-    backgroundColor: "#09090b",
-    gap: 6,
-  },
-  footerLabel: {
-    color: "#a1a1aa",
-    fontSize: 12,
-    textAlign: "right",
-    fontWeight: "600",
-  },
-  footerAddress: {
-    color: "#f4f4f5",
-    fontSize: 13,
-    textAlign: "right",
-    lineHeight: 20,
-    minHeight: 40,
-  },
-  footerArea: {
-    color: "#f97316",
-    fontSize: 12,
-    textAlign: "right",
-  },
-  confirmButton: {
-    marginTop: 8,
-    backgroundColor: "#22c55e",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  confirmButtonDisabled: {
-    opacity: 0.45,
-  },
-  confirmButtonText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-});
+const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], isDark: boolean) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: themeColors.background,
+    },
+    header: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: themeColors.cardBorder,
+    },
+    headerBtn: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: "center",
+      color: themeColors.text,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    searchContainer: {
+      marginHorizontal: 12,
+      marginTop: 10,
+      position: "relative",
+      zIndex: 20,
+    },
+    searchInput: {
+      backgroundColor: themeColors.inputBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingRight: 40,
+      height: 48,
+      color: themeColors.text,
+      fontSize: 14,
+    },
+    searchButton: {
+      position: "absolute",
+      right: 12,
+      top: 14,
+      zIndex: 21,
+    },
+    dropdown: {
+      position: "absolute",
+      top: 52,
+      left: 0,
+      right: 0,
+      backgroundColor: themeColors.cardBg,
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 12,
+      maxHeight: 180,
+      overflow: "hidden",
+      zIndex: 100,
+      elevation: 6,
+    },
+    dropdownList: {
+      paddingVertical: 4,
+    },
+    dropdownItem: {
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderBottomColor: themeColors.cardBorder,
+      borderBottomWidth: 0.5,
+    },
+    dropdownText: {
+      color: themeColors.text,
+      fontSize: 12,
+      textAlign: "right",
+    },
+    myLocationFab: {
+      position: "absolute",
+      right: 16,
+      bottom: 16,
+      zIndex: 1100,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: "#ffffff",
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.28,
+      shadowRadius: 4,
+      elevation: 6,
+    },
+    myLocationFabDisabled: {
+      opacity: 0.7,
+    },
+    mapBorder: {
+      flex: 1,
+      marginHorizontal: 12,
+      marginTop: 10,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: themeColors.cardBorder,
+      overflow: "hidden",
+      position: "relative",
+      minHeight: 280,
+    },
+    webview: {
+      flex: 1,
+      backgroundColor: isDark ? "#111827" : "#f3f4f6",
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: isDark ? "#111827" : "#f3f4f6",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    geocodingIndicator: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      zIndex: 1000,
+      backgroundColor: isDark ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.95)",
+      borderColor: themeColors.cardBorder,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 6,
+    },
+    geocodingText: {
+      fontSize: 10,
+      color: themeColors.textMuted,
+    },
+    errorText: {
+      marginHorizontal: 12,
+      marginTop: 6,
+      color: "#ef4444",
+      fontSize: 12,
+      textAlign: "center",
+    },
+    footer: {
+      marginTop: 10,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: themeColors.cardBorder,
+      backgroundColor: themeColors.background,
+      gap: 6,
+    },
+    footerLabel: {
+      color: themeColors.textMuted,
+      fontSize: 12,
+      textAlign: "right",
+      fontWeight: "600",
+    },
+    footerAddress: {
+      color: themeColors.text,
+      fontSize: 13,
+      textAlign: "right",
+      lineHeight: 20,
+      minHeight: 40,
+    },
+    footerArea: {
+      color: "#f97316",
+      fontSize: 12,
+      textAlign: "right",
+    },
+    confirmButton: {
+      marginTop: 8,
+      backgroundColor: "#22c55e",
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    confirmButtonDisabled: {
+      opacity: 0.45,
+    },
+    confirmButtonText: {
+      color: "#ffffff",
+      fontSize: 15,
+      fontWeight: "700",
+    },
+  });

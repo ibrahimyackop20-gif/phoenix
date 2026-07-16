@@ -6,80 +6,174 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "../../../../lib/supabaseClient";
-import { Feather, FontAwesome } from "@expo/vector-icons";
+import {
+  createRealtimeChannel,
+  teardownRealtimeChannel,
+} from "../../../../lib/realtimeChannel";
+import { Feather } from "@expo/vector-icons";
 
-interface DailySale {
-  date: string;
-  total: number;
-  count: number;
+interface WalletTopup {
+  id: string;
+  user_id: string;
+  amount: number;
+  receipt_url: string | null;
+  status: string;
+  admin_notes: string | null;
+  created_at: string;
+  profiles?: { full_name: string | null; phone_number: string | null } | null;
 }
 
 export default function FinanceScreen() {
   const router = useRouter();
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [totalOrders, setTotalOrders] = useState(0);
-  const [totalShipping, setTotalShipping] = useState(0);
-  const [totalPrintingCost, setTotalPrintingCost] = useState(0);
-  const [dailySales, setDailySales] = useState<DailySale[]>([]);
+  const [requests, setRequests] = useState<WalletTopup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const fetchRequests = async () => {
+    try {
+      let { data, error } = await supabase
+        .from("wallet_topups")
+        .select("*, profiles(full_name, phone_number)")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        const fallback = await supabase
+          .from("wallet_topups")
+          .select("*")
+          .order("created_at", { ascending: false });
+        data = fallback.data;
+      }
+
+      setRequests((data || []) as WalletTopup[]);
+    } catch (err) {
+      console.error("Error fetching wallet topups:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFinance = async () => {
-      try {
-        const { data: orders } = await supabase
-          .from("sales_orders")
-          .select("total, shipping_cost, created_at")
-          .order("created_at", { ascending: false });
+    fetchRequests();
 
-        if (orders) {
-          const revenue = orders.reduce((sum: number, o: { total: number | null }) => sum + (o.total || 0), 0);
-          const shipping = orders.reduce((sum: number, o: { shipping_cost: number | null }) => sum + (o.shipping_cost || 0), 0);
-          setTotalRevenue(revenue);
-          setTotalOrders(orders.length);
-          setTotalShipping(shipping);
+    const channel = createRealtimeChannel("admin-wallet-topups-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "wallet_topups" }, () => {
+        fetchRequests();
+      })
+      .subscribe();
 
-          const last7: DailySale[] = [];
-          for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().slice(0, 10);
-            const dayOrders = orders.filter(
-              (o: { created_at: string | null }) => o.created_at?.slice(0, 10) === dateStr
-            );
-            last7.push({
-              date: d.toLocaleDateString("ar-SA", { weekday: "short", day: "numeric" }),
-              total: dayOrders.reduce((s: number, o: { total: number | null }) => s + (o.total || 0), 0),
-              count: dayOrders.length,
-            });
-          }
-          setDailySales(last7);
-        }
-
-        const { data: printOrders } = await supabase
-          .from("orders")
-          .select("total_cost")
-          .eq("status", "Completed");
-
-        if (printOrders) {
-          const printCost = printOrders.reduce((s: number, o: { total_cost: number | null }) => s + (o.total_cost || 0), 0);
-          setTotalPrintingCost(printCost);
-        }
-      } catch (err) {
-        console.error("Error fetching finance data:", err);
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      teardownRealtimeChannel(channel);
     };
-
-    fetchFinance();
   }, []);
 
-  const totalProfit = totalRevenue - totalShipping - totalPrintingCost;
-  const maxBarValue = Math.max(...dailySales.map((d) => d.total), 1);
+  const handleApprove = (req: WalletTopup) => {
+    Alert.alert("تأكيد الشحن", `إضافة ${req.amount.toLocaleString()} د.ع إلى محفظة المستخدم؟`, [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "نعم، تأكيد",
+        onPress: async () => {
+          setProcessing(req.id);
+          try {
+            const { data: profile, error: profileErr } = await supabase
+              .from("profiles")
+              .select("balance")
+              .eq("id", req.user_id)
+              .single();
+
+            if (profileErr) throw profileErr;
+
+            const newBalance = (profile?.balance || 0) + req.amount;
+            const { error: balanceErr } = await supabase
+              .from("profiles")
+              .update({ balance: newBalance })
+              .eq("id", req.user_id);
+
+            if (balanceErr) throw balanceErr;
+
+            const { error } = await supabase
+              .from("wallet_topups")
+              .update({ status: "approved" })
+              .eq("id", req.id);
+
+            if (error) throw error;
+
+            setRequests((prev) =>
+              prev.map((r) => (r.id === req.id ? { ...r, status: "approved" } : r))
+            );
+            showToast("تم شحن المحفظة بنجاح ✓");
+
+            await supabase.from("notifications").insert({
+              user_id: req.user_id,
+              title: "تم شحن محفظتك ✓",
+              message: `تمت إضافة ${req.amount.toLocaleString()} د.ع إلى رصيد محفظتك بعد مراجعة الوصل.`,
+              is_read: false,
+            });
+          } catch (err) {
+            console.error(err);
+            showToast("فشل تأكيد الشحن", "error");
+          } finally {
+            setProcessing(null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleReject = (req: WalletTopup) => {
+    Alert.alert("تأكيد الرفض", "هل تريد رفض طلب الشحن هذا؟", [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "رفض الطلب",
+        style: "destructive",
+        onPress: async () => {
+          setProcessing(req.id);
+          try {
+            const { error } = await supabase
+              .from("wallet_topups")
+              .update({ status: "rejected" })
+              .eq("id", req.id);
+
+            if (error) throw error;
+
+            setRequests((prev) =>
+              prev.map((r) => (r.id === req.id ? { ...r, status: "rejected" } : r))
+            );
+            showToast("تم رفض الطلب");
+
+            await supabase.from("notifications").insert({
+              user_id: req.user_id,
+              title: "تم رفض طلب الشحن",
+              message: `تم رفض طلب شحن بمبلغ ${req.amount.toLocaleString()} د.ع. يرجى التحقق من الوصل وإعادة المحاولة.`,
+              is_read: false,
+            });
+          } catch (err) {
+            showToast("فشل رفض الطلب", "error");
+          } finally {
+            setProcessing(null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const pendingRequests = requests.filter((r) => r.status === "pending");
+  const pendingTotal = pendingRequests.reduce((sum, r) => sum + r.amount, 0);
+  const approvedTotal = requests
+    .filter((r) => r.status === "approved")
+    .reduce((sum, r) => sum + r.amount, 0);
 
   if (loading) {
     return (
@@ -91,156 +185,152 @@ export default function FinanceScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
+      {toast && (
+        <View style={[styles.toastAlert, toast.type === "error" ? styles.toastError : styles.toastSuccess]}>
+          <Text style={styles.toastText}>{toast.message}</Text>
+        </View>
+      )}
+
       <View style={styles.header}>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle}>لوحة المالية</Text>
-          <Text style={styles.headerSubtitle}>متابعة الإيرادات والأرباح</Text>
+          <Text style={styles.headerTitle}>طلبات المحفظة</Text>
+          <Text style={styles.headerSubtitle}>مراجعة وتأكيد طلبات شحن المحفظة</Text>
         </View>
 
-        <TouchableOpacity
-          onPress={() => router.push("/admin" as any)}
-          style={styles.backBtn}
-        >
-          <Feather name="arrow-right" size={16} color="#a1a1aa" />
-          <Text style={styles.backBtnText}>لوحة الإدارة</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.refreshBtn} onPress={fetchRequests}>
+            <Feather name="refresh-cw" size={16} color="#f4f4f5" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/admin" as any)}
+            style={styles.backBtn}
+          >
+            <Feather name="arrow-right" size={16} color="#a1a1aa" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Metric Cards Grid */}
-        <View style={styles.metricGrid}>
-          {/* Revenue */}
-          <View style={styles.metricCard}>
-            <View style={styles.metricHeader}>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(16, 185, 129, 0.1)" }]}>
-                <Feather name="dollar-sign" size={18} color="#10b981" />
-              </View>
-              <Text style={styles.metricLabel}>إجمالي الإيرادات</Text>
-            </View>
-            <Text style={[styles.metricValue, { color: "#10b981" }]}>
-              {totalRevenue.toLocaleString()}
-            </Text>
-            <Text style={styles.currencyText}>د.ع</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Feather name="clock" size={16} color="#fbbf24" style={styles.statIcon} />
+            <Text style={[styles.statValue, { color: "#fbbf24" }]}>{pendingRequests.length}</Text>
+            <Text style={styles.statLabel}>طلبات معلقة</Text>
           </View>
 
-          {/* Profit */}
-          <View style={styles.metricCard}>
-            <View style={styles.metricHeader}>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(234, 88, 12, 0.1)" }]}>
-                <Feather name="trending-up" size={18} color="#ea580c" />
-              </View>
-              <Text style={styles.metricLabel}>صافي الأرباح</Text>
-            </View>
-            <Text style={[styles.metricValue, totalProfit >= 0 ? { color: "#ea580c" } : { color: "#ef4444" }]}>
-              {totalProfit.toLocaleString()}
+          <View style={styles.statCard}>
+            <Feather name="dollar-sign" size={16} color="#ea580c" style={styles.statIcon} />
+            <Text style={[styles.statValue, { color: "#ea580c" }]}>
+              {pendingTotal.toLocaleString()} د.ع
             </Text>
-            <Text style={styles.currencyText}>د.ع</Text>
+            <Text style={styles.statLabel}>قيد المراجعة</Text>
           </View>
 
-          {/* Orders */}
-          <View style={styles.metricCard}>
-            <View style={styles.metricHeader}>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(251, 191, 36, 0.1)" }]}>
-                <Feather name="shopping-bag" size={18} color="#fbbf24" />
-              </View>
-              <Text style={styles.metricLabel}>عدد الطلبات</Text>
-            </View>
-            <Text style={[styles.metricValue, { color: "#fbbf24" }]}>
-              {totalOrders}
+          <View style={styles.statCard}>
+            <Feather name="check-circle" size={16} color="#10b981" style={styles.statIcon} />
+            <Text style={[styles.statValue, { color: "#10b981" }]}>
+              {approvedTotal.toLocaleString()} د.ع
             </Text>
-            <Text style={styles.currencyText}>طلب</Text>
-          </View>
-
-          {/* Costs */}
-          <View style={styles.metricCard}>
-            <View style={styles.metricHeader}>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(239, 68, 68, 0.1)" }]}>
-                <Feather name="credit-card" size={18} color="#ef4444" />
-              </View>
-              <Text style={styles.metricLabel}>إجمالي التكاليف</Text>
-            </View>
-            <Text style={[styles.metricValue, { color: "#ef4444" }]}>
-              {(totalShipping + totalPrintingCost).toLocaleString()}
-            </Text>
-            <Text style={styles.currencyText}>د.ع</Text>
+            <Text style={styles.statLabel}>تم اعتمادها</Text>
           </View>
         </View>
 
-        {/* Costs Details Breakdowns */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>تفاصيل التكاليف</Text>
+        <View style={styles.listSection}>
+          <Text style={styles.sectionTitle}>طلبات شحن المحفظة</Text>
 
-          <View style={styles.breakdownRow}>
-            <View style={styles.breakdownItem}>
-              <View style={styles.breakdownHeader}>
-                <Feather name="truck" size={14} color="#60a5fa" />
-                <Text style={styles.breakdownLabel}>تكاليف التوصيل</Text>
-              </View>
-              <Text style={[styles.breakdownValue, { color: "#60a5fa" }]}>
-                {totalShipping.toLocaleString()} د.ع
-              </Text>
+          {requests.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Feather name="credit-card" size={48} color="#27272a" />
+              <Text style={styles.emptyText}>لا توجد طلبات شحن حالياً</Text>
             </View>
+          ) : (
+            <View style={styles.list}>
+              {requests.map((req) => {
+                const isPending = req.status === "pending";
+                const isApproved = req.status === "approved";
+                const isRejected = req.status === "rejected";
 
-            <View style={styles.breakdownItem}>
-              <View style={styles.breakdownHeader}>
-                <Feather name="printer" size={14} color="#a78bfa" />
-                <Text style={styles.breakdownLabel}>تكاليف الطباعة</Text>
-              </View>
-              <Text style={[styles.breakdownValue, { color: "#a78bfa" }]}>
-                {totalPrintingCost.toLocaleString()} د.ع
-              </Text>
-            </View>
-          </View>
-        </View>
+                return (
+                  <View
+                    key={req.id}
+                    style={[
+                      styles.requestCard,
+                      isPending && styles.pendingCard,
+                      isRejected && styles.rejectedCard,
+                    ]}
+                  >
+                    <View style={styles.cardHeader}>
+                      <Text style={styles.requestCode}>
+                        #{req.id.slice(0, 8).toUpperCase()}
+                      </Text>
+                      {isPending ? (
+                        <View style={styles.pendingBadge}>
+                          <Text style={styles.pendingBadgeText}>معلق</Text>
+                        </View>
+                      ) : isApproved ? (
+                        <View style={styles.completedBadge}>
+                          <Text style={styles.completedBadgeText}>معتمد</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.rejectedBadge}>
+                          <Text style={styles.rejectedBadgeText}>مرفوض</Text>
+                        </View>
+                      )}
+                    </View>
 
-        {/* Sales Chart Bar Representation */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>المبيعات - آخر 7 أيام</Text>
+                    <View style={styles.cardBody}>
+                      <Text style={styles.cardText}>المستخدم: {req.profiles?.full_name || "—"}</Text>
+                      <Text style={styles.cardText}>رقم الهاتف: {req.profiles?.phone_number || "—"}</Text>
+                      <Text style={styles.amountText}>المبلغ: {req.amount.toLocaleString()} د.ع</Text>
+                      <Text style={styles.dateText}>
+                        التاريخ: {new Date(req.created_at).toLocaleDateString("ar-SA")}
+                      </Text>
 
-          <View style={styles.chartContainer}>
-            {dailySales.map((day, i) => {
-              const heightPercentage = maxBarValue > 0 ? (day.total / maxBarValue) * 100 : 0;
-              return (
-                <View key={i} style={styles.chartBarWrapper}>
-                  {/* Total Value */}
-                  <Text style={styles.barValueText}>
-                    {day.total > 0 ? `${(day.total / 1000).toFixed(0)}K` : "0"}
-                  </Text>
+                      {req.receipt_url ? (
+                        <TouchableOpacity
+                          style={styles.receiptPreview}
+                          onPress={() => Linking.openURL(req.receipt_url!)}
+                        >
+                          <Image
+                            source={{ uri: req.receipt_url }}
+                            style={styles.receiptImage}
+                            resizeMode="cover"
+                          />
+                          <Text style={styles.receiptLink}>عرض الوصل</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.cardText}>لا يوجد وصل مرفق</Text>
+                      )}
+                    </View>
 
-                  {/* Dynamic Bar */}
-                  <View style={styles.barTrack}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        { height: `${Math.max(heightPercentage, 4)}%` },
-                      ]}
-                    />
+                    {isPending && (
+                      <View style={styles.cardFooter}>
+                        <TouchableOpacity
+                          style={styles.approveBtn}
+                          onPress={() => handleApprove(req)}
+                          disabled={processing === req.id}
+                        >
+                          {processing === req.id ? (
+                            <ActivityIndicator size="small" color="#ffffff" />
+                          ) : (
+                            <Text style={styles.approveBtnText}>اعتماد وإضافة الرصيد</Text>
+                          )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.rejectBtn}
+                          onPress={() => handleReject(req)}
+                          disabled={processing === req.id}
+                        >
+                          <Text style={styles.rejectBtnText}>رفض</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
-
-                  {/* Day Date */}
-                  <Text style={styles.barLabelText}>{day.date}</Text>
-                  <Text style={styles.barCountText}>{day.count} طلب</Text>
-                </View>
-              );
-            })}
-          </View>
-
-          {/* Sum details */}
-          <View style={styles.chartFooter}>
-            <Text style={styles.footerText}>
-              إجمالي الفترة:{" "}
-              <Text style={styles.whiteText}>
-                {dailySales.reduce((s, d) => s + d.total, 0).toLocaleString()} د.ع
-              </Text>
-            </Text>
-            <Text style={styles.footerText}>
-              عدد الطلبات:{" "}
-              <Text style={styles.whiteText}>
-                {dailySales.reduce((s, d) => s + d.count, 0)}
-              </Text>
-            </Text>
-          </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -250,13 +340,39 @@ export default function FinanceScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#09090b", // zinc-950
+    backgroundColor: "#09090b",
   },
   loadingContainer: {
     flex: 1,
     backgroundColor: "#09090b",
     alignItems: "center",
     justifyContent: "center",
+  },
+  toastAlert: {
+    position: "absolute",
+    top: 60,
+    left: 20,
+    right: 20,
+    zIndex: 99,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toastSuccess: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderColor: "rgba(16, 185, 129, 0.2)",
+  },
+  toastError: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderColor: "rgba(239, 68, 68, 0.2)",
+  },
+  toastText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
   },
   header: {
     flexDirection: "row-reverse",
@@ -269,6 +385,7 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -280,158 +397,204 @@ const styles = StyleSheet.create({
     color: "#71717a",
     marginTop: 4,
   },
-  backBtn: {
+  headerActions: {
     flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
+    gap: 8,
+  },
+  refreshBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: "#18181b",
     borderWidth: 1,
     borderColor: "#27272a",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  backBtnText: {
-    color: "#a1a1aa",
-    fontSize: 12,
-    fontWeight: "bold",
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#18181b",
+    borderWidth: 1,
+    borderColor: "#27272a",
+    alignItems: "center",
+    justifyContent: "center",
   },
   scrollContent: {
     padding: 20,
-    gap: 16,
+    gap: 20,
   },
-  metricGrid: {
+  statsRow: {
     flexDirection: "row-reverse",
-    flexWrap: "wrap",
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#18181b",
+    borderWidth: 1,
+    borderColor: "#27272a",
+    borderRadius: 14,
+    padding: 12,
+    alignItems: "center",
+  },
+  statIcon: {
+    marginBottom: 6,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  statLabel: {
+    fontSize: 9,
+    color: "#71717a",
+    marginTop: 4,
+  },
+  listSection: {
     gap: 12,
   },
-  metricCard: {
-    width: "48%", // 2 columns layout on mobile
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#f4f4f5",
+    textAlign: "right",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 12,
+  },
+  emptyText: {
+    color: "#71717a",
+    fontSize: 14,
+  },
+  list: {
+    gap: 12,
+  },
+  requestCard: {
     backgroundColor: "#18181b",
     borderWidth: 1,
     borderColor: "#27272a",
     borderRadius: 16,
     padding: 16,
+    gap: 12,
+  },
+  pendingCard: {
+    borderColor: "rgba(251, 191, 36, 0.35)",
+  },
+  rejectedCard: {
+    borderColor: "rgba(239, 68, 68, 0.35)",
+  },
+  cardHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  requestCode: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  pendingBadge: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  pendingBadgeText: {
+    color: "#fbbf24",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  completedBadge: {
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  completedBadgeText: {
+    color: "#10b981",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  rejectedBadge: {
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  rejectedBadgeText: {
+    color: "#ef4444",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  cardBody: {
+    gap: 6,
     alignItems: "flex-end",
   },
-  metricHeader: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
+  cardText: {
+    color: "#d4d4d8",
+    fontSize: 13,
+    textAlign: "right",
   },
-  iconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  amountText: {
+    color: "#ea580c",
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "right",
+  },
+  dateText: {
+    color: "#71717a",
+    fontSize: 12,
+    textAlign: "right",
+  },
+  receiptPreview: {
+    marginTop: 8,
+    width: "100%",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#27272a",
+  },
+  receiptImage: {
+    width: "100%",
+    height: 160,
+    backgroundColor: "#09090b",
+  },
+  receiptLink: {
+    color: "#60a5fa",
+    fontSize: 12,
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  cardFooter: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    marginTop: 4,
+  },
+  approveBtn: {
+    flex: 1,
+    backgroundColor: "#ea580c",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  approveBtnText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  rejectBtn: {
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#3f3f46",
     alignItems: "center",
     justifyContent: "center",
   },
-  metricLabel: {
-    fontSize: 10,
-    color: "#71717a",
-    fontWeight: "500",
-  },
-  metricValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  currencyText: {
-    fontSize: 9,
-    color: "#71717a",
-    marginTop: 2,
-  },
-  card: {
-    backgroundColor: "#18181b",
-    borderWidth: 1,
-    borderColor: "#27272a",
-    borderRadius: 20,
-    padding: 20,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
+  rejectBtnText: {
     color: "#f4f4f5",
-    marginBottom: 16,
-    textAlign: "right",
-  },
-  breakdownRow: {
-    flexDirection: "row-reverse",
-    gap: 12,
-  },
-  breakdownItem: {
-    flex: 1,
-    backgroundColor: "#09090b",
-    borderWidth: 1,
-    borderColor: "#27272a",
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "flex-end",
-  },
-  breakdownHeader: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-  breakdownLabel: {
-    fontSize: 10,
-    color: "#71717a",
-  },
-  breakdownValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  chartContainer: {
-    flexDirection: "row-reverse",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: 160,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderColor: "#27272a",
-  },
-  chartBarWrapper: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  barValueText: {
-    fontSize: 8,
-    color: "#71717a",
-    fontWeight: "500",
-  },
-  barTrack: {
-    width: 14,
-    height: 100,
-    backgroundColor: "transparent",
-    justifyContent: "flex-end",
-  },
-  barFill: {
-    width: "100%",
-    borderRadius: 4,
-    backgroundColor: "#ea580c",
-  },
-  barLabelText: {
-    fontSize: 8,
-    color: "#71717a",
-    marginTop: 4,
-  },
-  barCountText: {
-    fontSize: 7,
-    color: "#71717a",
-  },
-  chartFooter: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    marginTop: 12,
-  },
-  footerText: {
-    fontSize: 11,
-    color: "#71717a",
-  },
-  whiteText: {
-    color: "#f4f4f5",
-    fontWeight: "bold",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });
