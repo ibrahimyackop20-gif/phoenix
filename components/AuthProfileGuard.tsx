@@ -8,10 +8,21 @@ import {
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { supabase, centralSupabase } from "../lib/supabaseClient";
+import { isPrimaryAdminEmail, resolveAuthEmail } from "../lib/adminAccess";
+import { markPostAuthNavigation } from "../lib/postAuthNavigation";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
 
 const checkPath = (p: string, prefix: string) => p === prefix || p.startsWith(prefix + "/");
+
+function destinationForLocalSession(user: {
+  email?: string | null;
+  identities?: Array<{ identity_data?: { email?: string } }> | null;
+  user_metadata?: Record<string, unknown> | null;
+}): "/dashboard" | "/admin" {
+  const email = resolveAuthEmail(user, user.email);
+  return isPrimaryAdminEmail(email) ? "/admin" : "/dashboard";
+}
 
 /**
  * Global auth guard (React Native)
@@ -127,9 +138,19 @@ export default function AuthProfileGuard() {
               if (!verifyError) {
                 console.log("✅ AuthProfileGuard: Local session sync completed successfully.");
                 if (isAuthPage) {
-                  console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Auth State: Authenticated (Local Sync). Executing replace...`);
-                  router.replace("/dashboard" as any);
-                  console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Done.`);
+                  const {
+                    data: { session: synced },
+                  } = await supabase.auth.getSession();
+                  const target = synced
+                    ? destinationForLocalSession(synced.user)
+                    : "/dashboard";
+                  console.log("[AuthProfileGuard][NAV] after central sync", {
+                    currentRoute: path,
+                    navigationTarget: target,
+                    authState: "authenticated",
+                  });
+                  router.replace(target as any);
+                  console.log("[AuthProfileGuard][NAV] final screen →", target);
                 }
               } else {
                 console.error("❌ AuthProfileGuard local verifyOtp failed:", verifyError.message);
@@ -141,9 +162,14 @@ export default function AuthProfileGuard() {
                 if (currentSession) {
                   console.log("🔑 AuthProfileGuard: Local session already exists. Proceeding...");
                   if (isAuthPage) {
-                    console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Auth State: Authenticated (Local Session Exists). Executing replace...`);
-                    router.replace("/dashboard" as any);
-                    console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Done.`);
+                    const target = destinationForLocalSession(currentSession.user);
+                    console.log("[AuthProfileGuard][NAV] local session exists after sync fail", {
+                      currentRoute: path,
+                      navigationTarget: target,
+                      authState: "authenticated",
+                    });
+                    router.replace(target as any);
+                    console.log("[AuthProfileGuard][NAV] final screen →", target);
                   }
                 } else {
                   isSyncing.current = false;
@@ -182,14 +208,54 @@ export default function AuthProfileGuard() {
           }
 
           if (isAuthPage) {
-            console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Auth State: Authenticated (Session exists). Executing replace...`);
-            router.replace("/dashboard" as any);
-            console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /dashboard, Done.`);
+            const target = destinationForLocalSession(localSession.user);
+            console.log("[AuthProfileGuard][NAV] session established (central+local)", {
+              currentRoute: path,
+              navigationTarget: target,
+              authState: "authenticated",
+              email: localSession.user.email,
+            });
+            router.replace(target as any);
+            console.log("[AuthProfileGuard][NAV] final screen →", target);
           }
         }
       } else {
-        // No Central session exists
-        if (isProtected) {
+        // No Central session — local-only (e.g. Google / email password on primary Supabase)
+        if (localSession && isAuthPage) {
+          const target = destinationForLocalSession(localSession.user);
+          console.log("[AuthProfileGuard][NAV] local-only session on auth page → leave auth", {
+            currentRoute: path,
+            navigationTarget: target,
+            authState: "authenticated",
+            email: localSession.user.email,
+          });
+          // Ensure profile row exists (Google users often have none yet)
+          const user = localSession.user;
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (!isMountedRef.current) return;
+
+          if (!profile) {
+            const meta = user.user_metadata || {};
+            await supabase.from("profiles").upsert(
+              {
+                id: user.id,
+                full_name: meta.full_name || meta.name || user.email || "",
+                phone_number: meta.phone_number || meta.phone || "",
+              },
+              { onConflict: "id" }
+            );
+          }
+
+          if (!isMountedRef.current) return;
+          markPostAuthNavigation(target);
+          router.replace(target as any);
+          console.log("[AuthProfileGuard][NAV] final screen rendered →", target);
+        } else if (isProtected) {
           if (!localSession) {
             console.log("🔒 AuthProfileGuard: No active session. Redirecting to login...");
             console.log(`[Navigation] Component: AuthProfileGuard, Current Route: ${path}, Target Route: /auth/login, Auth State: Guest. Executing replace...`);
@@ -217,6 +283,11 @@ export default function AuthProfileGuard() {
                 { onConflict: "id" }
               );
             }
+            console.log("[AuthProfileGuard][NAV] local session on protected route — stay", {
+              currentRoute: path,
+              authState: "authenticated",
+              finalScreen: path,
+            });
           }
         }
       }

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useRouter } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 import * as Notifications from "expo-notifications";
+import * as Linking from "expo-linking";
 import { supabase } from "../lib/supabaseClient";
 import {
   registerForPushNotificationsAsync,
@@ -8,6 +9,8 @@ import {
   cacheFcmToken,
   saveTokenToSupabase,
 } from "../lib/notifications";
+import { shouldSuppressPushNavigation } from "../lib/postAuthNavigation";
+import { isGoogleAuthCallbackUrl } from "../lib/googleAuth";
 
 interface NotificationRegistrarProps {
   /** True once splash/onboarding has finished — triggers first-launch permission. */
@@ -24,6 +27,10 @@ type PushData = {
   [key: string]: unknown;
 };
 
+/** Survive remounts (Google OAuth deep-link remount resets component refs). */
+let lastHandledResponseIdGlobal: string | null = null;
+let coldStartLastResponseChecked = false;
+
 function readPushData(
   response: Notifications.NotificationResponse
 ): PushData {
@@ -38,16 +45,30 @@ function readPushData(
  * - After login: associate the cached FCM token with the authenticated user.
  * - Token refresh keeps local cache + Supabase in sync.
  * - Tap opens Order Details when order_id is present; otherwise Orders list.
+ *
+ * IMPORTANT: getLastNotificationResponseAsync() returns the same stale tap across
+ * remounts. Without process-level dedupe + clear, Google Sign-In remount steals
+ * navigation to /dashboard/orders after an intentional /dashboard replace.
  */
 export default function NotificationRegistrar({
   ready = false,
 }: NotificationRegistrarProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   const registrationStarted = useRef(false);
-  const associatedForUser = useRef<string | null>(null);
-  const lastHandledResponseId = useRef<string | null>(null);
 
-  const navigateFromPushData = (data: PushData) => {
+  const navigateFromPushData = (data: PushData, source: string) => {
+    if (shouldSuppressPushNavigation()) {
+      console.log("[NotificationRegistrar][NAV] suppressed (post-auth window)", {
+        source,
+        currentRoute: pathnameRef.current,
+        data,
+      });
+      return;
+    }
+
     const orderId =
       (typeof data.order_id === "string" && data.order_id) ||
       (typeof data.orderId === "string" && data.orderId) ||
@@ -65,7 +86,14 @@ export default function NotificationRegistrar({
     }
 
     if (orderId) {
-      router.push(`/dashboard/orders/${orderId}` as any);
+      const target = `/dashboard/orders/${orderId}`;
+      console.log("[NotificationRegistrar][NAV] push → order detail", {
+        source,
+        currentRoute: pathnameRef.current,
+        navigationTarget: target,
+        selectedTab: "orders",
+      });
+      router.push(target as any);
       return;
     }
 
@@ -73,6 +101,13 @@ export default function NotificationRegistrar({
       (typeof data.url === "string" && data.url) ||
       (typeof data.route === "string" && data.route) ||
       "/dashboard/orders";
+    console.log("[NotificationRegistrar][NAV] push → list/route", {
+      source,
+      currentRoute: pathnameRef.current,
+      navigationTarget: target,
+      selectedTab: String(target).includes("orders") ? "orders" : "other",
+      finalScreen: target,
+    });
     try {
       router.push(target as any);
     } catch {
@@ -81,13 +116,25 @@ export default function NotificationRegistrar({
   };
 
   const handleNotificationResponse = (
-    response: Notifications.NotificationResponse | null
+    response: Notifications.NotificationResponse | null,
+    source: string
   ) => {
     if (!response) return;
     const responseId = response.notification.request.identifier;
-    if (responseId && lastHandledResponseId.current === responseId) return;
-    if (responseId) lastHandledResponseId.current = responseId;
-    navigateFromPushData(readPushData(response));
+    if (responseId && lastHandledResponseIdGlobal === responseId) {
+      console.log("[NotificationRegistrar][NAV] skip duplicate response", {
+        source,
+        responseId,
+      });
+      return;
+    }
+    if (responseId) lastHandledResponseIdGlobal = responseId;
+    navigateFromPushData(readPushData(response), source);
+    try {
+      Notifications.clearLastNotificationResponse();
+    } catch {
+      // older native builds
+    }
   };
 
   // 1. First-launch permission + FCM registration — runs after splash, no auth required.
@@ -106,6 +153,7 @@ export default function NotificationRegistrar({
     let tokenSub: { remove: () => void } | null = null;
     let receivedSub: { remove: () => void } | null = null;
     let responseSub: { remove: () => void } | null = null;
+    let associatedForUser: string | null = null;
 
     const associate = async () => {
       try {
@@ -113,8 +161,8 @@ export default function NotificationRegistrar({
           data: { user },
         } = await supabase.auth.getUser();
         if (!isMounted || !user) return;
-        if (associatedForUser.current === user.id) return;
-        associatedForUser.current = user.id;
+        if (associatedForUser === user.id) return;
+        associatedForUser = user.id;
         await associateCachedTokenWithUser();
       } catch (error) {
         console.warn("[NotificationRegistrar] associate failed:", error);
@@ -126,12 +174,12 @@ export default function NotificationRegistrar({
 
       const auth = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
-          if (associatedForUser.current !== session.user.id) {
-            associatedForUser.current = session.user.id;
+          if (associatedForUser !== session.user.id) {
+            associatedForUser = session.user.id;
             associateCachedTokenWithUser().catch(() => {});
           }
         } else {
-          associatedForUser.current = null;
+          associatedForUser = null;
         }
       });
       authSub = auth.data;
@@ -152,22 +200,49 @@ export default function NotificationRegistrar({
       responseSub = Notifications.addNotificationResponseReceivedListener(
         (response) => {
           try {
-            handleNotificationResponse(response);
+            handleNotificationResponse(response, "live-tap");
           } catch (error) {
             console.warn("[NotificationRegistrar] response handler failed:", error);
           }
         }
       );
 
-      if (ready) {
-        Notifications.getLastNotificationResponseAsync()
-          .then((response) => {
+      // Cold-start / last-response: only once per JS process (not per remount).
+      if (ready && !coldStartLastResponseChecked) {
+        coldStartLastResponseChecked = true;
+        (async () => {
+          try {
+            const initialUrl = await Linking.getInitialURL();
+            if (initialUrl && isGoogleAuthCallbackUrl(initialUrl)) {
+              console.log(
+                "[NotificationRegistrar][NAV] skip cold-start push — Google auth callback",
+                { initialUrl, currentRoute: pathnameRef.current }
+              );
+              try {
+                Notifications.clearLastNotificationResponse();
+              } catch {
+                // ignore
+              }
+              return;
+            }
+            if (shouldSuppressPushNavigation()) {
+              console.log(
+                "[NotificationRegistrar][NAV] skip cold-start push — post-auth suppress"
+              );
+              return;
+            }
+            const response = await Notifications.getLastNotificationResponseAsync();
             if (!isMounted) return;
-            handleNotificationResponse(response);
-          })
-          .catch((error) => {
+            console.log("[NotificationRegistrar][NAV] cold-start last response", {
+              hasResponse: !!response,
+              currentRoute: pathnameRef.current,
+              responseId: response?.notification.request.identifier ?? null,
+            });
+            handleNotificationResponse(response, "cold-start-last");
+          } catch (error) {
             console.warn("[NotificationRegistrar] last response failed:", error);
-          });
+          }
+        })();
       }
     } catch (error) {
       console.warn("[NotificationRegistrar] listener setup failed:", error);

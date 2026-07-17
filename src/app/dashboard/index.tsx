@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter, Link, usePathname, useNavigation } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -26,9 +26,21 @@ export default function DashboardIndex() {
   const { t } = useTranslation();
   const { themeColors } = useAppTheme();
   const router = useRouter();
+  const pathname = usePathname();
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [stats, setStats] = useState<StatItem[]>([]);
+
+  useEffect(() => {
+    const state = navigation.getState?.();
+    console.log("[DashboardIndex][NAV] final screen rendered", {
+      currentRoute: pathname,
+      selectedTab: "dashboard",
+      navigatorStateRoutes: state?.routes?.map((r: { name?: string }) => r.name) ?? null,
+      index: state?.index ?? null,
+    });
+  }, [pathname, navigation]);
 
   const fetchDashboardData = async () => {
     try {

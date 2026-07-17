@@ -53,6 +53,15 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<UnifiedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    console.log("[OrdersScreen][NAV] final screen rendered", {
+      currentRoute: "/dashboard/orders",
+      selectedTab: "orders",
+      highlight: highlight ?? null,
+      orderId: orderId ?? null,
+    });
+  }, [highlight, orderId]);
   const [filter, setFilter] = useState<FilterType>("all");
   const [bwPrice, setBwPrice] = useState(0);
   const [colorPrice, setColorPrice] = useState(0);

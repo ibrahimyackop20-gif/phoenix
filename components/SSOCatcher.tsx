@@ -10,6 +10,12 @@ import {
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import { supabase, centralSupabase } from "../lib/supabaseClient";
+import {
+  completeGoogleAuthFromUrl,
+  getPostGoogleAuthDestination,
+  isGoogleAuthCallbackUrl,
+} from "../lib/googleAuth";
+import { markPostAuthNavigation } from "../lib/postAuthNavigation";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
 
@@ -31,6 +37,59 @@ export default function SSOCatcher() {
     const handleUrl = async (url: string) => {
       try {
         console.log("🔗 SSOCatcher: Incoming URL received:", url);
+
+        // Google OAuth: AuthSession may establish the session, but deep-link
+        // reopen remounts the tree and drops login.tsx router.replace — navigate here.
+        if (isGoogleAuthCallbackUrl(url)) {
+          if (isProcessing.current) {
+            console.log("[SSOCatcher][NAV] Google callback already processing — skip duplicate");
+            return;
+          }
+          isProcessing.current = true;
+          setLoading(true);
+          setError(null);
+          try {
+            console.log("[SSOCatcher][NAV] Google callback received", { url });
+            const result = await completeGoogleAuthFromUrl(url);
+            if (result.status !== "success" || !result.session) {
+              // AuthSession may already have exchanged the code — use current session.
+              const {
+                data: { session: existing },
+              } = await supabase.auth.getSession();
+              if (existing) {
+                const target = getPostGoogleAuthDestination(existing);
+                console.log("[SSOCatcher][NAV] session already present after Google URL", {
+                  email: existing.user.email,
+                  navigationTarget: target,
+                  authState: "authenticated",
+                });
+                markPostAuthNavigation(target);
+                router.replace(target as any);
+                console.log("[SSOCatcher][NAV] final screen rendered →", target);
+                return;
+              }
+              console.warn("[SSOCatcher][NAV] Google callback failed", result.message);
+              setError(result.message || "فشل تسجيل الدخول عبر Google");
+              return;
+            }
+            const target = getPostGoogleAuthDestination(result.session);
+            console.log("[SSOCatcher][NAV] session established", {
+              email: result.session.user.email,
+              navigationTarget: target,
+              authState: "authenticated",
+            });
+            markPostAuthNavigation(target);
+            router.replace(target as any);
+            console.log("[SSOCatcher][NAV] final screen rendered →", target);
+          } catch (err) {
+            console.error("[SSOCatcher] Google callback error:", err);
+            setError(err instanceof Error ? err.message : String(err));
+          } finally {
+            setLoading(false);
+            isProcessing.current = false;
+          }
+          return;
+        }
 
         const parsed = Linking.parse(url);
         let accessToken = parsed.queryParams?.access_token as string | undefined;

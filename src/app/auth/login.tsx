@@ -10,9 +10,15 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter, usePathname, Link } from "expo-router";
 import { supabase } from "@/lib/supabaseClient";
 import { isPrimaryAdminEmail, resolveAuthEmail } from "@/lib/adminAccess";
+import {
+  getPostGoogleAuthDestination,
+  signInWithGoogle,
+} from "@/lib/googleAuth";
+import { markPostAuthNavigation } from "@/lib/postAuthNavigation";
+import GoogleSignInButton from "@/../components/GoogleSignInButton";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
@@ -21,6 +27,7 @@ type PageState = "login" | "otp" | "success";
 
 export default function LoginPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
   const styles = getStyles(themeColors, isDark);
@@ -29,6 +36,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [pageState, setPageState] = useState<PageState>("login");
@@ -66,12 +74,75 @@ export default function LoginPage() {
         destination = "/admin";
       }
 
+      markPostAuthNavigation(destination);
       router.replace(destination as any);
     } catch (err) {
       console.error(err);
       setError(t("auth_login_error"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (loading || googleLoading) return;
+    setGoogleLoading(true);
+    setError("");
+
+    try {
+      console.log("[Login][NAV] Google sign-in started", {
+        currentRoute: pathname,
+        authState: "guest",
+      });
+      const result = await signInWithGoogle();
+
+      if (result.status === "cancelled") {
+        // Deep-link remount may have established session via SSOCatcher.
+        const {
+          data: { session: existing },
+        } = await supabase.auth.getSession();
+        if (existing) {
+          const destination = getPostGoogleAuthDestination(existing);
+          console.log("[Login][NAV] cancelled but session exists — navigating", {
+            currentRoute: pathname,
+            navigationTarget: destination,
+            authState: "authenticated",
+            email: existing.user.email,
+          });
+          markPostAuthNavigation(destination);
+          router.replace(destination as any);
+          console.log("[Login][NAV] final screen rendered →", destination);
+        }
+        return;
+      }
+      if (result.status === "expo_go_unsupported") {
+        setError(t("auth_google_expo_go"));
+        return;
+      }
+      if (result.status === "offline") {
+        setError(t("auth_google_offline"));
+        return;
+      }
+      if (result.status !== "success" || !result.session) {
+        setError(result.message || t("auth_google_failed"));
+        return;
+      }
+
+      const destination = getPostGoogleAuthDestination(result.session);
+      console.log("[Login][NAV] session established — navigating", {
+        currentRoute: pathname,
+        navigationTarget: destination,
+        authState: "authenticated",
+        email: result.session.user.email,
+      });
+      markPostAuthNavigation(destination);
+      router.replace(destination as any);
+      console.log("[Login][NAV] final screen rendered →", destination);
+    } catch (err) {
+      console.error(err);
+      setError(t("auth_google_failed"));
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -240,7 +311,7 @@ export default function LoginPage() {
 
                 <TouchableOpacity
                   onPress={handleLogin}
-                  disabled={loading}
+                  disabled={loading || googleLoading}
                   style={styles.primaryButton}
                 >
                   {loading ? (
@@ -253,9 +324,21 @@ export default function LoginPage() {
                   )}
                 </TouchableOpacity>
 
+                <View style={styles.orRow}>
+                  <View style={styles.orLine} />
+                  <Text style={styles.orText}>{t("auth_or")}</Text>
+                  <View style={styles.orLine} />
+                </View>
+
+                <GoogleSignInButton
+                  onPress={handleGoogleSignIn}
+                  loading={googleLoading}
+                  disabled={loading}
+                />
+
                 <TouchableOpacity
                   onPress={handleForgotPassword}
-                  disabled={sendingReset}
+                  disabled={sendingReset || loading || googleLoading}
                   style={styles.forgotButton}
                 >
                   <Text style={styles.forgotText}>
@@ -517,6 +600,23 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       shadowOpacity: 0.3,
       shadowRadius: 6,
       elevation: 4,
+    },
+    orRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 16,
+      marginBottom: 4,
+      gap: 10,
+    },
+    orLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: themeColors.cardBorder,
+    },
+    orText: {
+      fontSize: 12,
+      color: themeColors.textMuted,
+      fontWeight: "500",
     },
     buttonInner: {
       flexDirection: "row-reverse",

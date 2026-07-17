@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   StyleSheet,
   View,
@@ -10,18 +10,36 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter, usePathname, Link } from "expo-router";
 import { supabase } from "@/lib/supabaseClient";
 import { isPrimaryAdminEmail, resolveAuthEmail } from "@/lib/adminAccess";
+import {
+  getPostGoogleAuthDestination,
+  signInWithGoogle,
+} from "@/lib/googleAuth";
+import { markPostAuthNavigation } from "@/lib/postAuthNavigation";
 import OtpInput from "@/../components/OtpInput";
+import GoogleSignInButton from "@/../components/GoogleSignInButton";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 type Step = "register" | "verify";
 
+/** Supabase default per-user email OTP / signup confirmation window (seconds). */
+const SUPABASE_EMAIL_COOLDOWN_SEC = 60;
+
+function parseRateLimitSeconds(message: string): number | null {
+  const match = message.match(/after\s+(\d+)\s+seconds?/i);
+  if (!match) return null;
+  const sec = parseInt(match[1], 10);
+  return Number.isFinite(sec) && sec > 0 ? sec : null;
+}
+
 export default function SignupPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
   const styles = getStyles(themeColors, isDark);
@@ -34,22 +52,132 @@ export default function SignupPage() {
 
   const [step, setStep] = useState<Step>("register");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const [otpError, setOtpError] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const [countdown, setCountdown] = useState(0);
 
+  // Synchronous lock — React setState is async; without this, a fast double-tap
+  // can fire two signUp() network requests before `loading` re-renders.
+  const registerInFlightRef = useRef(false);
+  const resendInFlightRef = useRef(false);
+  const verifyInFlightRef = useRef(false);
+  const otpRequestCountRef = useRef(0);
+
+  // TEMP DEBUG — keep until device verification is confirmed by the user.
+  useEffect(() => {
+    console.log("[SignupOTP] auth listener attached");
+    const { data } = supabase.auth.onAuthStateChange(
+      (event: AuthChangeEvent, session: Session | null) => {
+        console.log("[SignupOTP] auth state change", {
+          event,
+          hasSession: !!session,
+          email: session?.user?.email ?? null,
+          ts: Date.now(),
+        });
+      }
+    );
+    return () => {
+      console.log("[SignupOTP] auth listener removed");
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Countdown: one timeout per remaining second (no OTP side effects).
   useEffect(() => {
     if (countdown <= 0) return;
-    const timer = setInterval(() => {
-      setCountdown((prev) => prev - 1);
+    const timer = setTimeout(() => {
+      setCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
-    return () => clearInterval(timer);
+    return () => clearTimeout(timer);
   }, [countdown]);
 
+  const goToVerifyStep = useCallback((reason: string) => {
+    console.log("[SignupOTP] navigate to verification screen", {
+      reason,
+      email: email.trim(),
+      ts: Date.now(),
+    });
+    setStep("verify");
+    setCountdown(SUPABASE_EMAIL_COOLDOWN_SEC);
+  }, [email]);
+
+  const handleGoogleSignIn = async () => {
+    if (loading || googleLoading || registerInFlightRef.current) return;
+    setGoogleLoading(true);
+    setError("");
+
+    try {
+      console.log("[Signup][NAV] Google sign-in started", {
+        currentRoute: pathname,
+        authState: "guest",
+      });
+      const result = await signInWithGoogle();
+
+      if (result.status === "cancelled") {
+        const {
+          data: { session: existing },
+        } = await supabase.auth.getSession();
+        if (existing) {
+          const destination = getPostGoogleAuthDestination(existing);
+          console.log("[Signup][NAV] cancelled but session exists — navigating", {
+            currentRoute: pathname,
+            navigationTarget: destination,
+            authState: "authenticated",
+            email: existing.user.email,
+          });
+          markPostAuthNavigation(destination);
+          router.replace(destination as any);
+          console.log("[Signup][NAV] final screen rendered →", destination);
+        }
+        return;
+      }
+      if (result.status === "expo_go_unsupported") {
+        setError(t("auth_google_expo_go"));
+        return;
+      }
+      if (result.status === "offline") {
+        setError(t("auth_google_offline"));
+        return;
+      }
+      if (result.status !== "success" || !result.session) {
+        setError(result.message || t("auth_google_failed"));
+        return;
+      }
+
+      const destination = getPostGoogleAuthDestination(result.session);
+      console.log("[Signup][NAV] session established — navigating", {
+        currentRoute: pathname,
+        navigationTarget: destination,
+        authState: "authenticated",
+        email: result.session.user.email,
+      });
+      markPostAuthNavigation(destination);
+      router.replace(destination as any);
+      console.log("[Signup][NAV] final screen rendered →", destination);
+    } catch (err) {
+      console.error(err);
+      setError(t("auth_google_failed"));
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
+    // Guard: ignore duplicate taps before loading UI updates.
+    if (registerInFlightRef.current || loading) {
+      console.log("[SignupOTP] signUp() BLOCKED duplicate tap", {
+        inFlight: registerInFlightRef.current,
+        loading,
+        ts: Date.now(),
+      });
+      return;
+    }
+
     if (!fullName.trim() || !email.trim() || !password.trim()) {
       setError(t("auth_fill_required"));
       return;
@@ -59,12 +187,25 @@ export default function SignupPage() {
       return;
     }
 
+    registerInFlightRef.current = true;
     setLoading(true);
     setError("");
 
+    const trimmedEmail = email.trim();
+
     try {
+      otpRequestCountRef.current += 1;
+      console.log("[SignupOTP] signUp() CALL #" + otpRequestCountRef.current, {
+        email: trimmedEmail,
+        ts: Date.now(),
+      });
+
+      // ONE email path: signUp() alone triggers Supabase "Confirm signup" email.
+      // Do NOT call signInWithOtp() here — that hits /auth/v1/otp immediately after
+      // /auth/v1/signup and causes "For security purposes, you can only request
+      // this after XX seconds" plus intermittent missing OTP emails.
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: trimmedEmail,
         password,
         options: {
           data: {
@@ -74,10 +215,20 @@ export default function SignupPage() {
         },
       });
 
+      console.log("[SignupOTP] signUp() RESPONSE", {
+        error: signUpError?.message ?? null,
+        status: signUpError?.status ?? null,
+        code: (signUpError as { code?: string } | null)?.code ?? null,
+        hasUser: !!signUpData?.user,
+        hasSession: !!signUpData?.session,
+        identities: signUpData?.user?.identities?.length ?? null,
+        ts: Date.now(),
+      });
+
       if (signUpError) {
         console.error("[Signup] signUp failed:", signUpError.message, {
           status: signUpError.status,
-          code: (signUpError as any).code,
+          code: (signUpError as { code?: string }).code,
         });
         if (signUpError.message === "User already registered") {
           setError(t("auth_email_exists"));
@@ -86,118 +237,167 @@ export default function SignupPage() {
         ) {
           setError(t("auth_smtp_error"));
         } else {
-          setError(t("auth_signup_failed", { message: signUpError.message }));
+          const wait = parseRateLimitSeconds(signUpError.message);
+          if (wait != null) {
+            setCountdown(wait);
+            setError(t("auth_signup_failed", { message: signUpError.message }));
+          } else {
+            setError(t("auth_signup_failed", { message: signUpError.message }));
+          }
         }
-        setLoading(false);
         return;
       }
 
-      // Supabase "Confirm signup" often sends a magic link, not a 6-digit code.
-      // Password-reset works because recovery templates include {{ .Token }}.
-      // Send an OTP email explicitly (same path as Magic Link / email OTP) so
-      // the in-app verify screen receives a code the user can enter.
+      // Anti-enumeration: already-registered users can return a user with empty identities.
       const identities = signUpData?.user?.identities;
       if (Array.isArray(identities) && identities.length === 0) {
         setError(t("auth_email_exists"));
-        setLoading(false);
         return;
       }
 
-      setStep("verify");
-      setCountdown(60);
-
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { shouldCreateUser: false },
-      });
-
-      if (otpError) {
-        console.error("[Signup] signInWithOtp failed:", otpError.message);
-        setError(t("auth_signup_failed", { message: otpError.message }));
+      // Email confirmation disabled in dashboard → session already issued.
+      if (signUpData?.session) {
+        console.log("[SignupOTP] session returned from signUp — skipping OTP screen");
+        let destination = "/dashboard";
+        if (isPrimaryAdminEmail(resolveAuthEmail(signUpData.session.user, trimmedEmail))) {
+          destination = "/admin";
+        }
+        router.replace(destination as any);
+        return;
       }
+
+      // Confirmation email was sent by signUp() — show OTP screen. No second send.
+      console.log(
+        "[SignupOTP] signInWithOtp() SKIPPED after signup (single confirmation email from signUp)"
+      );
+      goToVerifyStep("after_successful_signUp");
     } catch (err) {
-      console.error(err);
+      console.error("[SignupOTP] unexpected register error", err);
       setError(t("auth_unexpected"));
     } finally {
+      registerInFlightRef.current = false;
       setLoading(false);
     }
   };
 
   const handleVerifyOtp = useCallback(
     async (code: string) => {
+      if (verifyInFlightRef.current || verifying) {
+        console.log("[SignupOTP] verifyOtp() BLOCKED duplicate", { ts: Date.now() });
+        return;
+      }
+
+      verifyInFlightRef.current = true;
       setVerifying(true);
       setError("");
       setOtpError(false);
 
       try {
-        // OTP is sent via signInWithOtp → verify type "email" first.
-        // Fallback to "signup" if Confirm-signup template also sent a code.
-        let verifyError = (
-          await supabase.auth.verifyOtp({
-            email: email.trim(),
-            token: code,
-            type: "email",
-          })
-        ).error;
+        console.log("[SignupOTP] verifyOtp() CALL type=signup", {
+          email: email.trim(),
+          codeLength: code.length,
+          ts: Date.now(),
+        });
 
-        if (verifyError) {
-          verifyError = (
-            await supabase.auth.verifyOtp({
-              email: email.trim(),
-              token: code,
-              type: "signup",
-            })
-          ).error;
-        }
+        // Signup confirmation OTP uses type "signup" (from signUp / resend signup).
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({
+          email: email.trim(),
+          token: code,
+          type: "signup",
+        });
+
+        console.log("[SignupOTP] verifyOtp() RESPONSE", {
+          error: verifyError?.message ?? null,
+          hasSession: !!data?.session,
+          ts: Date.now(),
+        });
 
         if (verifyError) {
           console.error("[Signup] verifyOtp failed:", verifyError.message);
           setError(t("auth_signup_failed", { message: verifyError.message }));
           setOtpError(true);
           setVerifying(false);
+          verifyInFlightRef.current = false;
           return;
         }
 
         setSuccess(true);
         setError("");
+        console.log("[SignupOTP] signup verify success UI shown (auth_signup_success)", {
+          hasSession: !!data?.session,
+          userId: data?.session?.user?.id ?? null,
+          ts: Date.now(),
+        });
 
         let destination = "/dashboard";
-        if (isPrimaryAdminEmail(resolveAuthEmail(null, email.trim()))) {
+        if (isPrimaryAdminEmail(resolveAuthEmail(data?.session?.user ?? null, email.trim()))) {
           destination = "/admin";
         }
 
         setTimeout(() => {
+          console.log("[SignupOTP] navigate after verify success", { destination });
           router.replace(destination as any);
         }, 1800);
       } catch (err) {
-        console.error(err);
+        console.error("[SignupOTP] unexpected verify error", err);
         setError(t("auth_unexpected"));
         setVerifying(false);
+        verifyInFlightRef.current = false;
       }
     },
-    [email, router, t]
+    [email, router, t, verifying]
   );
 
   const handleResendCode = async () => {
+    // Resend is MANUAL only — never called from useEffect or after signUp.
+    if (resendInFlightRef.current || resending || countdown > 0) {
+      console.log("[SignupOTP] resend() BLOCKED", {
+        inFlight: resendInFlightRef.current,
+        resending,
+        countdown,
+        ts: Date.now(),
+      });
+      return;
+    }
+
+    resendInFlightRef.current = true;
+    setResending(true);
     setError("");
     setOtpError(false);
 
     try {
-      // Resend via the same OTP path used after signUp (6-digit code email).
-      const { error: resendError } = await supabase.auth.signInWithOtp({
+      console.log("[SignupOTP] resend() CALL type=signup (manual)", {
         email: email.trim(),
-        options: { shouldCreateUser: false },
+        ts: Date.now(),
+      });
+
+      // Same email family as initial signUp confirmation — NOT signInWithOtp / magic link.
+      const { data, error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+      });
+
+      console.log("[SignupOTP] resend() RESPONSE", {
+        error: resendError?.message ?? null,
+        data: data ?? null,
+        ts: Date.now(),
       });
 
       if (resendError) {
+        const wait =
+          parseRateLimitSeconds(resendError.message) ?? SUPABASE_EMAIL_COOLDOWN_SEC;
+        setCountdown(wait);
         setError(t("auth_signup_failed", { message: resendError.message }));
         return;
       }
 
-      setCountdown(60);
+      setCountdown(SUPABASE_EMAIL_COOLDOWN_SEC);
     } catch (err) {
-      console.error(err);
+      console.error("[SignupOTP] unexpected resend error", err);
       setError(t("auth_unexpected"));
+    } finally {
+      resendInFlightRef.current = false;
+      setResending(false);
     }
   };
 
@@ -233,6 +433,7 @@ export default function SignupPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="right"
+                      editable={!loading && !googleLoading}
                     />
                   </View>
                 </View>
@@ -249,6 +450,7 @@ export default function SignupPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="left"
+                      editable={!loading && !googleLoading}
                     />
                   </View>
                 </View>
@@ -266,6 +468,7 @@ export default function SignupPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="left"
+                      editable={!loading && !googleLoading}
                     />
                   </View>
                 </View>
@@ -283,10 +486,12 @@ export default function SignupPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={[styles.textInput, styles.passwordInput]}
                       textAlign="left"
+                      editable={!loading && !googleLoading}
                     />
                     <TouchableOpacity
                       onPress={() => setShowPassword(!showPassword)}
                       style={styles.eyeIcon}
+                      disabled={loading}
                     >
                       <Feather
                         name={showPassword ? "eye-off" : "eye"}
@@ -299,8 +504,12 @@ export default function SignupPage() {
 
                 <TouchableOpacity
                   onPress={handleRegister}
-                  disabled={loading}
-                  style={styles.primaryButton}
+                  disabled={loading || googleLoading || registerInFlightRef.current}
+                  style={[
+                    styles.primaryButton,
+                    (loading || googleLoading || registerInFlightRef.current) &&
+                      styles.primaryButtonDisabled,
+                  ]}
                 >
                   {loading ? (
                     <ActivityIndicator size="small" color="#ffffff" />
@@ -311,6 +520,18 @@ export default function SignupPage() {
                     </View>
                   )}
                 </TouchableOpacity>
+
+                <View style={styles.orRow}>
+                  <View style={styles.orLine} />
+                  <Text style={styles.orText}>{t("auth_or")}</Text>
+                  <View style={styles.orLine} />
+                </View>
+
+                <GoogleSignInButton
+                  onPress={handleGoogleSignIn}
+                  loading={googleLoading}
+                  disabled={loading}
+                />
               </View>
 
               <View style={styles.footerRow}>
@@ -331,8 +552,8 @@ export default function SignupPage() {
                   <View style={styles.successBadge}>
                     <Feather name="check-circle" size={48} color="#22c55e" />
                   </View>
-                  <Text style={styles.successTitle}>{t("auth_reset_success")}</Text>
-                  <Text style={styles.successSubtitle}>{t("auth_callback_verifying")}</Text>
+                  <Text style={styles.successTitle}>{t("auth_signup_success")}</Text>
+                  <Text style={styles.successSubtitle}>{t("auth_signup_success_subtitle")}</Text>
                   <View style={styles.sparklesRow}>
                     <Ionicons name="sparkles" size={18} color="#22c55e" style={styles.sparkleIcon} />
                     <Ionicons name="sparkles" size={12} color="rgba(34, 197, 94, 0.6)" style={styles.sparkleIcon} />
@@ -375,17 +596,20 @@ export default function SignupPage() {
                     <View style={styles.divider} />
 
                     <View style={styles.resendSection}>
-                      {countdown > 0 ? (
+                      {countdown > 0 || resending ? (
                         <View style={styles.resendTimer}>
                           <Feather name="refresh-cw" size={12} color={themeColors.textMuted} />
                           <Text style={styles.resendTimerText}>
-                            {t("auth_resend_in", { sec: countdown })}
+                            {resending
+                              ? t("auth_callback_verifying")
+                              : t("auth_resend_in", { sec: countdown })}
                           </Text>
                         </View>
                       ) : (
                         <TouchableOpacity
                           onPress={handleResendCode}
                           style={styles.resendButton}
+                          disabled={resending}
                         >
                           <Feather name="refresh-cw" size={12} color="#ea580c" style={styles.resendButtonIcon} />
                           <Text style={styles.resendButtonText}>{t("auth_resend_otp")}</Text>
@@ -395,9 +619,11 @@ export default function SignupPage() {
 
                     <TouchableOpacity
                       onPress={() => {
+                        console.log("[SignupOTP] back to register form");
                         setStep("register");
                         setError("");
                         setOtpError(false);
+                        setCountdown(0);
                       }}
                       disabled={verifying}
                       style={styles.backButton}
@@ -527,6 +753,26 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       shadowOpacity: 0.3,
       shadowRadius: 6,
       elevation: 4,
+    },
+    primaryButtonDisabled: {
+      opacity: 0.7,
+    },
+    orRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 16,
+      marginBottom: 4,
+      gap: 10,
+    },
+    orLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: themeColors.cardBorder,
+    },
+    orText: {
+      fontSize: 12,
+      color: themeColors.textMuted,
+      fontWeight: "500",
     },
     buttonInner: {
       flexDirection: "row-reverse",

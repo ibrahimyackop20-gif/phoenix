@@ -104,6 +104,8 @@ function createSafeClient(
         autoRefreshToken: Boolean(url && key),
         persistSession: Boolean(url && key),
         detectSessionInUrl: false,
+        // PKCE is required for reliable mobile OAuth (Google) redirects.
+        flowType: "pkce",
       },
     });
   } catch (error) {
@@ -114,6 +116,7 @@ function createSafeClient(
         autoRefreshToken: false,
         persistSession: false,
         detectSessionInUrl: false,
+        flowType: "pkce",
       },
     });
   }

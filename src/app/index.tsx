@@ -9,6 +9,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "@/../lib/supabaseClient";
+import { getPostGoogleAuthDestination } from "@/../lib/googleAuth";
+import { markPostAuthNavigation } from "@/../lib/postAuthNavigation";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../components/ThemeProvider";
@@ -22,9 +24,17 @@ export default function HomeScreen() {
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          router.replace("/dashboard" as any);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          const target = getPostGoogleAuthDestination(session);
+          console.log("[Index][NAV] session found →", target, {
+            email: session.user.email,
+            authState: "authenticated",
+          });
+          markPostAuthNavigation(target);
+          router.replace(target as any);
         }
       } catch (err) {
         console.error("Auth check failed:", err);
