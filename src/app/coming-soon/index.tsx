@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   Animated,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -68,7 +69,10 @@ export default function ComingSoonScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Screen header title — feature-specific (Library vs Contact) */}
         <Text style={styles.screenHeader} accessibilityRole="header">
           {pageTitle}
@@ -114,7 +118,7 @@ export default function ComingSoonScreen() {
             <Text style={styles.secondaryButtonText}>{t("new_order")}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -125,18 +129,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#09090b",
   },
   container: {
-    flex: 1,
+      flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
+      paddingVertical: 32,
+      width: "100%",
+      maxWidth: 640,
+      alignSelf: "center",
   },
   screenHeader: {
-    position: "absolute",
-    top: 16,
     alignSelf: "center",
     fontSize: 18,
     fontWeight: "700",
     color: "#f4f4f5",
+      textAlign: "center",
+      flexShrink: 1,
+      marginBottom: 32,
   },
   logoOuter: {
     position: "relative",
@@ -183,12 +192,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
     color: "#fbbf24",
+      textAlign: "center",
+      flexShrink: 1,
   },
   titleText: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#f97316",
     marginBottom: 16,
+      textAlign: "center",
+      flexShrink: 1,
   },
   descriptionText: {
     fontSize: 15,
@@ -216,6 +229,9 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: "row-reverse",
     gap: 12,
+      flexWrap: "wrap",
+      justifyContent: "center",
+      width: "100%",
   },
   primaryButton: {
     backgroundColor: "#ea580c",
@@ -224,11 +240,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+      minHeight: 48,
+      maxWidth: "100%",
   },
   primaryButtonText: {
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
   },
   secondaryButton: {
     backgroundColor: "#18181b",
@@ -239,10 +259,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+      minHeight: 48,
+      maxWidth: "100%",
   },
   secondaryButtonText: {
     color: "#f4f4f5",
     fontSize: 13,
     fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
   },
 });

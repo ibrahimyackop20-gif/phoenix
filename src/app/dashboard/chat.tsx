@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
@@ -53,7 +54,10 @@ const EMOJI_LIST = [
 export default function ChatScreen() {
   const { t } = useTranslation();
   const { themeColors } = useAppTheme();
-  const styles = getStyles(themeColors);
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
+  const styles = getStyles(themeColors, isCompact, isTablet);
 
   const { refreshUnread, markChatAsRead } = useChat();
   const { markChatNotificationsAsRead, refreshNotifications } = useNotifications();
@@ -334,6 +338,8 @@ export default function ChatScreen() {
               placeholder={t("chat_placeholder")}
               placeholderTextColor={themeColors.textMuted}
               style={styles.textInput}
+              multiline
+              textAlignVertical="center"
             />
 
             <TouchableOpacity onPress={() => setShowEmoji(!showEmoji)} style={styles.emojiToggle}>
@@ -381,7 +387,7 @@ export default function ChatScreen() {
 
                   <View style={styles.convDetails}>
                     <Text style={styles.convName}>{item.other_name}</Text>
-                    <Text numberOfLines={1} style={styles.convSnippet}>
+                    <Text style={styles.convSnippet}>
                       {item.last_snippet || t("chat_no_messages")}
                     </Text>
                   </View>
@@ -413,7 +419,7 @@ const getStyles = (themeColors: {
   inputBg: string;
   inputBorder: string;
   secondary: string;
-}) =>
+}, isCompact: boolean, isTablet: boolean) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -421,6 +427,9 @@ const getStyles = (themeColors: {
     },
     chatWindow: {
       flex: 1,
+      width: "100%",
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
     },
     chatHeader: {
       flexDirection: "row-reverse",
@@ -443,6 +452,8 @@ const getStyles = (themeColors: {
       fontSize: 16,
       fontWeight: "bold",
       color: themeColors.text,
+      textAlign: "right",
+      flexShrink: 1,
     },
     headerSubtitle: {
       fontSize: 12,
@@ -478,7 +489,7 @@ const getStyles = (themeColors: {
       justifyContent: "flex-start",
     },
     messageBubble: {
-      maxWidth: "80%",
+      maxWidth: isCompact ? "92%" : "80%",
       borderRadius: 16,
       paddingHorizontal: 14,
       paddingVertical: 10,
@@ -503,6 +514,7 @@ const getStyles = (themeColors: {
     },
     emojiContainer: {
       flexDirection: "row-reverse",
+      flexWrap: "wrap",
       justifyContent: "space-around",
       backgroundColor: themeColors.cardBg,
       borderColor: themeColors.cardBorder,
@@ -517,12 +529,12 @@ const getStyles = (themeColors: {
     },
     inputArea: {
       flexDirection: "row-reverse",
-      alignItems: "center",
       backgroundColor: themeColors.cardBg,
       borderTopWidth: 1,
       borderColor: themeColors.cardBorder,
       paddingHorizontal: 12,
       paddingVertical: 8,
+      alignItems: "flex-end",
     },
     sendButton: {
       width: 40,
@@ -534,7 +546,8 @@ const getStyles = (themeColors: {
     },
     textInput: {
       flex: 1,
-      height: 40,
+      minHeight: 40,
+      maxHeight: 120,
       backgroundColor: themeColors.inputBg,
       borderColor: themeColors.inputBorder,
       borderWidth: 1,
@@ -544,12 +557,16 @@ const getStyles = (themeColors: {
       color: themeColors.text,
       fontSize: 14,
       textAlign: "right",
+      paddingVertical: 9,
     },
     emojiToggle: {
       padding: 6,
     },
     listContainer: {
       flex: 1,
+      width: "100%",
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
     },
     listHeader: {
       padding: 16,
@@ -571,7 +588,8 @@ const getStyles = (themeColors: {
       borderWidth: 1,
       borderRadius: 12,
       paddingHorizontal: 12,
-      height: 44,
+      minHeight: 44,
+      paddingVertical: 8,
     },
     searchIcon: {
       marginLeft: 8,
@@ -612,6 +630,7 @@ const getStyles = (themeColors: {
       padding: 16,
       borderBottomWidth: 1,
       borderColor: themeColors.cardBorder,
+      minHeight: 80,
     },
     convAvatar: {
       width: 48,
@@ -636,16 +655,20 @@ const getStyles = (themeColors: {
       fontWeight: "bold",
       color: themeColors.text,
       marginBottom: 4,
+      textAlign: "right",
+      flexShrink: 1,
     },
     convSnippet: {
       fontSize: 13,
       color: themeColors.textMuted,
+      textAlign: "right",
+      flexShrink: 1,
     },
     unreadBadge: {
       backgroundColor: themeColors.primary,
       borderRadius: 10,
       minWidth: 20,
-      height: 20,
+      minHeight: 20,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 6,

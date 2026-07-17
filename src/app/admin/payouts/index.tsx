@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -35,6 +36,9 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 export default function AdminPayoutsScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isNarrow = width < 420;
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -200,7 +204,7 @@ export default function AdminPayoutsScreen() {
       )}
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>إدارة السحوبات</Text>
           <Text style={styles.headerSubtitle}>مراجعة وتأكيد طلبات سحب الأرباح</Text>
@@ -211,16 +215,16 @@ export default function AdminPayoutsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         {/* Stats Grid */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="clock" size={16} color="#fbbf24" style={styles.statIcon} />
             <Text style={[styles.statValue, { color: "#fbbf24" }]}>{pendingRequests.length}</Text>
             <Text style={styles.statLabel}>طلبات معلقة</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="dollar-sign" size={16} color="#ea580c" style={styles.statIcon} />
             <Text style={[styles.statValue, { color: "#ea580c" }]}>
               {pendingTotal.toLocaleString()} د.ع
@@ -228,7 +232,7 @@ export default function AdminPayoutsScreen() {
             <Text style={styles.statLabel}>قيد المعالجة</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="check-circle" size={16} color="#10b981" style={styles.statIcon} />
             <Text style={[styles.statValue, { color: "#10b981" }]}>
               {completedTotal.toLocaleString()} د.ع
@@ -372,6 +376,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -382,6 +388,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   refreshBtn: {
     width: 36,
@@ -397,18 +404,24 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 20,
   },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1000,
+    alignSelf: "center",
+  },
   statsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 8,
   },
   statCard: {
-    flex: 1,
     backgroundColor: "#18181b",
     borderWidth: 1,
     borderColor: "#27272a",
     borderRadius: 14,
     padding: 12,
     alignItems: "center",
+    minHeight: 104,
   },
   statIcon: {
     marginBottom: 6,
@@ -416,11 +429,13 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: "bold",
+    textAlign: "center",
   },
   statLabel: {
     fontSize: 9,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "center",
   },
   listSection: {
     gap: 12,
@@ -464,6 +479,8 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
+    flexWrap: "wrap",
     borderBottomWidth: 1,
     borderColor: "#27272a",
     paddingBottom: 10,
@@ -473,6 +490,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "monospace",
     color: "#71717a",
+    flexShrink: 1,
   },
   pendingBadge: {
     backgroundColor: "rgba(251, 191, 36, 0.1)",
@@ -515,6 +533,8 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 12,
     color: "#a1a1aa",
+    textAlign: "right",
+    flexShrink: 1,
   },
   amountText: {
     fontSize: 14,
@@ -532,11 +552,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#27272a",
     paddingTop: 12,
+    flexWrap: "wrap",
   },
   approveBtn: {
     flex: 1,
+    minWidth: 160,
     backgroundColor: "#ea580c",
-    height: 38,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -545,12 +569,15 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 12,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   rejectBtn: {
     backgroundColor: "#27272a",
     borderWidth: 1,
     borderColor: "#ef4444",
-    height: 38,
+    minHeight: 44,
+    paddingVertical: 10,
     borderRadius: 8,
     paddingHorizontal: 16,
     alignItems: "center",
@@ -560,5 +587,6 @@ const styles = StyleSheet.create({
     color: "#ef4444",
     fontSize: 12,
     fontWeight: "bold",
+    textAlign: "center",
   },
 });

@@ -87,6 +87,7 @@ type Tab = "orders" | "inquiries";
 export default function AdminScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 375;
+  const isTablet = width >= 768;
 
   const [orders, setOrders] = useState<OrderWithProfile[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -316,7 +317,7 @@ export default function AdminScreen() {
       )}
 
       {/* Welcome Native Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>لوحة الإدارة</Text>
           <Text style={styles.headerSubtitle}>إدارة طلبات الطباعة واستفسارات الطلاب</Text>
@@ -330,7 +331,7 @@ export default function AdminScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]} showsVerticalScrollIndicator={false}>
         {/* Statistics Section (Responsive: 1 per row on small screens, 2 per row on standard screens) */}
         <View style={styles.statsGrid}>
           {stats.map((stat, i) => (
@@ -338,7 +339,7 @@ export default function AdminScreen() {
               key={i}
               style={[
                 styles.statCard,
-                { width: isSmallScreen ? "100%" : "48%" },
+                { width: isSmallScreen ? "100%" : isTablet ? "23.5%" : "48%" },
               ]}
             >
               <View style={styles.statTopRow}>
@@ -432,7 +433,7 @@ export default function AdminScreen() {
                   <View key={order.id} style={styles.mobileCard}>
                     {/* Header Row */}
                     <View style={styles.cardHeaderRow}>
-                      <Text style={styles.studentName} numberOfLines={1}>
+                      <Text style={styles.studentName}>
                         {order.profiles?.full_name || "طالب غير معروف"}
                       </Text>
                       <StatusBadge status={order.status} />
@@ -441,12 +442,12 @@ export default function AdminScreen() {
                     {/* Meta Parameters Grid */}
                     <View style={styles.cardBody}>
                       <View style={styles.metaRow}>
-                        <Text style={styles.metaValue} numberOfLines={1}>{order.id}</Text>
+                        <Text style={styles.metaValue}>{order.id}</Text>
                         <Text style={styles.metaLabel}>رقم الطلب</Text>
                       </View>
 
                       <View style={styles.metaRow}>
-                        <Text style={styles.metaValue} numberOfLines={1}>{order.file_name}</Text>
+                        <Text style={styles.metaValue}>{order.file_name}</Text>
                         <Text style={styles.metaLabel}>اسم الملف</Text>
                       </View>
 
@@ -551,7 +552,7 @@ export default function AdminScreen() {
                 {inquiries.map((inq) => (
                   <View key={inq.id} style={[styles.mobileCard, !inq.is_read && styles.unreadCard]}>
                     <View style={styles.cardHeaderRow}>
-                      <Text style={styles.studentName} numberOfLines={1}>
+                      <Text style={styles.studentName}>
                         {inq.profiles?.full_name || "طالب غير معروف"}
                       </Text>
                       {!inq.is_read && <View style={styles.unreadMarker} />}
@@ -679,6 +680,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -689,6 +692,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
+    flexShrink: 1,
   },
   refreshBtn: {
     width: 44,
@@ -699,9 +704,15 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1100,
+    alignSelf: "center",
   },
   statsGrid: {
     flexDirection: "row-reverse",
@@ -752,7 +763,9 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -769,6 +782,8 @@ const styles = StyleSheet.create({
   tabButtonText: {
     fontSize: 13,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   whiteText: {
     color: "#ffffff",
@@ -790,7 +805,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#27272a",
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
     paddingHorizontal: 16,
   },
   searchIcon: {
@@ -798,7 +813,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: "100%",
+    minHeight: 46,
     color: "#f4f4f5",
     fontSize: 14,
   },
@@ -814,7 +829,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    height: 36,
+    minHeight: 36,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -829,6 +844,7 @@ const styles = StyleSheet.create({
   filterBadgeText: {
     fontSize: 12,
     fontWeight: "600",
+    textAlign: "center",
   },
   emptyContainer: {
     alignItems: "center",
@@ -875,6 +891,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     marginBottom: 12,
     gap: 8,
+    flexWrap: "wrap",
   },
   studentName: {
     fontSize: 15,
@@ -890,13 +907,15 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
+    flexWrap: "wrap",
   },
   metaLabel: {
     fontSize: 12,
     color: "#71717a",
     fontWeight: "500",
+    flexShrink: 0,
   },
   metaValue: {
     fontSize: 13,
@@ -929,6 +948,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: "#10b981", // modern Stripe-like emerald green
+    flexShrink: 1,
   },
   cardActions: {
     gap: 8,
@@ -940,13 +960,17 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: "#ea580c",
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     width: "100%",
   },
   cardActionBtnText: {
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   telegramActionBtn: {
     backgroundColor: "rgba(41, 182, 246, 0.1)",
@@ -957,7 +981,9 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   noFileBadge: {
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: "#27272a",
     borderRadius: 12,
     alignItems: "center",
@@ -966,6 +992,7 @@ const styles = StyleSheet.create({
   noFileText: {
     color: "#a1a1aa",
     fontSize: 12,
+    textAlign: "center",
   },
   cardSecondaryBtn: {
     flexDirection: "row-reverse",
@@ -976,13 +1003,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#3f3f46",
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     width: "100%",
   },
   cardSecondaryBtnText: {
     color: "#f4f4f5",
     fontSize: 13,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   replyBox: {
     backgroundColor: "#09090b",
@@ -1025,7 +1056,8 @@ const styles = StyleSheet.create({
   sendReplyBtn: {
     backgroundColor: "#22c55e",
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1037,7 +1069,8 @@ const styles = StyleSheet.create({
   cancelReplyBtn: {
     backgroundColor: "#27272a",
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
   },

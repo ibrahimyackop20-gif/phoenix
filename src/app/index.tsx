@@ -137,6 +137,9 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     },
     scrollContent: {
       paddingBottom: 40,
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
     },
     heroSection: {
       alignItems: "center",
@@ -154,11 +157,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       paddingVertical: 6,
       paddingHorizontal: 16,
       marginBottom: 24,
+      maxWidth: "100%",
     },
     badgeText: {
       color: "#fb923c",
       fontSize: 12,
       fontWeight: "600",
+      textAlign: "center",
+      flexShrink: 1,
     },
     titleText: {
       fontSize: 36,
@@ -166,6 +172,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       textAlign: "center",
       lineHeight: 46,
       marginBottom: 16,
+      flexShrink: 1,
     },
     orangeText: {
       color: "#f97316",
@@ -186,6 +193,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       width: "100%",
       gap: 12,
       paddingHorizontal: 16,
+      maxWidth: 440,
     },
     primaryButton: {
       backgroundColor: "#ea580c",
@@ -204,6 +212,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: "#ffffff",
       fontSize: 16,
       fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
     },
     buttonIcon: {
       marginRight: 8,
@@ -221,6 +231,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: themeColors.text,
       fontSize: 16,
       fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
     },
     featuresSection: {
       paddingVertical: 40,
@@ -287,6 +299,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 8,
+      paddingHorizontal: 20,
     },
     logoBadge: {
       width: 28,
@@ -300,9 +313,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       fontSize: 15,
       fontWeight: "bold",
       color: "#f97316",
+      textAlign: "center",
+      flexShrink: 1,
     },
     footerCopyText: {
       fontSize: 11,
       color: themeColors.textMuted,
+      textAlign: "center",
+      paddingHorizontal: 20,
+      flexShrink: 1,
     },
   });

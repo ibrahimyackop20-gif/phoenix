@@ -151,12 +151,14 @@ const styles = StyleSheet.create({
   },
   centerText: {
     textAlign: 'center',
+    flexShrink: 1,
   },
   pressed: {
     opacity: 0.7,
   },
   linkButton: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
     borderRadius: Spacing.five,
@@ -168,6 +170,7 @@ const styles = StyleSheet.create({
     gap: Spacing.five,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
+    paddingBottom: Spacing.three,
   },
   collapsibleContent: {
     alignItems: 'center',

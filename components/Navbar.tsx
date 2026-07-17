@@ -7,7 +7,7 @@ import {
   Image,
   Modal,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   FlatList,
   ActivityIndicator,
 } from "react-native";
@@ -22,8 +22,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "./ThemeProvider";
 import { isAdminUser } from "../lib/adminAccess";
-
-const { width } = Dimensions.get("window");
+import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
 
 interface NavbarProps {
   role?: string;
@@ -32,6 +31,8 @@ interface NavbarProps {
 export default function Navbar({ role: roleProp }: NavbarProps) {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const { drawerWidth, horizontalPadding, isCompactWidth } = useLayoutMetrics();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useGlobalSearchParams<{ feature?: string | string[] }>();
@@ -179,7 +180,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.cardBg }]}>
-      <View style={[styles.navbar, { backgroundColor: themeColors.cardBg, borderBottomColor: themeColors.cardBorder }]}>
+      <View style={[styles.navbar, { backgroundColor: themeColors.cardBg, borderBottomColor: themeColors.cardBorder, paddingHorizontal: horizontalPadding }]}>
         {/* Hamburger Menu Toggle (Right aligned in Arabic design) */}
         <TouchableOpacity
           onPress={() => setMenuOpen(true)}
@@ -198,7 +199,9 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
             style={styles.logoImage}
             resizeMode="contain"
           />
-          <Text style={[styles.brandName, { color: themeColors.text }]}>{t("brand_name")}</Text>
+          {!isCompactWidth && (
+            <Text style={[styles.brandName, { color: themeColors.text }]}>{t("brand_name")}</Text>
+          )}
         </TouchableOpacity>
 
         {/* Action Row: Notifs, Chat, Wallet */}
@@ -270,7 +273,14 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
         >
           <GestureHandlerRootView style={StyleSheet.absoluteFill}>
             <View
-              style={[styles.notifDropdown, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
+              style={[
+                styles.notifDropdown,
+                {
+                  backgroundColor: themeColors.cardBg,
+                  borderColor: themeColors.cardBorder,
+                  width: Math.min(width - horizontalPadding * 2, 480),
+                },
+              ]}
               onStartShouldSetResponder={() => true}
             >
               <View style={[styles.dropdownHeader, { borderBottomColor: themeColors.cardBorder }]}>
@@ -365,7 +375,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
           />
 
           {/* Drawer Content (Slides from Right in RTL context) */}
-          <View style={[styles.drawerPanel, { backgroundColor: themeColors.cardBg, borderLeftColor: themeColors.cardBorder }]}>
+          <View style={[styles.drawerPanel, { backgroundColor: themeColors.cardBg, borderLeftColor: themeColors.cardBorder, width: drawerWidth }]}>
             <SafeAreaView style={styles.drawerSafeArea}>
               {/* Drawer Header */}
               <View style={[styles.drawerHeader, { borderBottomColor: themeColors.cardBorder }]}>
@@ -507,11 +517,11 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   navbar: {
-    height: 56,
+    minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderBottomWidth: 1,
   },
   hamburgerButton: {
@@ -521,6 +531,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexShrink: 1,
   },
   logoImage: {
     width: 32,
@@ -529,11 +540,13 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 16,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexShrink: 1,
   },
   actionIcon: {
     padding: 6,
@@ -546,10 +559,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     gap: 6,
+    flexShrink: 1,
   },
   balanceText: {
     fontSize: 11,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   currencySymbol: {
     fontSize: 9,
@@ -559,12 +574,13 @@ const styles = StyleSheet.create({
     top: 2,
     right: 2,
     minWidth: 14,
-    height: 14,
+    minHeight: 14,
     borderRadius: 7,
     backgroundColor: "#ea580c",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,
+    paddingVertical: 1,
   },
   badgeDanger: {
     backgroundColor: "#ef4444",
@@ -617,8 +633,6 @@ const styles = StyleSheet.create({
   notifDropdown: {
     position: "absolute",
     top: 110,
-    left: 16,
-    right: 16,
     borderWidth: 1,
     borderRadius: 16,
     maxHeight: 380,
@@ -635,19 +649,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     borderBottomWidth: 1,
+    gap: 12,
   },
   dropdownTitle: {
     fontSize: 13,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   readAllButton: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 4,
+    flexShrink: 1,
   },
   readAllText: {
     fontSize: 10,
     color: "#ea580c",
+    flexShrink: 1,
   },
   emptyNotifContainer: {
     padding: 32,
@@ -693,7 +711,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   drawerPanel: {
-    width: 280,
     borderLeftWidth: 1,
     height: "100%",
   },
@@ -714,6 +731,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexShrink: 1,
   },
   drawerLogo: {
     width: 28,
@@ -722,6 +740,7 @@ const styles = StyleSheet.create({
   drawerBrandText: {
     fontSize: 14,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   drawerProfileCard: {
     flexDirection: "row-reverse",
@@ -752,11 +771,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flexShrink: 1,
   },
   walletCardValue: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#ea580c",
+    flexShrink: 1,
   },
   walletCardCurrency: {
     fontSize: 9,
@@ -765,6 +786,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
+    flexShrink: 1,
   },
   drawerWalletLabelText: {
     fontSize: 10,
@@ -790,6 +812,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     gap: 12,
+    minHeight: 44,
   },
   drawerItemActive: {
     backgroundColor: "rgba(234, 88, 12, 0.12)",
@@ -799,6 +822,8 @@ const styles = StyleSheet.create({
   drawerItemLabel: {
     fontSize: 13,
     fontWeight: "500",
+    flexShrink: 1,
+    textAlign: "right",
   },
   activeText: {
     color: "#ea580c",

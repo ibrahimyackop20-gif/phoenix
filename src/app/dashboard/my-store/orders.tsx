@@ -9,6 +9,7 @@ import {
   FlatList,
   Modal,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
@@ -64,6 +65,7 @@ function parseOrderItems(items: OrderItem[] | string): OrderItem[] {
 }
 
 export default function SellerOrdersScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const router = useRouter();
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +75,7 @@ export default function SellerOrdersScreen() {
   const [rejectReason, setRejectReason] = useState("");
   const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
+  const contentWidth = Math.min(windowWidth, 960);
 
   // Success/error notifications
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -335,7 +338,7 @@ export default function SellerOrdersScreen() {
       </Modal>
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { width: contentWidth, alignSelf: "center" }]}>
         <TouchableOpacity onPress={handleRefresh} disabled={refreshing} style={styles.refreshButton}>
           <Feather name="refresh-cw" size={16} color="#f4f4f5" />
         </TouchableOpacity>
@@ -355,7 +358,7 @@ export default function SellerOrdersScreen() {
       </View>
 
       {/* Metrics Row */}
-      <View style={styles.metricsRow}>
+      <View style={[styles.metricsRow, { width: contentWidth, alignSelf: "center" }]}>
         <View style={styles.metricBox}>
           <Text style={[styles.metricValue, { color: "#fb923c" }]}>{pendingCount}</Text>
           <Text style={styles.metricLabel}>بانتظار الموافقة</Text>
@@ -372,7 +375,7 @@ export default function SellerOrdersScreen() {
 
       {/* Orders List */}
       {orders.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <View style={[styles.emptyContainer, { width: contentWidth, alignSelf: "center" }]}>
           <Feather name="shopping-bag" size={64} color="#27272a" />
           <Text style={styles.emptyTitle}>لا توجد طلبات بعد</Text>
           <Text style={styles.emptySubtitle}>عندما يشتري أحد من متجرك ستظهر طلبات الزبائن هنا</Text>
@@ -381,7 +384,10 @@ export default function SellerOrdersScreen() {
         <FlatList
           data={orders}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { width: contentWidth, alignSelf: "center" },
+          ]}
           renderItem={({ item }) => {
             const parsedItems = parseOrderItems(item.items);
             const statusConfig = SELLER_STATUSES[item.seller_status] || SELLER_STATUSES.pending;
@@ -596,7 +602,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
-    height: 80,
+    minHeight: 80,
     color: "#f4f4f5",
     fontSize: 13,
     textAlignVertical: "top",
@@ -604,6 +610,7 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "flex-end",
     gap: 10,
   },
@@ -630,6 +637,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -638,7 +646,7 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     width: 40,
-    height: 40,
+    minHeight: 40,
     borderRadius: 12,
     backgroundColor: "#18181b",
     borderColor: "#27272a",
@@ -647,10 +655,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerText: {
+    flex: 1,
+    minWidth: 180,
     alignItems: "flex-end",
   },
   titleRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
   },
@@ -658,6 +669,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   subtitle: {
     fontSize: 12,
@@ -666,6 +679,7 @@ const styles = StyleSheet.create({
   },
   metricsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: 20,
     gap: 8,
@@ -673,6 +687,7 @@ const styles = StyleSheet.create({
   },
   metricBox: {
     flex: 1,
+    minWidth: 100,
     backgroundColor: "#18181b",
     borderColor: "#27272a",
     borderWidth: 1,
@@ -688,6 +703,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#71717a",
     marginTop: 2,
+    textAlign: "center",
   },
   emptyContainer: {
     flex: 1,
@@ -729,6 +745,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
@@ -738,6 +755,8 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    flexShrink: 1,
     alignItems: "center",
     gap: 8,
   },
@@ -769,6 +788,7 @@ const styles = StyleSheet.create({
   headerLeft: {},
   buyerRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 6,
@@ -776,6 +796,7 @@ const styles = StyleSheet.create({
   buyerText: {
     fontSize: 12,
     color: "#a1a1aa",
+    flexShrink: 1,
   },
   boldText: {
     color: "#f4f4f5",
@@ -809,18 +830,24 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 4,
   },
   itemNameWrapper: {
     flexDirection: "row-reverse",
+    flex: 1,
+    minWidth: 0,
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 6,
   },
   itemName: {
     fontSize: 12,
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   itemQty: {
     fontSize: 11,
@@ -865,11 +892,14 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   acceptButton: {
     flex: 1,
-    height: 38,
+    minWidth: 120,
+    minHeight: 38,
+    paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: "#22c55e",
     alignItems: "center",
@@ -877,7 +907,9 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     flex: 1,
-    height: 38,
+    minWidth: 120,
+    minHeight: 38,
+    paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: "rgba(239, 68, 68, 0.1)",
     borderColor: "rgba(239, 68, 68, 0.2)",
@@ -904,7 +936,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    height: 38,
+    minHeight: 38,
+    paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: "rgba(234, 88, 12, 0.1)",
     borderColor: "rgba(234, 88, 12, 0.25)",
@@ -940,7 +973,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    height: 32,
+    minHeight: 32,
+    paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
     borderColor: "#27272a",

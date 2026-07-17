@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -34,10 +34,8 @@ interface Product {
   categories: { id: string; name: string } | null;
 }
 
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 48) / 2;
-
 export default function StoreDetailScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams();
   const storeId = params.id as string;
   const router = useRouter();
@@ -52,6 +50,12 @@ export default function StoreDetailScreen() {
   const [contactingSeller, setContactingSeller] = useState(false);
   const [storeOwnerId, setStoreOwnerId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const contentWidth = Math.min(windowWidth, 1180);
+  const gridColumns = windowWidth >= 1100 ? 4 : windowWidth >= 768 ? 3 : 2;
+  const gridGap = 16;
+  const gridPadding = 20;
+  const productCardWidth =
+    (contentWidth - gridPadding * 2 - gridGap * (gridColumns - 1)) / gridColumns;
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -200,7 +204,13 @@ export default function StoreDetailScreen() {
   const renderProductItem = ({ item }: { item: Product }) => {
     const isOutOfStock = item.quantity <= 0;
     return (
-      <View style={[styles.productCard, isOutOfStock && styles.outOfStockCard]}>
+      <View
+        style={[
+          styles.productCard,
+          { width: productCardWidth },
+          isOutOfStock && styles.outOfStockCard,
+        ]}
+      >
         <View style={styles.imageWrapper}>
           {item.image_url ? (
             <Image source={{ uri: item.image_url }} style={styles.productImage} />
@@ -269,7 +279,7 @@ export default function StoreDetailScreen() {
       )}
 
       {/* Top Header */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { width: contentWidth, alignSelf: "center" }]}>
         <TouchableOpacity
           onPress={() => router.push("/library" as any)}
           style={styles.backLink}
@@ -291,7 +301,12 @@ export default function StoreDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { width: contentWidth, alignSelf: "center" },
+        ]}
+      >
         {/* Store Detail Header */}
         <View
           style={[
@@ -415,13 +430,15 @@ export default function StoreDetailScreen() {
           </View>
         ) : (
           <FlatList
+            key={`products-${gridColumns}`}
             data={filteredProducts}
             renderItem={renderProductItem}
             keyExtractor={(item) => item.id}
-            numColumns={2}
+            numColumns={gridColumns}
             scrollEnabled={false}
-            columnWrapperStyle={styles.productRow}
+            columnWrapperStyle={[styles.productRow, { gap: gridGap }]}
             contentContainerStyle={styles.productsGrid}
+            extraData={productCardWidth}
           />
         )}
       </ScrollView>
@@ -473,6 +490,7 @@ const styles = StyleSheet.create({
   },
   topBar: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
@@ -482,6 +500,7 @@ const styles = StyleSheet.create({
   },
   backLink: {
     flexDirection: "row-reverse",
+    flexShrink: 1,
     alignItems: "center",
     gap: 8,
   },
@@ -489,10 +508,11 @@ const styles = StyleSheet.create({
     color: "#71717a",
     fontSize: 13,
     fontWeight: "500",
+    flexShrink: 1,
   },
   cartBtn: {
     width: 38,
-    height: 38,
+    minHeight: 38,
     borderRadius: 12,
     backgroundColor: "#ea580c",
     alignItems: "center",
@@ -536,6 +556,7 @@ const styles = StyleSheet.create({
   },
   headerInfoRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 16,
   },
@@ -564,10 +585,12 @@ const styles = StyleSheet.create({
   },
   storeTextContainer: {
     flex: 1,
+    minWidth: 0,
     alignItems: "flex-end",
   },
   storeTitleRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
     marginBottom: 4,
@@ -576,6 +599,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   officialBadge: {
     flexDirection: "row-reverse",
@@ -612,6 +637,7 @@ const styles = StyleSheet.create({
   },
   contactBtnInner: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 6,
   },
@@ -672,11 +698,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   productRow: {
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     marginBottom: 16,
   },
   productCard: {
-    width: CARD_WIDTH,
     backgroundColor: "#18181b",
     borderRadius: 18,
     borderWidth: 1,
@@ -688,7 +713,7 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     width: "100%",
-    height: CARD_WIDTH,
+    aspectRatio: 1,
     backgroundColor: "#09090b",
     position: "relative",
     alignItems: "center",
@@ -743,9 +768,11 @@ const styles = StyleSheet.create({
     color: "#f4f4f5",
     marginBottom: 8,
     textAlign: "right",
+    flexShrink: 1,
   },
   productFooter: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -753,10 +780,11 @@ const styles = StyleSheet.create({
     color: "#f97316",
     fontSize: 14,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   addToCartBtn: {
     width: 32,
-    height: 32,
+    minHeight: 32,
     borderRadius: 10,
     backgroundColor: "#ea580c",
     alignItems: "center",
@@ -790,6 +818,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
     backgroundColor: "#ea580c",

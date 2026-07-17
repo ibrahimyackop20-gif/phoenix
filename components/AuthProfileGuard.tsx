@@ -5,6 +5,7 @@ import {
   Text,
   ActivityIndicator,
   Modal,
+  ScrollView,
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { supabase, centralSupabase } from "../lib/supabaseClient";
@@ -12,6 +13,7 @@ import { isPrimaryAdminEmail, resolveAuthEmail } from "../lib/adminAccess";
 import { markPostAuthNavigation } from "../lib/postAuthNavigation";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
+import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
 
 const checkPath = (p: string, prefix: string) => p === prefix || p.startsWith(prefix + "/");
 
@@ -37,6 +39,7 @@ export default function AuthProfileGuard() {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const isSyncing = useRef(false);
+  const { isTablet, isCompactWidth } = useLayoutMetrics();
 
   const isMountedRef = useRef(true);
   const pathnameRef = useRef(pathname);
@@ -352,9 +355,13 @@ export default function AuthProfileGuard() {
   if (loading && (isProtected || isAuthPage) && !isAuthenticated) {
     return (
       <Modal transparent animationType="fade" visible={true}>
-        <View style={styles.overlay}>
-          <GlassView style={styles.glassCard} glassEffectStyle="regular" colorScheme="dark">
-            <View style={styles.loadingContainer}>
+        <ScrollView contentContainerStyle={styles.overlay}>
+          <GlassView
+            style={[styles.glassCard, { maxWidth: isTablet ? 420 : 320 }]}
+            glassEffectStyle="regular"
+            colorScheme="dark"
+          >
+            <View style={[styles.loadingContainer, isCompactWidth && styles.compactContent]}>
               <View style={styles.spinnerWrapper}>
                 <ActivityIndicator size="large" color="#f97316" />
                 <Ionicons
@@ -370,7 +377,7 @@ export default function AuthProfileGuard() {
               </Text>
             </View>
           </GlassView>
-        </View>
+        </ScrollView>
       </Modal>
     );
   }
@@ -385,6 +392,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
+    flexGrow: 1,
   },
   glassCard: {
     borderRadius: 24,
@@ -397,6 +405,9 @@ const styles = StyleSheet.create({
   loadingContainer: {
     padding: 32,
     alignItems: "center",
+  },
+  compactContent: {
+    padding: 24,
   },
   spinnerWrapper: {
     position: "relative",
@@ -416,11 +427,13 @@ const styles = StyleSheet.create({
     color: "#f4f4f5", // Foreground
     marginBottom: 8,
     textAlign: "center",
+    flexShrink: 1,
   },
   loadingText: {
     fontSize: 14,
     color: "#a1a1aa", // Muted
     textAlign: "center",
     lineHeight: 20,
+    flexShrink: 1,
   },
 });

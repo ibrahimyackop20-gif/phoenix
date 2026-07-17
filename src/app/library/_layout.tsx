@@ -3,12 +3,15 @@ import { StyleSheet, View, ActivityIndicator } from "react-native";
 import { Slot, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import Navbar from "../../../components/Navbar";
+import ScreenContent from "../../../components/ScreenContent";
 import { useProfile } from "../../../components/ProfileProvider";
+import { useAppTheme } from "../../../components/ThemeProvider";
 
 export default function LibraryLayout() {
   const router = useRouter();
   const [sessionChecked, setSessionChecked] = useState(false);
   const { role, profileReady } = useProfile();
+  const { themeColors } = useAppTheme();
 
   useEffect(() => {
     let active = true;
@@ -44,18 +47,18 @@ export default function LibraryLayout() {
 
   if (!sessionChecked || !profileReady) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
         <ActivityIndicator size="large" color="#ea580c" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Navbar role={role || undefined} />
-      <View style={styles.main}>
+      <ScreenContent style={styles.main}>
         <Slot />
-      </View>
+      </ScreenContent>
     </View>
   );
 }

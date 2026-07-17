@@ -171,7 +171,7 @@ export default function FileUploader({
                 style={styles.fileIcon}
               />
               <View style={styles.textColumn}>
-                <Text style={styles.fileName} numberOfLines={1}>
+                <Text style={styles.fileName}>
                   {selectedFile.name}
                 </Text>
                 <Text style={styles.fileSize}>{formatSize(selectedFile.size)}</Text>
@@ -233,6 +233,8 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       fontSize: 12,
       fontWeight: "500",
       color: themeColors.primary,
+      flexShrink: 1,
+      textAlign: "center",
     },
     uploadZone: {
       padding: 24,
@@ -247,6 +249,7 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
     uploadZoneContent: {
       alignItems: "center",
       gap: 12,
+      width: "100%",
     },
     uploadIconWrapper: {
       width: 56,
@@ -258,24 +261,28 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
     },
     uploadTextWrapper: {
       alignItems: "center",
+      width: "100%",
     },
     uploadTitle: {
       fontSize: 14,
       fontWeight: "600",
       color: themeColors.text,
       textAlign: "center",
+      flexShrink: 1,
     },
     uploadSubtitle: {
       fontSize: 12,
       color: themeColors.textMuted,
       marginTop: 4,
       textAlign: "center",
+      flexShrink: 1,
     },
     uploadHint: {
       fontSize: 10,
       color: themeColors.textMuted,
       marginTop: 2,
       textAlign: "center",
+      flexShrink: 1,
     },
     fileCard: {
       backgroundColor: themeColors.cardBg,
@@ -291,14 +298,16 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
     },
     cardHeader: {
       flexDirection: "row-reverse",
-      alignItems: "center",
+      alignItems: "flex-start",
       justifyContent: "space-between",
+      gap: 8,
     },
     fileInfo: {
       flexDirection: "row-reverse",
       alignItems: "center",
       flex: 1,
       gap: 12,
+      minWidth: 0,
     },
     fileIcon: {
       marginLeft: 4,
@@ -306,19 +315,24 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
     textColumn: {
       alignItems: "flex-end",
       flex: 1,
+      minWidth: 0,
     },
     fileName: {
       fontSize: 14,
       fontWeight: "500",
       color: themeColors.text,
+      flexShrink: 1,
+      textAlign: "right",
     },
     fileSize: {
       fontSize: 11,
       color: themeColors.textMuted,
       marginTop: 2,
+      flexShrink: 1,
     },
     removeButton: {
       padding: 4,
+      flexShrink: 0,
     },
     progressContainer: {
       marginTop: 12,
@@ -339,5 +353,6 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       color: themeColors.textMuted,
       marginTop: 6,
       textAlign: "center",
+      flexShrink: 1,
     },
   });

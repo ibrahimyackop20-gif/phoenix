@@ -181,7 +181,8 @@ const styles = StyleSheet.create({
   },
   appBar: {
     flexDirection: "row-reverse",
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -198,10 +199,15 @@ const styles = StyleSheet.create({
   appBarTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   warningCard: {
     backgroundColor: "rgba(239, 68, 68, 0.08)",
@@ -220,6 +226,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 8,
+    textAlign: "center",
+    flexShrink: 1,
   },
   warningText: {
     color: "#f4f4f5",
@@ -258,10 +266,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   textInput: {
-    height: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
+    paddingVertical: 10,
     textAlign: "right",
     fontSize: 13,
     marginBottom: 12,
@@ -273,7 +282,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   deleteButton: {
-    height: 44,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: "#ef4444",
     borderRadius: 12,
     flexDirection: "row-reverse",
@@ -287,6 +298,8 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   noteCard: {
     flexDirection: "row-reverse",

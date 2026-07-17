@@ -311,12 +311,16 @@ const getStyles = (
     scrollContent: {
       padding: 20,
       paddingBottom: 40,
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
     },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: 24,
+      gap: 12,
     },
     refreshButton: {
       width: 40,
@@ -331,16 +335,21 @@ const getStyles = (
     spinning: {},
     headerText: {
       alignItems: "flex-end",
+      flex: 1,
     },
     title: {
       fontSize: 24,
       fontWeight: "bold",
       color: themeColors.text,
+      textAlign: "right",
+      flexShrink: 1,
     },
     subtitle: {
       fontSize: 13,
       color: themeColors.textMuted,
       marginTop: 4,
+      textAlign: "right",
+      flexShrink: 1,
     },
     glassCard: {
       backgroundColor: themeColors.cardBg,
@@ -360,6 +369,7 @@ const getStyles = (
       fontSize: 16,
       fontWeight: "bold",
       color: themeColors.text,
+      flexShrink: 1,
     },
     successContainer: {
       flexDirection: "row-reverse",
@@ -407,8 +417,9 @@ const getStyles = (
       borderColor: themeColors.inputBorder,
       borderWidth: 1,
       borderRadius: 12,
-      height: 48,
+      minHeight: 48,
       paddingHorizontal: 12,
+      paddingVertical: 6,
     },
     inputIcon: {
       marginLeft: 8,
@@ -417,6 +428,8 @@ const getStyles = (
       flex: 1,
       color: themeColors.text,
       fontSize: 14,
+      minHeight: 40,
+      paddingVertical: 8,
     },
     textArea: {
       backgroundColor: themeColors.inputBg,
@@ -428,7 +441,9 @@ const getStyles = (
       textAlignVertical: "top",
     },
     primaryButton: {
-      height: 48,
+      minHeight: 48,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
       backgroundColor: themeColors.primary,
       borderRadius: 12,
       alignItems: "center",
@@ -439,6 +454,8 @@ const getStyles = (
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 8,
+      flexWrap: "wrap",
+      justifyContent: "center",
     },
     buttonIcon: {
       marginLeft: 4,
@@ -447,6 +464,8 @@ const getStyles = (
       color: "#ffffff",
       fontSize: 14,
       fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
     },
     historyContainer: {
       marginBottom: 20,
@@ -461,6 +480,7 @@ const getStyles = (
       fontSize: 16,
       fontWeight: "bold",
       color: themeColors.text,
+      flexShrink: 1,
     },
     loader: {
       paddingVertical: 40,
@@ -516,6 +536,7 @@ const getStyles = (
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 4,
+      flexShrink: 1,
     },
     timeIcon: {
       marginLeft: 2,
@@ -523,6 +544,8 @@ const getStyles = (
     timeText: {
       fontSize: 11,
       color: themeColors.textMuted,
+      flexShrink: 1,
+      textAlign: "right",
     },
     studentMessageBubble: {
       backgroundColor: themeColors.inputBg,
@@ -574,5 +597,7 @@ const getStyles = (
       color: "#fb923c",
       fontSize: 12,
       fontWeight: "500",
+      textAlign: "center",
+      flexShrink: 1,
     },
   });

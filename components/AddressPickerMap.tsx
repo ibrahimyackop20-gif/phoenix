@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { getCurrentLocationWithPermission } from "../lib/locationPermissions";
 import { useAppTheme } from "./ThemeProvider";
 import i18n from "../i18n";
+import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
 
 interface LocationData {
   lat: number;
@@ -88,7 +89,8 @@ export default function AddressPickerMap({
 }: AddressPickerMapProps) {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
-  const styles = getStyles(themeColors, isDark);
+  const { isCompactHeight, isTablet, formMaxWidth } = useLayoutMetrics();
+  const styles = getStyles(themeColors, isDark, isCompactHeight, isTablet, formMaxWidth);
 
   const webViewRef = useRef<WebView>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
@@ -375,11 +377,20 @@ export default function AddressPickerMap({
   );
 }
 
-const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], isDark: boolean) =>
+const getStyles = (
+  themeColors: ReturnType<typeof useAppTheme>["themeColors"],
+  isDark: boolean,
+  isCompactHeight: boolean,
+  isTablet: boolean,
+  formMaxWidth: number
+) =>
   StyleSheet.create({
     container: {
       marginVertical: 8,
       gap: 8,
+      width: "100%",
+      maxWidth: formMaxWidth,
+      alignSelf: "center",
     },
     searchContainer: {
       position: "relative",
@@ -392,19 +403,24 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderRadius: 12,
       paddingHorizontal: 16,
       paddingRight: 40,
-      height: 48,
+      minHeight: 48,
       color: themeColors.text,
       fontSize: 14,
+      paddingVertical: 12,
     },
     searchButton: {
       position: "absolute",
       right: 12,
-      top: 14,
+      top: 0,
+      bottom: 0,
+      width: 28,
+      alignItems: "center",
+      justifyContent: "center",
       zIndex: 11,
     },
     dropdown: {
       position: "absolute",
-      top: 52,
+      top: "100%",
       left: 0,
       right: 0,
       backgroundColor: themeColors.cardBg,
@@ -433,6 +449,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: themeColors.text,
       fontSize: 12,
       textAlign: "right",
+      flexShrink: 1,
     },
     noResultsText: {
       color: themeColors.textMuted,
@@ -441,7 +458,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       textAlign: "center",
     },
     mapBorder: {
-      height: 250,
+      height: isTablet ? 360 : isCompactHeight ? 220 : 250,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: themeColors.cardBorder,
@@ -476,6 +493,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 6,
+      maxWidth: "90%",
     },
     spinner: {
       transform: [{ scale: 0.8 }],
@@ -483,6 +501,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     geocodingText: {
       fontSize: 10,
       color: themeColors.textMuted,
+      flexShrink: 1,
     },
     useMyLocationButton: {
       backgroundColor: "#ea580c",
@@ -493,12 +512,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
+      minHeight: 48,
     },
     useMyLocationButtonText: {
       fontSize: 14,
       fontWeight: "700",
       color: "#ffffff",
       textAlign: "center",
+      flexShrink: 1,
     },
     infoText: {
       fontSize: 10,
@@ -523,5 +544,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     errorText: {
       fontSize: 12,
       color: "#ef4444",
+      flexShrink: 1,
+      textAlign: "center",
     },
   });

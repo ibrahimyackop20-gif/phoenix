@@ -109,11 +109,13 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
       color: themeColors.text,
       marginBottom: 8,
       textAlign: "center",
+      flexShrink: 1,
     },
     loadingText: {
       fontSize: 14,
       color: themeColors.textMuted,
       textAlign: "center",
       lineHeight: 20,
+      flexShrink: 1,
     },
   });

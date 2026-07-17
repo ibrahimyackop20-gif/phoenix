@@ -10,6 +10,7 @@ import {
   ScrollView,
   Image,
   Clipboard,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
@@ -51,7 +52,10 @@ interface DeliveryZone {
 export default function CartScreen() {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
-  const styles = getStyles(themeColors, isDark);
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
+  const styles = getStyles(themeColors, isDark, isCompact, isTablet);
   const router = useRouter();
   const { refreshCart } = useCart();
   const [items, setItems] = useState<CartItem[]>([]);
@@ -979,7 +983,7 @@ export default function CartScreen() {
   );
 }
 
-const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
+const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTablet: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: themeColors.background,
@@ -1018,6 +1022,9 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
+    width: "100%",
+    maxWidth: isTablet ? 700 : undefined,
+    alignSelf: "center",
   },
   successBadge: {
     width: 80,
@@ -1055,13 +1062,15 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     lineHeight: 18,
   },
   successActions: {
-    flexDirection: "row",
+    flexDirection: isCompact ? "column" : "row",
     gap: 12,
     width: "100%",
   },
   primaryBtnCompact: {
     flex: 1,
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 11,
+    width: isCompact ? "100%" : undefined,
     backgroundColor: "#ea580c",
     borderRadius: 12,
     alignItems: "center",
@@ -1074,7 +1083,9 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   secondaryBtnCompact: {
     flex: 1,
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 11,
+    width: isCompact ? "100%" : undefined,
     backgroundColor: themeColors.cardBg,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
@@ -1090,6 +1101,9 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: isTablet ? 900 : undefined,
+    alignSelf: "center",
   },
   header: {
     alignItems: "flex-end",
@@ -1148,8 +1162,9 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     padding: 12,
   },
   cartCardBody: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: isCompact ? "column" : "row",
+    alignItems: isCompact ? "stretch" : "center",
+    gap: isCompact ? 10 : 0,
   },
   imageContainer: {
     width: 64,
@@ -1167,13 +1182,15 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   cartDetails: {
     flex: 1,
-    marginRight: 12,
+    marginRight: isCompact ? 0 : 12,
     alignItems: "flex-end",
   },
   productName: {
     fontSize: 13,
     fontWeight: "bold",
     color: themeColors.text,
+    flexShrink: 1,
+    textAlign: "right",
   },
   storeNameText: {
     fontSize: 10,
@@ -1192,13 +1209,13 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 8,
-    height: 28,
+    minHeight: 32,
     marginTop: 6,
     overflow: "hidden",
   },
   counterBtn: {
-    width: 28,
-    height: 28,
+    minWidth: 32,
+    minHeight: 32,
     backgroundColor: themeColors.background,
     alignItems: "center",
     justifyContent: "center",
@@ -1275,12 +1292,15 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 12,
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 10,
     paddingHorizontal: 12,
   },
   dropdownSelectorText: {
     color: themeColors.text,
     fontSize: 13,
+    flex: 1,
+    textAlign: "right",
   },
   dropdownMenu: {
     backgroundColor: themeColors.background,
@@ -1319,14 +1339,17 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     textAlignVertical: "top",
   },
   promoRow: {
-    flexDirection: "row",
+    flexDirection: isCompact ? "column-reverse" : "row",
     gap: 10,
   },
   promoBtn: {
     backgroundColor: "#ea580c",
     borderRadius: 10,
-    width: 80,
-    height: 40,
+    minWidth: 80,
+    width: isCompact ? "100%" : 80,
+    minHeight: 40,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1341,7 +1364,9 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 10,
-    height: 40,
+    minHeight: 40,
+    width: isCompact ? "100%" : undefined,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     color: themeColors.text,
     fontSize: 14,
@@ -1365,11 +1390,14 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   paymentMethodsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 16,
   },
   paymentMethodBox: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: isCompact ? "46%" : 0,
+    minWidth: isCompact ? "46%" : undefined,
     backgroundColor: themeColors.background,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
@@ -1389,6 +1417,8 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 11,
     color: themeColors.textMuted,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   paymentMethodTextActive: {
     color: "#ea580c",
@@ -1431,9 +1461,10 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     marginBottom: 12,
   },
   paymentAccountRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column" : "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isCompact ? "flex-end" : "center",
+    gap: 6,
     width: "100%",
     backgroundColor: themeColors.cardBg,
     borderRadius: 10,
@@ -1448,6 +1479,8 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     color: themeColors.textMuted,
     fontSize: 12,
     fontFamily: "monospace",
+    flexShrink: 1,
+    textAlign: "right",
   },
   receiptPreview: {
     flexDirection: "row-reverse",
@@ -1470,7 +1503,8 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     borderStyle: "dashed",
     borderColor: themeColors.cardBorder,
     borderRadius: 10,
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 11,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
@@ -1486,9 +1520,10 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 12,
   },
   billingRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column" : "row-reverse",
     justifyContent: "space-between",
     paddingVertical: 4,
+    gap: 4,
   },
   billingLabel: {
     color: themeColors.textMuted,
@@ -1515,7 +1550,9 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     fontWeight: "bold",
   },
   checkoutBtn: {
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
     backgroundColor: "#ea580c",
     borderRadius: 14,
     alignItems: "center",

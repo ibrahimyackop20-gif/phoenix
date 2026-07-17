@@ -1,7 +1,8 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import i18n from "../i18n";
 import { useAppTheme } from "./ThemeProvider";
+import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
 
 interface Props {
   children: ReactNode;
@@ -20,17 +21,23 @@ function ErrorFallbackUI({
   onRetry: () => void;
 }) {
   const { themeColors } = useAppTheme();
+  const { formMaxWidth } = useLayoutMetrics();
   const styles = getStyles(themeColors);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{i18n.t("err_startup_title")}</Text>
-      <Text style={styles.body}>{i18n.t("err_startup_body")}</Text>
-      {!!message && <Text style={styles.detail}>{message}</Text>}
-      <Pressable style={styles.button} onPress={onRetry}>
-        <Text style={styles.buttonText}>{i18n.t("err_retry")}</Text>
-      </Pressable>
-    </View>
+    <ScrollView
+      style={{ backgroundColor: themeColors.background }}
+      contentContainerStyle={styles.container}
+    >
+      <View style={[styles.card, { maxWidth: formMaxWidth }]}>
+        <Text style={styles.title}>{i18n.t("err_startup_title")}</Text>
+        <Text style={styles.body}>{i18n.t("err_startup_body")}</Text>
+        {!!message && <Text style={styles.detail}>{message}</Text>}
+        <Pressable style={styles.button} onPress={onRetry}>
+          <Text style={styles.buttonText}>{i18n.t("err_retry")}</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -75,6 +82,12 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
       alignItems: "center",
       justifyContent: "center",
       padding: 24,
+      flexGrow: 1,
+    },
+    card: {
+      width: "100%",
+      alignItems: "center",
+      alignSelf: "center",
     },
     title: {
       color: "#f97316",
@@ -102,10 +115,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 12,
+      minHeight: 48,
+      justifyContent: "center",
     },
     buttonText: {
       color: "#fff",
       fontWeight: "700",
       fontSize: 15,
+      textAlign: "center",
+      flexShrink: 1,
     },
   });

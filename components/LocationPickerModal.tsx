@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { getCurrentLocationWithPermission } from "../lib/locationPermissions";
 import { useAppTheme } from "./ThemeProvider";
 import i18n from "../i18n";
+import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
 
 export type LocationPickerResult = {
   lat: number;
@@ -102,7 +103,8 @@ export default function LocationPickerModal({
 }: LocationPickerModalProps) {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
-  const styles = getStyles(themeColors, isDark);
+  const { isCompactHeight, isTablet } = useLayoutMetrics();
+  const styles = getStyles(themeColors, isDark, isCompactHeight, isTablet);
 
   const webViewRef = useRef<WebView>(null);
   const geocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -323,6 +325,7 @@ export default function LocationPickerModal({
     >
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <View style={styles.contentShell}>
 
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.headerBtn} hitSlop={12}>
@@ -419,7 +422,7 @@ export default function LocationPickerModal({
 
         <View style={styles.footer}>
           <Text style={styles.footerLabel}>{t("map_selected_label")}</Text>
-          <Text style={styles.footerAddress} numberOfLines={3}>
+          <Text style={styles.footerAddress}>
             {selected?.formattedAddress || selected?.area || t("map_select_hint")}
           </Text>
           {selected?.area ? (
@@ -434,16 +437,28 @@ export default function LocationPickerModal({
             <Text style={styles.confirmButtonText}>{t("map_confirm")}</Text>
           </TouchableOpacity>
         </View>
+        </View>
       </SafeAreaView>
     </Modal>
   );
 }
 
-const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], isDark: boolean) =>
+const getStyles = (
+  themeColors: ReturnType<typeof useAppTheme>["themeColors"],
+  isDark: boolean,
+  isCompactHeight: boolean,
+  isTablet: boolean
+) =>
   StyleSheet.create({
     safe: {
       flex: 1,
       backgroundColor: themeColors.background,
+    },
+    contentShell: {
+      flex: 1,
+      width: "100%",
+      maxWidth: isTablet ? 960 : undefined,
+      alignSelf: "center",
     },
     header: {
       flexDirection: "row-reverse",
@@ -466,6 +481,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: themeColors.text,
       fontSize: 16,
       fontWeight: "700",
+      flexShrink: 1,
     },
     searchContainer: {
       marginHorizontal: 12,
@@ -480,19 +496,24 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderRadius: 12,
       paddingHorizontal: 16,
       paddingRight: 40,
-      height: 48,
+      minHeight: 48,
       color: themeColors.text,
       fontSize: 14,
+      paddingVertical: 12,
     },
     searchButton: {
       position: "absolute",
       right: 12,
-      top: 14,
+      top: 0,
+      bottom: 0,
+      width: 28,
+      alignItems: "center",
+      justifyContent: "center",
       zIndex: 21,
     },
     dropdown: {
       position: "absolute",
-      top: 52,
+      top: "100%",
       left: 0,
       right: 0,
       backgroundColor: themeColors.cardBg,
@@ -517,6 +538,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: themeColors.text,
       fontSize: 12,
       textAlign: "right",
+      flexShrink: 1,
     },
     myLocationFab: {
       position: "absolute",
@@ -547,7 +569,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderColor: themeColors.cardBorder,
       overflow: "hidden",
       position: "relative",
-      minHeight: 280,
+      minHeight: isCompactHeight ? 180 : 280,
     },
     webview: {
       flex: 1,
@@ -573,10 +595,12 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 6,
+      flexShrink: 1,
     },
     geocodingText: {
       fontSize: 10,
       color: themeColors.textMuted,
+      flexShrink: 1,
     },
     errorText: {
       marginHorizontal: 12,
@@ -607,6 +631,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       textAlign: "right",
       lineHeight: 20,
       minHeight: 40,
+      flexShrink: 1,
     },
     footerArea: {
       color: "#f97316",
@@ -618,7 +643,9 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       backgroundColor: "#22c55e",
       borderRadius: 12,
       paddingVertical: 14,
+      paddingHorizontal: 16,
       alignItems: "center",
+      minHeight: 48,
     },
     confirmButtonDisabled: {
       opacity: 0.45,
@@ -627,5 +654,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: "#ffffff",
       fontSize: 15,
       fontWeight: "700",
+      textAlign: "center",
+      flexShrink: 1,
     },
   });

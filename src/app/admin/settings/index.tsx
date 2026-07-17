@@ -9,6 +9,7 @@ import {
   TextInput,
   Switch,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -33,6 +34,9 @@ interface Coupon {
 }
 
 export default function AdminSettingsScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isNarrow = width < 420;
   const [loading, setLoading] = useState(true);
   const [isLibraryEnabled, setIsLibraryEnabled] = useState(true);
   const [zaincashNumber, setZaincashNumber] = useState("");
@@ -363,14 +367,14 @@ export default function AdminSettingsScreen() {
       )}
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>الإعدادات العامة</Text>
           <Text style={styles.headerSubtitle}>تكوين بوابات الدفع، مناطق التوصيل والكوبونات</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         {/* Bookstore Settings Toggle */}
         <View style={styles.card}>
           <View style={styles.toggleRow}>
@@ -432,7 +436,7 @@ export default function AdminSettingsScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>إدارة مناطق التوصيل والأسعار</Text>
 
-          <View style={styles.addZoneForm}>
+          <View style={[styles.addZoneForm, isNarrow && styles.stackOnNarrow]}>
             <TextInput
               value={newAreaName}
               onChangeText={setNewAreaName}
@@ -512,7 +516,7 @@ export default function AdminSettingsScreen() {
               textAlign="right"
             />
 
-            <View style={styles.couponRow}>
+            <View style={[styles.couponRow, isNarrow && styles.stackOnNarrow]}>
               <TextInput
                 value={cpValue}
                 onChangeText={setCpValue}
@@ -540,7 +544,7 @@ export default function AdminSettingsScreen() {
               </View>
             </View>
 
-            <View style={styles.couponRow}>
+            <View style={[styles.couponRow, isNarrow && styles.stackOnNarrow]}>
               <TextInput
                 value={cpMinOrder}
                 onChangeText={setCpMinOrder}
@@ -707,6 +711,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -717,10 +723,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   scrollContent: {
     padding: 20,
     gap: 20,
+  },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1000,
+    alignSelf: "center",
   },
   card: {
     backgroundColor: "#18181b",
@@ -733,19 +745,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
   },
   toggleTextWrapper: {
     alignItems: "flex-end",
+    flex: 1,
+    minWidth: 180,
   },
   toggleTitle: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#f4f4f5",
+    textAlign: "right",
+    flexShrink: 1,
   },
   toggleSubtitle: {
     fontSize: 11,
     color: "#71717a",
     marginTop: 2,
+    textAlign: "right",
+    flexShrink: 1,
   },
   cardTitle: {
     fontSize: 14,
@@ -767,7 +787,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   textInput: {
-    height: 44,
+    minHeight: 48,
     backgroundColor: "#09090b",
     borderRadius: 10,
     borderWidth: 1,
@@ -778,7 +798,9 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     backgroundColor: "#ea580c",
-    height: 44,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -788,15 +810,20 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   addZoneForm: {
     flexDirection: "row-reverse",
     gap: 8,
     marginBottom: 16,
   },
+  stackOnNarrow: {
+    flexDirection: "column",
+  },
   addZoneBtn: {
-    width: 44,
-    height: 44,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: 10,
     backgroundColor: "#ea580c",
     alignItems: "center",
@@ -814,17 +841,21 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     borderRadius: 10,
     padding: 12,
+    gap: 10,
+    flexWrap: "wrap",
   },
   itemActions: {
     flexDirection: "row",
     gap: 12,
+    minHeight: 44,
+    alignItems: "center",
   },
   actionIcon: {
     padding: 2,
   },
   editFeeInput: {
-    width: 80,
-    height: 28,
+    minWidth: 100,
+    minHeight: 44,
     backgroundColor: "#18181b",
     borderRadius: 6,
     color: "#ffffff",
@@ -835,10 +866,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#f97316",
     fontWeight: "bold",
+    flexShrink: 1,
+    textAlign: "right",
   },
   areaNameText: {
     fontSize: 13,
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   couponForm: {
     gap: 12,
@@ -854,13 +889,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#27272a",
     overflow: "hidden",
-    height: 44,
+    minHeight: 48,
   },
   selectorBtn: {
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
-    height: "100%",
+    minHeight: 46,
   },
   selectorActive: {
     backgroundColor: "#27272a",
@@ -874,10 +909,14 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: 8,
     marginVertical: 4,
+    flexWrap: "wrap",
   },
   targetBtn: {
     flex: 1,
-    height: 38,
+    minWidth: 120,
+    minHeight: 44,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderRadius: 8,
     backgroundColor: "#09090b",
     borderWidth: 1,
@@ -893,6 +932,8 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 11,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   couponItem: {
     backgroundColor: "#09090b",
@@ -906,11 +947,15 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 10,
+    flexWrap: "wrap",
   },
   couponCode: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#f97316",
+    flexShrink: 1,
+    textAlign: "right",
   },
   couponDetails: {
     alignItems: "flex-end",
@@ -940,10 +985,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#27272a",
     borderWidth: 1,
     borderColor: "#3f3f46",
+    minHeight: 40,
+    justifyContent: "center",
   },
   presetBtnText: {
     color: "#e4e4e7",
     fontSize: 11,
+    textAlign: "center",
   },
   validationText: {
     fontSize: 11,

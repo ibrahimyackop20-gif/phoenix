@@ -8,7 +8,7 @@ import {
   Modal,
   Image,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,8 +19,6 @@ import { useAppTheme } from "../../../components/ThemeProvider";
 import { isPrimaryAdminEmail, resolveAuthEmail } from "../../../lib/adminAccess";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-
-const { width } = Dimensions.get("window");
 
 const navItems = [
   { href: "/admin", label: "dashboard", icon: "layout" as const },
@@ -35,6 +33,7 @@ const navItems = [
 ];
 
 export default function AdminLayout() {
+  const { width } = useWindowDimensions();
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -121,7 +120,7 @@ export default function AdminLayout() {
       
       {/* Mobile Top Navbar */}
       <SafeAreaView style={[styles.navbarSafeArea, { backgroundColor: themeColors.cardBg }]}>
-        <View style={[styles.navbar, { borderBottomColor: themeColors.cardBorder }]}>
+        <View style={[styles.navbar, { borderBottomColor: themeColors.cardBorder, paddingHorizontal: width < 360 ? 10 : 16 }]}>
           {/* Hamburger Menu Toggle (Right aligned in Arabic design) */}
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.hamburgerButton}>
             <Feather name="menu" size={24} color={themeColors.text} />
@@ -134,7 +133,7 @@ export default function AdminLayout() {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={[styles.brandName, { color: themeColors.text }]}>{t("brand_name")}</Text>
+            <Text style={[styles.brandName, { color: themeColors.text }]} numberOfLines={2}>{t("brand_name")}</Text>
           </TouchableOpacity>
 
           {/* Quick Exit back to Student Panel */}
@@ -167,7 +166,7 @@ export default function AdminLayout() {
           />
 
           {/* Slide-out Menu Panel (Right aligned for RTL) */}
-          <View style={[styles.drawerPanel, { backgroundColor: themeColors.cardBg, borderLeftColor: themeColors.cardBorder }]}>
+          <View style={[styles.drawerPanel, { width: Math.min(width * 0.86, 360), backgroundColor: themeColors.cardBg, borderLeftColor: themeColors.cardBorder }]}>
             <SafeAreaView style={styles.drawerSafeArea}>
               {/* Drawer Header */}
               <View style={[styles.drawerHeader, { borderBottomColor: themeColors.cardBorder }]}>
@@ -186,7 +185,7 @@ export default function AdminLayout() {
 
               {/* Admin profile details card */}
               <View style={[styles.drawerProfileCard, { borderBottomColor: themeColors.cardBorder }]}>
-                <Text style={[styles.drawerProfileName, { color: themeColors.text }]} numberOfLines={1}>
+                <Text style={[styles.drawerProfileName, { color: themeColors.text }]}>
                   {profile?.full_name || t("admin_panel")}
                 </Text>
                 <View style={styles.adminRoleBadge}>
@@ -269,7 +268,7 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   navbar: {
-    height: 56,
+    minHeight: 56,
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
@@ -277,9 +276,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   hamburgerButton: {
-    padding: 6,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   brandContainer: {
+    flex: 1,
+    justifyContent: "center",
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
@@ -291,9 +295,14 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 16,
     fontWeight: "bold",
+    flexShrink: 1,
+    textAlign: "center",
   },
   studentPanelLink: {
-    padding: 6,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   main: {
     flex: 1,
@@ -308,8 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerPanel: {
-    width: width * 0.78,
-    maxWidth: 300,
+    maxWidth: 360,
     height: "100%",
     borderLeftWidth: 1,
   },
@@ -317,7 +325,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerHeader: {
-    height: 56,
+    minHeight: 56,
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
@@ -325,9 +333,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   drawerCloseButton: {
-    padding: 6,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   drawerBrand: {
+    flex: 1,
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
@@ -339,6 +351,8 @@ const styles = StyleSheet.create({
   drawerBrandText: {
     fontSize: 15,
     fontWeight: "bold",
+    flexShrink: 1,
+    textAlign: "right",
   },
   drawerProfileCard: {
     padding: 16,
@@ -349,6 +363,8 @@ const styles = StyleSheet.create({
   drawerProfileName: {
     fontSize: 14,
     fontWeight: "bold",
+    flexShrink: 1,
+    textAlign: "right",
   },
   adminRoleBadge: {
     flexDirection: "row-reverse",
@@ -384,7 +400,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
     marginBottom: 4,
   },
   drawerItemActive: {
@@ -393,6 +409,10 @@ const styles = StyleSheet.create({
   drawerItemLabel: {
     fontSize: 14,
     fontWeight: "500",
+    flex: 1,
+    flexShrink: 1,
+    textAlign: "right",
+    marginLeft: 12,
   },
   activeText: {
     color: "#ea580c",
@@ -410,11 +430,15 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: "#27272a",
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   studentPanelBtnText: {
     fontSize: 13,
     fontWeight: "bold",
+    flexShrink: 1,
+    textAlign: "center",
   },
   drawerLogoutButton: {
     flexDirection: "row-reverse",
@@ -422,7 +446,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderRadius: 12,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   logoutText: {
     color: "#ef4444",

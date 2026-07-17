@@ -3,6 +3,7 @@ import { StyleSheet, View, ActivityIndicator } from "react-native";
 import { Slot, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import Navbar from "../../../components/Navbar";
+import ScreenContent from "../../../components/ScreenContent";
 import { useProfile } from "../../../components/ProfileProvider";
 import { useAppTheme } from "../../../components/ThemeProvider";
 
@@ -55,9 +56,9 @@ export default function DashboardLayout() {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Navbar role={role} />
-      <View style={styles.main}>
+      <ScreenContent style={styles.main}>
         <Slot />
-      </View>
+      </ScreenContent>
     </View>
   );
 }

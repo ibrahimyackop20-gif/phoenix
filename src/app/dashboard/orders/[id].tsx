@@ -9,6 +9,7 @@ import {
   Linking,
   Animated,
   I18nManager,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -103,7 +104,13 @@ export default function OrderDetailScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
-  const styles = useMemo(() => getStyles(themeColors, isDark), [themeColors, isDark]);
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
+  const styles = useMemo(
+    () => getStyles(themeColors, isDark, isCompact, isTablet),
+    [themeColors, isDark, isCompact, isTablet]
+  );
   const rtl = i18n.language === "ar" || I18nManager.isRTL;
 
   const [loading, setLoading] = useState(true);
@@ -617,7 +624,7 @@ export default function OrderDetailScreen() {
                         <Feather name="file-text" size={20} color="#60a5fa" />
                       </View>
                       <View style={styles.fileMeta}>
-                        <Text style={[styles.fileTitle, { color: themeColors.text }]} numberOfLines={1}>
+                        <Text style={[styles.fileTitle, { color: themeColors.text }]}>
                           {name}
                         </Text>
                         {printOrder.total_pages != null ? (
@@ -699,7 +706,9 @@ export default function OrderDetailScreen() {
 
 const getStyles = (
   themeColors: { background: string; cardBg: string; cardBorder: string; text: string; textMuted: string },
-  isDark: boolean
+  isDark: boolean,
+  isCompact: boolean,
+  isTablet: boolean
 ) =>
   StyleSheet.create({
     safe: { flex: 1 },
@@ -710,11 +719,20 @@ const getStyles = (
       paddingHorizontal: 16,
       paddingVertical: 12,
       borderBottomWidth: 1,
+      width: "100%",
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
     },
-    backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-    appBarCenter: { alignItems: "center", gap: 8 },
-    appBarTitle: { fontSize: 16, fontWeight: "700", fontFamily: "monospace" },
-    scroll: { padding: 20, paddingBottom: 48 },
+    backBtn: { width: 40, minHeight: 40, alignItems: "center", justifyContent: "center" },
+    appBarCenter: { alignItems: "center", gap: 8, flex: 1, paddingHorizontal: 8 },
+    appBarTitle: { fontSize: 16, fontWeight: "700", fontFamily: "monospace", textAlign: "center" },
+    scroll: {
+      padding: 20,
+      paddingBottom: 48,
+      width: "100%",
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
+    },
     sectionTitle: {
       fontSize: 15,
       fontWeight: "700",
@@ -769,17 +787,24 @@ const getStyles = (
     cancelledTitle: { color: "#ef4444", fontWeight: "700", fontSize: 14 },
     cancelledDesc: { fontSize: 11, marginTop: 4, textAlign: "right" },
     infoRow: {
-      flexDirection: "row-reverse",
+      flexDirection: isCompact ? "column" : "row-reverse",
       justifyContent: "space-between",
       alignItems: "flex-start",
       paddingVertical: 8,
       gap: 12,
     },
-    infoLabel: { fontSize: 12, flex: 1, textAlign: "right" },
-    infoValue: { fontSize: 12, fontWeight: "600", flex: 1.2, textAlign: "left" },
+    infoLabel: { fontSize: 12, flex: isCompact ? 0 : 1, textAlign: "right", width: isCompact ? "100%" : undefined },
+    infoValue: {
+      fontSize: 12,
+      fontWeight: "600",
+      flex: isCompact ? 0 : 1.2,
+      textAlign: isCompact ? "right" : "left",
+      width: isCompact ? "100%" : undefined,
+      flexShrink: 1,
+    },
     fileRow: {
-      flexDirection: "row-reverse",
-      alignItems: "center",
+      flexDirection: isCompact ? "column" : "row-reverse",
+      alignItems: isCompact ? "flex-end" : "center",
       gap: 12,
       paddingVertical: 10,
     },
@@ -799,11 +824,11 @@ const getStyles = (
       alignItems: "center",
       justifyContent: "center",
     },
-    fileMeta: { flex: 1, alignItems: "flex-end" },
-    fileTitle: { fontSize: 13, fontWeight: "600" },
-    fileSub: { fontSize: 11, marginTop: 2 },
+    fileMeta: { flex: isCompact ? 0 : 1, alignItems: "flex-end", width: isCompact ? "100%" : undefined },
+    fileTitle: { fontSize: 13, fontWeight: "600", textAlign: "right", flexShrink: 1 },
+    fileSub: { fontSize: 11, marginTop: 2, textAlign: "right", flexShrink: 1 },
     historyRow: {
-      flexDirection: "row-reverse",
+      flexDirection: isCompact ? "column" : "row-reverse",
       alignItems: "flex-start",
       gap: 12,
       paddingVertical: 10,
@@ -825,6 +850,8 @@ const getStyles = (
       backgroundColor: PHOENIX_ORANGE,
       borderRadius: 16,
       paddingVertical: 14,
+      paddingHorizontal: 16,
+      minHeight: 48,
       marginTop: 20,
     },
     supportBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
@@ -838,10 +865,16 @@ const getStyles = (
     },
     libBadgeText: { color: "#34d399", fontSize: 11, fontWeight: "600" },
     libTimelineRow: {
-      flexDirection: "row-reverse",
+      flexDirection: isCompact ? "column" : "row-reverse",
       justifyContent: "space-between",
+      gap: isCompact ? 10 : 0,
     },
-    libStep: { alignItems: "center", flex: 1 },
+    libStep: {
+      alignItems: "center",
+      flex: isCompact ? 0 : 1,
+      flexDirection: isCompact ? "row-reverse" : "column",
+      gap: isCompact ? 10 : 0,
+    },
     libStepCircle: {
       width: 32,
       height: 32,
@@ -851,7 +884,7 @@ const getStyles = (
       justifyContent: "center",
       marginBottom: 6,
     },
-    libStepLabel: { fontSize: 9, textAlign: "center" },
+    libStepLabel: { fontSize: 9, textAlign: isCompact ? "right" : "center", flexShrink: 1 },
     notFound: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 },
     notFoundText: { fontSize: 15, textAlign: "center" },
     backBtnPrimary: {

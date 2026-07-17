@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { StyleSheet, View, Text, Animated, Dimensions } from "react-native";
+import { StyleSheet, View, Text, Animated, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
 interface SplashScreenProps {
@@ -7,11 +7,12 @@ interface SplashScreenProps {
   onReadyToHideNative: () => void;
 }
 
-const { width } = Dimensions.get("window");
-
 export default function SplashScreen({ onFinish, onReadyToHideNative }: SplashScreenProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
   const [hidden, setHidden] = useState(false);
+  const isTablet = width >= 600;
+  const logoSize = isTablet ? 240 : Math.min(180, width * 0.46);
 
   // Animated values
   const containerOpacity = useRef(new Animated.Value(1)).current;
@@ -234,6 +235,7 @@ export default function SplashScreen({ onFinish, onReadyToHideNative }: SplashSc
       <Animated.View
         style={[
           styles.logoContainer,
+          { width: logoSize, height: logoSize },
           {
             opacity: logoOpacity,
             transform: [{ scale: logoScale }],
@@ -267,7 +269,17 @@ export default function SplashScreen({ onFinish, onReadyToHideNative }: SplashSc
             transform: [{ translateY: textY }],
           }}
         >
-          <Text style={styles.title}>{t("brand_name").toUpperCase()}</Text>
+          <Text
+            style={[
+              styles.title,
+              {
+                fontSize: isTablet ? 44 : 32,
+                letterSpacing: width < 380 ? 6 : 10,
+              },
+            ]}
+          >
+            {t("brand_name").toUpperCase()}
+          </Text>
         </Animated.View>
 
         {/* Subtitle */}
@@ -278,7 +290,17 @@ export default function SplashScreen({ onFinish, onReadyToHideNative }: SplashSc
             marginTop: 6,
           }}
         >
-          <Text style={styles.subtitle}>PRINTING & DESIGN</Text>
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                fontSize: isTablet ? 14 : 10,
+                letterSpacing: width < 380 ? 3 : 5,
+              },
+            ]}
+          >
+            PRINTING & DESIGN
+          </Text>
         </Animated.View>
       </View>
     </Animated.View>
@@ -292,6 +314,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 99999,
+    paddingHorizontal: 24,
   },
   orb1: {
     position: "absolute",
@@ -316,8 +339,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: "center",
     justifyContent: "center",
-    width: width > 768 ? 240 : 180,
-    height: width > 768 ? 240 : 180,
     marginBottom: 24,
   },
   glowImage: {
@@ -335,19 +356,19 @@ const styles = StyleSheet.create({
   brandContainer: {
     alignItems: "center",
     marginTop: 10,
+    width: "100%",
+    maxWidth: 720,
   },
   title: {
-    fontSize: width > 768 ? 44 : 32,
     fontWeight: "900",
     color: "#ea580c",
-    letterSpacing: 10,
     textAlign: "center",
+    flexShrink: 1,
   },
   subtitle: {
-    fontSize: width > 768 ? 14 : 10,
     fontWeight: "600",
     color: "rgba(161, 161, 170, 0.7)",
-    letterSpacing: 5,
     textAlign: "center",
+    flexShrink: 1,
   },
 });

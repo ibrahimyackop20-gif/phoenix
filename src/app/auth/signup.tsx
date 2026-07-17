@@ -651,6 +651,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     scrollContent: {
       flexGrow: 1,
       justifyContent: "center",
+      paddingVertical: 24,
     },
     container: {
       padding: 16,
@@ -671,11 +672,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       fontWeight: "bold",
       color: themeColors.text,
       marginBottom: 8,
+      textAlign: "center",
+      flexShrink: 1,
     },
     subtitle: {
       fontSize: 14,
       color: themeColors.textMuted,
       textAlign: "center",
+      flexShrink: 1,
     },
     glassCard: {
       backgroundColor: themeColors.cardBg,
@@ -715,15 +719,15 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       textAlign: "right",
     },
     inputWrapper: {
-      position: "relative",
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: themeColors.inputBg,
       borderColor: themeColors.cardBorder,
       borderWidth: 1,
       borderRadius: 12,
-      height: 48,
+      minHeight: 48,
       paddingHorizontal: 12,
+      paddingVertical: 6,
     },
     inputIcon: {
       marginRight: 8,
@@ -732,17 +736,20 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flex: 1,
       color: themeColors.text,
       fontSize: 14,
+      minHeight: 40,
+      paddingVertical: 8,
     },
     passwordInput: {
-      paddingRight: 32,
+      paddingRight: 8,
     },
     eyeIcon: {
-      position: "absolute",
-      right: 12,
-      top: 14,
+      padding: 8,
+      flexShrink: 0,
     },
     primaryButton: {
-      height: 48,
+      minHeight: 48,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
       backgroundColor: "#ea580c",
       borderRadius: 12,
       alignItems: "center",
@@ -778,6 +785,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 8,
+      flexWrap: "wrap",
+      justifyContent: "center",
     },
     buttonIcon: {
       marginLeft: 4,
@@ -786,16 +795,21 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: "#ffffff",
       fontSize: 14,
       fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
     },
     footerRow: {
       flexDirection: "row-reverse",
       justifyContent: "center",
       alignItems: "center",
       marginTop: 24,
+      flexWrap: "wrap",
     },
     footerText: {
       color: themeColors.textMuted,
       fontSize: 13,
+      textAlign: "center",
+      flexShrink: 1,
     },
     linkText: {
       color: "#fb923c",
@@ -815,6 +829,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: themeColors.text,
       fontWeight: "600",
       marginTop: 4,
+      textAlign: "center",
+      flexShrink: 1,
     },
     otpWrapper: {
       alignItems: "center",
@@ -831,6 +847,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     verifyingText: {
       color: themeColors.textMuted,
       fontSize: 12,
+      textAlign: "center",
+      flexShrink: 1,
     },
     divider: {
       height: 1,
@@ -849,6 +867,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     resendTimerText: {
       fontSize: 12,
       color: themeColors.textMuted,
+      textAlign: "center",
+      flexShrink: 1,
     },
     resendButton: {
       flexDirection: "row-reverse",
@@ -873,7 +893,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : themeColors.inputBg,
       borderColor: themeColors.cardBorder,
       borderWidth: 1,
-      height: 48,
+      minHeight: 48,
+      paddingHorizontal: 12,
       width: "100%",
     },
     backButtonIcon: {
@@ -883,6 +904,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       color: themeColors.textMuted,
       fontSize: 13,
       fontWeight: "500",
+      textAlign: "center",
+      flexShrink: 1,
     },
     successCard: {
       alignItems: "center",

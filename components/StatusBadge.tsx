@@ -108,6 +108,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 9999,
     borderWidth: 1,
+    maxWidth: "100%",
+    flexShrink: 1,
   },
   dot: {
     width: 6,
@@ -117,5 +119,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 12,
     fontWeight: "600",
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

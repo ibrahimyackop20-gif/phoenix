@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter, Link, usePathname, useNavigation } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
@@ -28,6 +29,9 @@ export default function DashboardIndex() {
   const router = useRouter();
   const pathname = usePathname();
   const navigation = useNavigation();
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [stats, setStats] = useState<StatItem[]>([]);
@@ -128,7 +132,14 @@ export default function DashboardIndex() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent} style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <ScrollView
+      contentContainerStyle={[
+        styles.scrollContent,
+        isTablet && styles.tabletContent,
+        isCompact && styles.compactContent,
+      ]}
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
       {/* Welcome Banner */}
       <View style={styles.welcomeContainer}>
         <Text style={[styles.welcomeTitle, { color: themeColors.text }]}>
@@ -140,7 +151,14 @@ export default function DashboardIndex() {
       {/* Stats Grid */}
       <View style={styles.gridContainer}>
         {stats.map((stat) => (
-          <View key={stat.key} style={[styles.statCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+          <View
+            key={stat.key}
+            style={[
+              styles.statCard,
+              isCompact && styles.statCardCompact,
+              { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder },
+            ]}
+          >
             <View style={styles.cardHeader}>
               <View style={[styles.iconWrapper, { backgroundColor: stat.bgColor }]}>
                 <Feather name={stat.icon} size={20} color={stat.iconColor} />
@@ -156,7 +174,7 @@ export default function DashboardIndex() {
       <View style={styles.actionsContainer}>
         <Link href={"/dashboard/new-order" as any} asChild>
           <TouchableOpacity style={[styles.actionButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <View style={styles.actionInner}>
+            <View style={[styles.actionInner, isCompact && styles.actionInnerCompact]}>
               <View style={[styles.actionIconWrapper, styles.primaryIconBg]}>
                 <Feather name="plus-circle" size={24} color="#ea580c" />
               </View>
@@ -170,7 +188,7 @@ export default function DashboardIndex() {
 
         <Link href={"/dashboard/orders" as any} asChild>
           <TouchableOpacity style={[styles.actionButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <View style={styles.actionInner}>
+            <View style={[styles.actionInner, isCompact && styles.actionInnerCompact]}>
               <View style={[styles.actionIconWrapper, styles.secondaryIconBg]}>
                 <Feather name="clipboard" size={24} color="#fb923c" />
               </View>
@@ -193,6 +211,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+  },
+  tabletContent: {
+    maxWidth: 900,
+    alignSelf: "center",
+  },
+  compactContent: {
+    paddingHorizontal: 14,
   },
   loadingContainer: {
     flex: 1,
@@ -227,6 +253,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
   },
+  statCardCompact: {
+    width: "100%",
+  },
   cardHeader: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
@@ -255,11 +284,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 20,
     padding: 20,
+    minHeight: 92,
   },
   actionInner: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 16,
+  },
+  actionInnerCompact: {
+    alignItems: "flex-start",
   },
   actionIconWrapper: {
     width: 52,
@@ -282,8 +315,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 4,
+    flexShrink: 1,
   },
   actionSubtitle: {
     fontSize: 13,
+    flexShrink: 1,
+    textAlign: "right",
   },
 });

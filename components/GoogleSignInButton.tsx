@@ -53,7 +53,7 @@ export default function GoogleSignInButton({
 const getStyles = (isDark: boolean) =>
   StyleSheet.create({
     button: {
-      height: 48,
+      minHeight: 48,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
@@ -61,6 +61,8 @@ const getStyles = (isDark: boolean) =>
       borderWidth: 1,
       borderColor: isDark ? "rgba(255,255,255,0.18)" : "#747775",
       marginTop: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
     },
     buttonDisabled: {
       opacity: 0.65,
@@ -69,11 +71,15 @@ const getStyles = (isDark: boolean) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
+      justifyContent: "center",
+      flexWrap: "wrap",
     },
     label: {
       color: "#1F1F1F",
       fontSize: 14,
       fontWeight: "600",
       letterSpacing: 0.1,
+      flexShrink: 1,
+      textAlign: "center",
     },
   });

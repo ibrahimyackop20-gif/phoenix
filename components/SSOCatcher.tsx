@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Modal,
   TouchableOpacity,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
@@ -18,6 +19,7 @@ import {
 import { markPostAuthNavigation } from "../lib/postAuthNavigation";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
+import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
 
 let initialUrlProcessed = false;
 
@@ -32,6 +34,7 @@ export default function SSOCatcher() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isProcessing = useRef(false);
+  const { isTablet, isCompactWidth } = useLayoutMetrics();
 
   useEffect(() => {
     const handleUrl = async (url: string) => {
@@ -251,9 +254,13 @@ export default function SSOCatcher() {
 
   return (
     <Modal transparent animationType="fade" visible={true}>
-      <View style={styles.overlay}>
-        <GlassView style={styles.glassCard} glassEffectStyle="regular" colorScheme="dark">
-          <View style={styles.contentContainer}>
+      <ScrollView contentContainerStyle={styles.overlay}>
+        <GlassView
+          style={[styles.glassCard, { maxWidth: isTablet ? 420 : 320 }]}
+          glassEffectStyle="regular"
+          colorScheme="dark"
+        >
+          <View style={[styles.contentContainer, isCompactWidth && styles.compactContent]}>
             {error ? (
               <>
                 <View style={styles.errorIconWrapper}>
@@ -294,7 +301,7 @@ export default function SSOCatcher() {
             )}
           </View>
         </GlassView>
-      </View>
+      </ScrollView>
     </Modal>
   );
 }
@@ -306,6 +313,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
+    flexGrow: 1,
   },
   glassCard: {
     borderRadius: 24,
@@ -318,6 +326,9 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 32,
     alignItems: "center",
+  },
+  compactContent: {
+    padding: 24,
   },
   errorIconWrapper: {
     width: 64,
@@ -348,12 +359,14 @@ const styles = StyleSheet.create({
     color: "#f4f4f5", // Foreground
     marginBottom: 8,
     textAlign: "center",
+    flexShrink: 1,
   },
   infoText: {
     fontSize: 14,
     color: "#a1a1aa", // Muted
     textAlign: "center",
     lineHeight: 20,
+    flexShrink: 1,
   },
   errorText: {
     fontSize: 14,
@@ -361,6 +374,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
+    flexShrink: 1,
   },
   retryButton: {
     width: "100%",
@@ -369,11 +383,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: "center",
+    minHeight: 48,
   },
   retryButtonText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#f4f4f5",
+    textAlign: "center",
+    flexShrink: 1,
   },
 });

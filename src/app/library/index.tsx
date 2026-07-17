@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -31,6 +32,7 @@ interface StoreCard {
 }
 
 export default function LibraryScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
   const styles = getStyles(themeColors, isDark);
@@ -38,6 +40,7 @@ export default function LibraryScreen() {
   const { cartCount } = useCart();
   const [stores, setStores] = useState<StoreCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const contentWidth = Math.min(windowWidth, 960);
 
   const fetchStores = async () => {
     try {
@@ -218,7 +221,7 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea as any}>
-      <View style={styles.header as any}>
+      <View style={[styles.header as any, { width: contentWidth, alignSelf: "center" }]}>
         <View style={styles.headerTitleContainer as any}>
           <View style={styles.headerTitleRow as any}>
             <Ionicons name="sparkles" size={20} color="#fbbf24" style={styles.sparklesIcon as any} />
@@ -245,7 +248,10 @@ export default function LibraryScreen() {
         data={stores}
         renderItem={renderStoreItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent as any}
+        contentContainerStyle={[
+          styles.listContent as any,
+          { width: contentWidth, alignSelf: "center" },
+        ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer as any}>
             <Feather name="home" size={64} color="#27272a" style={styles.emptyIcon as any} />
@@ -271,6 +277,7 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   header: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
@@ -280,10 +287,12 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
+    minWidth: 0,
     alignItems: "flex-end",
   },
   headerTitleRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
   },
@@ -294,15 +303,19 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 22,
     fontWeight: "900",
     color: "#f97316",
+    flexShrink: 1,
+    textAlign: "right",
   },
   headerSubtitle: {
     fontSize: 12,
     color: themeColors.textMuted,
     marginTop: 4,
+    flexShrink: 1,
+    textAlign: "right",
   },
   cartButton: {
     width: 44,
-    height: 44,
+    minHeight: 44,
     borderRadius: 14,
     backgroundColor: "#ea580c",
     alignItems: "center",
@@ -389,10 +402,12 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   infoContainer: {
     flex: 1,
+    minWidth: 0,
     alignItems: "flex-end",
   },
   titleRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     marginBottom: 4,
   },
@@ -406,6 +421,8 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: themeColors.text,
+    flexShrink: 1,
+    textAlign: "right",
   },
   officialText: {
     color: isDark ? "#fef3c7" : "#78350f",
@@ -416,9 +433,12 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   storeDesc: {
     fontSize: 12,
     color: themeColors.textMuted,
+    flexShrink: 1,
+    textAlign: "right",
   },
   statsBar: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 10,
@@ -435,6 +455,7 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   productCountRow: {
     flexDirection: "row-reverse",
+    flexShrink: 1,
     alignItems: "center",
     gap: 6,
   },
@@ -444,6 +465,7 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   },
   ctaRow: {
     flexDirection: "row-reverse",
+    flexShrink: 1,
     alignItems: "center",
     gap: 4,
   },

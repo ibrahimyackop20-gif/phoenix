@@ -9,6 +9,7 @@ import {
   TextInput,
   Image,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -28,6 +29,9 @@ interface Profile {
 }
 
 export default function AdminUsersScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isNarrow = width < 420;
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -161,7 +165,7 @@ export default function AdminUsersScreen() {
       )}
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>إدارة المستخدمين</Text>
           <Text style={styles.headerSubtitle}>عرض وإدارة صلاحيات حسابات الطلاب</Text>
@@ -176,22 +180,22 @@ export default function AdminUsersScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="users" size={16} color="#f97316" style={styles.statIcon} />
             <Text style={styles.statValue}>{users.length}</Text>
             <Text style={styles.statLabel}>المجموع</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="user" size={16} color="#60a5fa" style={styles.statIcon} />
             <Text style={styles.statValue}>{studentCount}</Text>
             <Text style={styles.statLabel}>الطلاب</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="shield" size={16} color="#fbbf24" style={styles.statIcon} />
             <Text style={styles.statValue}>{adminCount}</Text>
             <Text style={styles.statLabel}>المديرين</Text>
@@ -327,6 +331,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -337,6 +343,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   refreshBtn: {
     width: 36,
@@ -352,18 +359,24 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 20,
   },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1000,
+    alignSelf: "center",
+  },
   statsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 8,
   },
   statCard: {
-    flex: 1,
     backgroundColor: "#18181b",
     borderWidth: 1,
     borderColor: "#27272a",
     borderRadius: 14,
     padding: 12,
     alignItems: "center",
+    minHeight: 100,
   },
   statIcon: {
     marginBottom: 6,
@@ -377,6 +390,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "center",
   },
   filterCard: {
     backgroundColor: "#18181b",
@@ -386,7 +400,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   searchInput: {
-    height: 40,
+    minHeight: 44,
     backgroundColor: "#09090b",
     borderRadius: 8,
     borderWidth: 1,
@@ -426,6 +440,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginBottom: 14,
+    flexWrap: "wrap",
   },
   avatarContainer: {
     width: 44,
@@ -447,16 +462,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "flex-end",
     gap: 2,
+    minWidth: 0,
   },
   nameRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
   },
   userName: {
     fontSize: 15,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   roleBadge: {
     borderRadius: 6,
@@ -494,13 +514,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#27272a",
     paddingTop: 12,
+    flexWrap: "wrap",
   },
   roleActionBtn: {
     flex: 1,
+    minWidth: 150,
     backgroundColor: "#09090b",
     borderWidth: 1,
     borderColor: "#27272a",
-    height: 36,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -509,12 +533,15 @@ const styles = StyleSheet.create({
     color: "#f4f4f5",
     fontSize: 12,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   deleteActionBtn: {
     backgroundColor: "rgba(239, 68, 68, 0.08)",
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.2)",
-    height: 36,
+    minHeight: 44,
+    paddingVertical: 10,
     borderRadius: 8,
     paddingHorizontal: 16,
     alignItems: "center",
@@ -524,5 +551,6 @@ const styles = StyleSheet.create({
     color: "#ef4444",
     fontSize: 12,
     fontWeight: "bold",
+    textAlign: "center",
   },
 });

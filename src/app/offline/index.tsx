@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -24,7 +25,7 @@ export default function OfflineScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.iconOuter}>
           <View style={styles.iconGlow} />
           <View style={styles.iconBadge}>
@@ -53,7 +54,7 @@ export default function OfflineScreen() {
             <Text style={styles.secondaryButtonText}>{t("offline_past_orders")}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -65,10 +66,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
       backgroundColor: themeColors.background,
     },
     container: {
-      flex: 1,
+      flexGrow: 1,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 24,
+      paddingVertical: 32,
+      width: "100%",
+      maxWidth: 640,
+      alignSelf: "center",
     },
     iconOuter: {
       position: "relative",
@@ -105,6 +110,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
       fontSize: 12,
       fontWeight: "bold",
       color: "#fbbf24",
+      textAlign: "center",
+      flexShrink: 1,
     },
     titleText: {
       fontSize: 26,
@@ -124,6 +131,9 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
     actionsRow: {
       flexDirection: "row-reverse",
       gap: 12,
+      flexWrap: "wrap",
+      justifyContent: "center",
+      width: "100%",
     },
     primaryButton: {
       backgroundColor: "#ea580c",
@@ -132,11 +142,15 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
+      minHeight: 48,
+      maxWidth: "100%",
     },
     primaryButtonText: {
       color: "#ffffff",
       fontSize: 13,
       fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
     },
     secondaryButton: {
       backgroundColor: themeColors.cardBg,
@@ -147,10 +161,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"]) =
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
+      minHeight: 48,
+      maxWidth: "100%",
     },
     secondaryButtonText: {
       color: themeColors.text,
       fontSize: 13,
       fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
     },
   });

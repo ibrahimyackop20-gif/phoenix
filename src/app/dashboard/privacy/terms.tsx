@@ -89,7 +89,8 @@ const styles = StyleSheet.create({
   },
   appBar: {
     flexDirection: "row-reverse",
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -106,10 +107,15 @@ const styles = StyleSheet.create({
   appBarTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   introHeader: {
     alignItems: "center",
@@ -127,10 +133,14 @@ const styles = StyleSheet.create({
   introTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   introDate: {
     fontSize: 11,
     marginTop: 6,
+    textAlign: "center",
+    flexShrink: 1,
   },
   contentBody: {
     gap: 16,
@@ -145,10 +155,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 8,
     textAlign: "right",
+    flexShrink: 1,
   },
   sectionText: {
     fontSize: 12,
     lineHeight: 20,
     textAlign: "right",
+    flexShrink: 1,
   },
 });

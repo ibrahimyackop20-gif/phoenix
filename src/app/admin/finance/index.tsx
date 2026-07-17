@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   Linking,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -31,6 +32,9 @@ interface WalletTopup {
 }
 
 export default function FinanceScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isNarrow = width < 420;
   const router = useRouter();
   const [requests, setRequests] = useState<WalletTopup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +195,7 @@ export default function FinanceScreen() {
         </View>
       )}
 
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>طلبات المحفظة</Text>
           <Text style={styles.headerSubtitle}>مراجعة وتأكيد طلبات شحن المحفظة</Text>
@@ -210,15 +214,15 @@ export default function FinanceScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="clock" size={16} color="#fbbf24" style={styles.statIcon} />
             <Text style={[styles.statValue, { color: "#fbbf24" }]}>{pendingRequests.length}</Text>
             <Text style={styles.statLabel}>طلبات معلقة</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="dollar-sign" size={16} color="#ea580c" style={styles.statIcon} />
             <Text style={[styles.statValue, { color: "#ea580c" }]}>
               {pendingTotal.toLocaleString()} د.ع
@@ -226,7 +230,7 @@ export default function FinanceScreen() {
             <Text style={styles.statLabel}>قيد المراجعة</Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { width: isNarrow ? "100%" : isTablet ? "31.5%" : "48%" }]}>
             <Feather name="check-circle" size={16} color="#10b981" style={styles.statIcon} />
             <Text style={[styles.statValue, { color: "#10b981" }]}>
               {approvedTotal.toLocaleString()} د.ع
@@ -386,6 +390,7 @@ const styles = StyleSheet.create({
   headerTextContainer: {
     alignItems: "flex-end",
     flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -396,6 +401,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   headerActions: {
     flexDirection: "row-reverse",
@@ -425,18 +431,24 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 20,
   },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1000,
+    alignSelf: "center",
+  },
   statsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 8,
   },
   statCard: {
-    flex: 1,
     backgroundColor: "#18181b",
     borderWidth: 1,
     borderColor: "#27272a",
     borderRadius: 14,
     padding: 12,
     alignItems: "center",
+    minHeight: 104,
   },
   statIcon: {
     marginBottom: 6,
@@ -444,11 +456,13 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: "bold",
+    textAlign: "center",
   },
   statLabel: {
     fontSize: 9,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "center",
   },
   listSection: {
     gap: 12,
@@ -489,11 +503,14 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
   },
   requestCode: {
     color: "#a1a1aa",
     fontSize: 12,
     fontWeight: "600",
+    flexShrink: 1,
   },
   pendingBadge: {
     backgroundColor: "rgba(251, 191, 36, 0.15)",
@@ -536,6 +553,7 @@ const styles = StyleSheet.create({
     color: "#d4d4d8",
     fontSize: 13,
     textAlign: "right",
+    flexShrink: 1,
   },
   amountText: {
     color: "#ea580c",
@@ -571,21 +589,28 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: 8,
     marginTop: 4,
+    flexWrap: "wrap",
   },
   approveBtn: {
     flex: 1,
+    minWidth: 180,
     backgroundColor: "#ea580c",
     borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: "center",
   },
   approveBtnText: {
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "700",
+    textAlign: "center",
+    flexShrink: 1,
   },
   rejectBtn: {
     paddingHorizontal: 18,
+    minHeight: 48,
+    paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#3f3f46",
@@ -596,5 +621,6 @@ const styles = StyleSheet.create({
     color: "#f4f4f5",
     fontSize: 13,
     fontWeight: "600",
+    textAlign: "center",
   },
 });

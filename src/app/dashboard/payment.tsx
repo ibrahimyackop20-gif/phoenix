@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Clipboard,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { pickDocumentWithPermission } from "../../../lib/filePermissions";
@@ -30,6 +31,9 @@ interface Order {
 export default function PaymentScreen() {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,7 +229,10 @@ export default function PaymentScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, isTablet && styles.tabletContent]}
+        keyboardShouldPersistTaps="handled"
+      >
         {successMsg && (
           <View style={styles.toastSuccess}>
             <Text style={styles.toastText}>{successMsg}</Text>
@@ -244,7 +251,7 @@ export default function PaymentScreen() {
         </View>
 
         {/* Balance cards grid */}
-        <View style={styles.metricsRow}>
+        <View style={[styles.metricsRow, isCompact && styles.stackedRow]}>
           <View style={[styles.metricCard, styles.metricCardPrimary, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
             <Ionicons name="wallet-outline" size={18} color="#ea580c" />
             <Text style={styles.metricValuePrimary}>{walletBalance.toLocaleString()} {t("currency")}</Text>
@@ -423,6 +430,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+  },
+  tabletContent: {
+    maxWidth: 900,
+    alignSelf: "center",
   },
   header: {
     alignItems: "flex-end",
@@ -438,16 +450,21 @@ const styles = StyleSheet.create({
   },
   metricsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 20,
   },
   metricCard: {
     flex: 1,
+    minWidth: 100,
     borderWidth: 1,
     borderRadius: 16,
     padding: 12,
     alignItems: "center",
     gap: 4,
+  },
+  stackedRow: {
+    flexDirection: "column",
   },
   metricCardPrimary: {
     backgroundColor: "rgba(234, 88, 12, 0.05)",
@@ -464,6 +481,8 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: 9,
     color: "#71717a",
+    textAlign: "center",
+    flexShrink: 1,
   },
   glassCard: {
     borderWidth: 1,
@@ -500,6 +519,8 @@ const styles = StyleSheet.create({
   paymentAccountTitle: {
     fontSize: 12,
     fontWeight: "bold",
+    flexShrink: 1,
+    textAlign: "right",
   },
   copyBtn: {
     padding: 4,
@@ -513,6 +534,8 @@ const styles = StyleSheet.create({
   paymentAccountDesc: {
     fontSize: 10,
     color: "#71717a",
+    textAlign: "right",
+    flexShrink: 1,
   },
   cashTitle: {
     fontSize: 12,
@@ -562,8 +585,9 @@ const styles = StyleSheet.create({
   inputWrapper: {
     borderWidth: 1,
     borderRadius: 12,
-    height: 44,
+    minHeight: 44,
     paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   textInput: {
     flex: 1,
@@ -573,7 +597,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderRadius: 12,
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -584,18 +610,24 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "center",
   },
   screenshotPickerText: {
     fontSize: 12,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   orderSummaryGrid: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 8,
   },
   summaryBox: {
     flex: 1,
+    minWidth: 90,
     alignItems: "center",
   },
   summaryVal: {
@@ -605,5 +637,7 @@ const styles = StyleSheet.create({
   },
   summaryLbl: {
     fontSize: 10,
+    textAlign: "center",
+    flexShrink: 1,
   },
 });

@@ -179,6 +179,9 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       justifyContent: "center",
       paddingHorizontal: 24,
       paddingVertical: 40,
+      width: "100%",
+      maxWidth: 560,
+      alignSelf: "center",
     },
     header: {
       alignItems: "center",
@@ -203,10 +206,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       fontWeight: "bold",
       color: "#f97316",
       marginBottom: 8,
+      textAlign: "center",
+      flexShrink: 1,
     },
     subtitleText: {
       fontSize: 14,
       color: themeColors.textMuted,
+      textAlign: "center",
+      flexShrink: 1,
     },
     card: {
       backgroundColor: themeColors.cardBg,
@@ -269,7 +276,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderColor: themeColors.cardBorder,
       borderRadius: 12,
       paddingHorizontal: 12,
-      height: 48,
+      minHeight: 48,
+      paddingVertical: 6,
     },
     fieldIcon: {
       marginRight: 8,
@@ -278,7 +286,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flex: 1,
       color: themeColors.text,
       fontSize: 14,
-      height: "100%",
+      minHeight: 40,
+      paddingVertical: 8,
     },
     eyeButton: {
       padding: 8,
@@ -286,7 +295,9 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     submitButton: {
       backgroundColor: "#ea580c",
       borderRadius: 12,
-      height: 48,
+      minHeight: 48,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
       alignItems: "center",
       justifyContent: "center",
       marginTop: 8,
@@ -301,11 +312,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
+      flexWrap: "wrap",
     },
     submitButtonText: {
       color: "#ffffff",
       fontSize: 14,
       fontWeight: "bold",
+      textAlign: "center",
+      flexShrink: 1,
     },
     buttonIcon: {
       marginLeft: 8,

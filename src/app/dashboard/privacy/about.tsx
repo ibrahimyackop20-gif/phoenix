@@ -99,7 +99,8 @@ const styles = StyleSheet.create({
   },
   appBar: {
     flexDirection: "row-reverse",
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -116,10 +117,15 @@ const styles = StyleSheet.create({
   appBarTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   brandSection: {
     alignItems: "center",
@@ -157,6 +163,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 12,
+    gap: 12,
+    flexWrap: "wrap",
   },
   rowBorder: {
     borderTopWidth: 1,
@@ -164,9 +172,11 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 12,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   infoValue: {
     fontSize: 12,
+    flexShrink: 1,
   },
   sectionTitle: {
     fontSize: 13,
@@ -180,14 +190,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 12,
+    gap: 12,
+    flexWrap: "wrap",
   },
   licenseName: {
     fontSize: 12,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   licenseText: {
     fontSize: 11,
     color: "#71717a",
+    flexShrink: 1,
   },
   copyrightText: {
     fontSize: 10,

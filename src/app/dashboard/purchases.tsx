@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   FlatList,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -75,6 +76,10 @@ const formatDate = (dateString: string) => {
 export default function PurchasesScreen() {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
+  const styles = getStyles(isCompact, isTablet);
   const router = useRouter();
   const params = useLocalSearchParams();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
@@ -345,7 +350,7 @@ export default function PurchasesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (isCompact: boolean, isTablet: boolean) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -361,6 +366,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
+    width: "100%",
+    maxWidth: isTablet ? 900 : undefined,
+    alignSelf: "center",
   },
   refreshButton: {
     width: 40,
@@ -371,6 +379,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     alignItems: "flex-end",
+    flex: 1,
+    marginLeft: 12,
   },
   title: {
     fontSize: 24,
@@ -385,6 +395,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 32,
+    width: "100%",
+    maxWidth: isTablet ? 900 : undefined,
+    alignSelf: "center",
   },
   emptyTitle: {
     fontSize: 16,
@@ -424,6 +437,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
+    width: "100%",
+    maxWidth: isTablet ? 700 : undefined,
+    alignSelf: "center",
   },
   successBadge: {
     width: 80,
@@ -438,6 +454,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 8,
+    textAlign: "center",
   },
   successSubtitle: {
     fontSize: 13,
@@ -446,12 +463,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   successActions: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column" : "row-reverse",
     gap: 16,
+    width: "100%",
   },
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: isTablet ? 900 : undefined,
+    alignSelf: "center",
   },
   orderCard: {
     borderWidth: 1,
@@ -463,9 +484,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(239, 68, 68, 0.2)",
   },
   cardHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column" : "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isCompact ? "stretch" : "center",
+    gap: isCompact ? 8 : 0,
     marginBottom: 12,
   },
   statusBadge: {
@@ -499,22 +521,27 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 12,
+    flexWrap: "wrap",
   },
   totalPrice: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#ea580c",
+    flexShrink: 1,
   },
   storeLocationRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column" : "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isCompact ? "flex-end" : "center",
+    gap: isCompact ? 6 : 0,
     marginBottom: 10,
   },
   storeNameText: {
     fontSize: 11,
     fontWeight: "bold",
     color: "#ea580c",
+    flexShrink: 1,
+    textAlign: "right",
   },
   storeRow: {
     flexDirection: "row-reverse",
@@ -530,18 +557,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   itemRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column-reverse" : "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isCompact ? "flex-end" : "center",
+    gap: isCompact ? 4 : 0,
     paddingVertical: 4,
   },
   itemNameWrapper: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
+    flexShrink: 1,
   },
   itemName: {
     fontSize: 12,
+    flexShrink: 1,
+    textAlign: "right",
   },
   itemQty: {
     fontSize: 11,
@@ -551,9 +582,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   shippingRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column-reverse" : "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isCompact ? "flex-end" : "center",
+    gap: isCompact ? 4 : 0,
     borderTopWidth: 1,
     borderTopColor: "rgba(113, 113, 122, 0.2)",
     paddingTop: 6,
@@ -589,13 +621,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   progressCirclesRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isCompact ? "column" : "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "stretch",
+    gap: isCompact ? 8 : 0,
   },
   progressStepNode: {
     alignItems: "center",
-    flex: 1,
+    flex: isCompact ? 0 : 1,
+    flexDirection: isCompact ? "row-reverse" : "column",
+    gap: isCompact ? 10 : 0,
   },
   stepCircle: {
     width: 24,
@@ -612,6 +647,8 @@ const styles = StyleSheet.create({
   },
   stepLabelText: {
     fontSize: 9,
+    flexShrink: 1,
+    textAlign: isCompact ? "right" : "center",
   },
   stepLabelCompleted: {
     color: "#34d399",

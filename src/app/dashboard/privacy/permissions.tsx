@@ -138,7 +138,8 @@ const styles = StyleSheet.create({
   },
   appBar: {
     flexDirection: "row-reverse",
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -155,10 +156,15 @@ const styles = StyleSheet.create({
   appBarTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   sectionDesc: {
     fontSize: 13,
@@ -180,6 +186,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+    flexWrap: "wrap",
+    gap: 8,
   },
   headerTitleRow: {
     flexDirection: "row-reverse",
@@ -209,6 +217,8 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   permDesc: {
     fontSize: 11,
@@ -216,7 +226,9 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   settingsButton: {
-    height: 46,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: "#ea580c",
     borderRadius: 12,
     flexDirection: "row-reverse",
@@ -228,6 +240,8 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   btnIcon: {
     marginLeft: 4,

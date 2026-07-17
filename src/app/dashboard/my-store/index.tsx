@@ -11,6 +11,7 @@ import {
   Modal,
   Platform,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
@@ -55,12 +56,18 @@ interface Coupon {
 }
 
 export default function MyStoreIndexScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const router = useRouter();
   const [store, setStore] = useState<StoreData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [salesStats, setSalesStats] = useState({ itemsSold: 0, totalRevenue: 0 });
+  const contentWidth = Math.min(windowWidth, 1080);
+  const productColumns = contentWidth >= 1000 ? 4 : contentWidth >= 700 ? 3 : 2;
+  const productGap = 12;
+  const productCardWidth =
+    (contentWidth - 40 - productGap * (productColumns - 1)) / productColumns;
 
   // Store creation state
   const [storeName, setStoreName] = useState("");
@@ -592,7 +599,12 @@ export default function MyStoreIndexScreen() {
   if (!store) {
     return (
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { width: contentWidth, alignSelf: "center" },
+          ]}
+        >
           {errorMsg && (
             <View style={styles.toastError}>
               <Text style={styles.toastText}>{errorMsg}</Text>
@@ -678,7 +690,12 @@ export default function MyStoreIndexScreen() {
   if (!store.is_verified) {
     return (
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { width: contentWidth, alignSelf: "center" },
+          ]}
+        >
           <View style={styles.glassCard}>
             <View style={styles.logoRow}>
               <TouchableOpacity onPress={handleLogoPicker} disabled={uploadingLogo} style={styles.logoBadge}>
@@ -725,7 +742,12 @@ export default function MyStoreIndexScreen() {
   // ── Store verified management dashboard ───────────
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { width: contentWidth, alignSelf: "center" },
+        ]}
+      >
         {successMsg && (
           <View style={styles.toastSuccess}>
             <Text style={styles.toastText}>{successMsg}</Text>
@@ -980,7 +1002,10 @@ export default function MyStoreIndexScreen() {
           ) : (
             <View style={styles.productsGrid}>
               {products.map((prod) => (
-                <View key={prod.id} style={styles.productCard}>
+                <View
+                  key={prod.id}
+                  style={[styles.productCard, { width: productCardWidth }]}
+                >
                   <View style={styles.productImageContainer}>
                     {prod.image_url ? (
                       <Image source={{ uri: prod.image_url }} style={styles.productImage} />
@@ -1013,7 +1038,12 @@ export default function MyStoreIndexScreen() {
         {/* Product Add/Edit Modal Form */}
         <Modal visible={showProductForm} transparent animationType="slide">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View
+              style={[
+                styles.modalContent,
+                { width: "100%", maxWidth: 720, alignSelf: "center" },
+              ]}
+            >
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={resetProductForm}>
                   <Feather name="x" size={20} color="#a1a1aa" />
@@ -1228,12 +1258,14 @@ const styles = StyleSheet.create({
   },
   benefitsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 8,
     marginBottom: 24,
   },
   benefitBox: {
     flex: 1,
+    minWidth: 100,
     backgroundColor: "#18181b",
     borderColor: "#27272a",
     borderWidth: 1,
@@ -1267,6 +1299,7 @@ const styles = StyleSheet.create({
   },
   logoRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 16,
   },
@@ -1298,17 +1331,22 @@ const styles = StyleSheet.create({
   },
   logoTexts: {
     flex: 1,
+    minWidth: 0,
     alignItems: "flex-end",
   },
   storeNameText: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   storeDescText: {
     fontSize: 12,
     color: "#a1a1aa",
     marginTop: 4,
+    flexShrink: 1,
+    textAlign: "right",
   },
   productCountText: {
     fontSize: 11,
@@ -1317,6 +1355,7 @@ const styles = StyleSheet.create({
   },
   nameVerifiedRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
   },
@@ -1387,11 +1426,14 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
   },
   headerText: {
+    flex: 1,
+    minWidth: 180,
     alignItems: "flex-end",
   },
   title: {
@@ -1403,14 +1445,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#a1a1aa",
     marginTop: 4,
+    flexShrink: 1,
+    textAlign: "right",
   },
   headerButtons: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    flexShrink: 1,
     gap: 8,
   },
   headerSettingsButton: {
     width: 36,
-    height: 36,
+    minHeight: 36,
     borderRadius: 10,
     backgroundColor: "#18181b",
     borderColor: "#27272a",
@@ -1426,7 +1472,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
-    height: 36,
+    minHeight: 36,
+    paddingVertical: 8,
   },
   headerAddButton: {
     flexDirection: "row-reverse",
@@ -1434,7 +1481,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#ea580c",
     borderRadius: 10,
     paddingHorizontal: 12,
-    height: 36,
+    minHeight: 36,
+    paddingVertical: 8,
   },
   headerButtonText: {
     color: "#f4f4f5",
@@ -1451,11 +1499,13 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 20,
   },
   statsCard: {
     flex: 1,
+    minWidth: 220,
     flexDirection: "row-reverse",
     alignItems: "center",
     backgroundColor: "#18181b",
@@ -1477,12 +1527,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(52, 211, 153, 0.1)",
   },
   statsInfo: {
+    flex: 1,
+    minWidth: 0,
     alignItems: "flex-end",
   },
   statsNumber: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   statsLabel: {
     fontSize: 10,
@@ -1491,11 +1545,14 @@ const styles = StyleSheet.create({
   },
   accordionHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
   },
   accordionTitleRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    flexShrink: 1,
     alignItems: "center",
     gap: 8,
   },
@@ -1531,11 +1588,13 @@ const styles = StyleSheet.create({
   },
   formRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 12,
   },
   formCol: {
     flex: 1,
+    minWidth: 140,
   },
   formLabel: {
     fontSize: 11,
@@ -1548,7 +1607,8 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     borderWidth: 1,
     borderRadius: 10,
-    height: 40,
+    minHeight: 40,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     color: "#f4f4f5",
     fontSize: 13,
@@ -1558,7 +1618,7 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     borderWidth: 1,
     borderRadius: 10,
-    height: 40,
+    minHeight: 40,
     overflow: "hidden",
   },
   couponToggleButton: {
@@ -1566,6 +1626,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#18181b",
+    minHeight: 40,
+    paddingVertical: 8,
   },
   couponToggleActive: {
     backgroundColor: "rgba(234, 88, 12, 0.1)",
@@ -1579,7 +1641,8 @@ const styles = StyleSheet.create({
     color: "#ea580c",
   },
   primaryButtonCompact: {
-    height: 38,
+    minHeight: 38,
+    paddingVertical: 8,
     backgroundColor: "#ea580c",
     borderRadius: 10,
     alignItems: "center",
@@ -1605,6 +1668,7 @@ const styles = StyleSheet.create({
   },
   couponCard: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -1617,6 +1681,7 @@ const styles = StyleSheet.create({
   },
   couponCardInfo: {
     flex: 1,
+    minWidth: 120,
     alignItems: "flex-end",
   },
   couponCardCode: {
@@ -1624,11 +1689,15 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#f4f4f5",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    flexShrink: 1,
+    textAlign: "right",
   },
   couponCardDesc: {
     fontSize: 11,
     color: "#71717a",
     marginTop: 2,
+    flexShrink: 1,
+    textAlign: "right",
   },
   couponStatusButton: {
     paddingHorizontal: 8,
@@ -1694,11 +1763,10 @@ const styles = StyleSheet.create({
   productsGrid: {
     flexDirection: "row-reverse",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     gap: 12,
   },
   productCard: {
-    width: "48%",
     backgroundColor: "#18181b",
     borderColor: "#27272a",
     borderWidth: 1,
@@ -1724,6 +1792,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   productCategory: {
     fontSize: 10,
@@ -1735,6 +1805,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
     marginTop: 8,
   },
   productPrice: {
@@ -1807,7 +1878,8 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     borderWidth: 1,
     borderRadius: 12,
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 6,
     paddingHorizontal: 12,
   },
   textInput: {
@@ -1833,12 +1905,15 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     borderWidth: 1,
     borderRadius: 12,
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 8,
     paddingHorizontal: 12,
   },
   dropdownSelectorText: {
     color: "#f4f4f5",
     fontSize: 13,
+    flexShrink: 1,
+    textAlign: "right",
   },
   dropdownMenu: {
     backgroundColor: "#09090b",
@@ -1887,12 +1962,14 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: "#27272a",
     borderRadius: 12,
-    height: 80,
+    minHeight: 80,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   imagePickerDashedInner: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
   },
@@ -1901,7 +1978,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   primaryButton: {
-    height: 46,
+    minHeight: 46,
+    paddingVertical: 10,
     backgroundColor: "#ea580c",
     borderRadius: 12,
     alignItems: "center",
@@ -1915,6 +1993,7 @@ const styles = StyleSheet.create({
   },
   buttonInner: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
   },

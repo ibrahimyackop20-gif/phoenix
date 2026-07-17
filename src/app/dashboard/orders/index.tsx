@@ -8,6 +8,7 @@ import {
   FlatList,
   ScrollView,
   I18nManager,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -45,7 +46,10 @@ export default function OrdersScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { themeColors, isDark } = useAppTheme();
-  const styles = getStyles(themeColors, isDark);
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
+  const styles = getStyles(themeColors, isDark, isCompact, isTablet);
   const { highlight, orderId } = useLocalSearchParams<{
     highlight?: string;
     orderId?: string;
@@ -433,7 +437,12 @@ export default function OrdersScreen() {
   );
 }
 
-const getStyles = (themeColors: { background: string; cardBg: string; cardBorder: string; text: string; textMuted: string }, isDark: boolean) =>
+const getStyles = (
+  themeColors: { background: string; cardBg: string; cardBorder: string; text: string; textMuted: string },
+  isDark: boolean,
+  isCompact: boolean,
+  isTablet: boolean
+) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: themeColors.background },
     loadingContainer: {
@@ -459,10 +468,13 @@ const getStyles = (themeColors: { background: string; cardBg: string; cardBorder
       paddingHorizontal: 20,
       paddingTop: 16,
       paddingBottom: 12,
+      width: "100%",
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
     },
     refreshButton: {
       width: 40,
-      height: 40,
+      minHeight: 40,
       borderRadius: 12,
       backgroundColor: themeColors.cardBg,
       borderColor: themeColors.cardBorder,
@@ -470,15 +482,17 @@ const getStyles = (themeColors: { background: string; cardBg: string; cardBorder
       alignItems: "center",
       justifyContent: "center",
     },
-    headerText: { alignItems: "flex-end" },
+    headerText: { alignItems: "flex-end", flex: 1, marginLeft: 12 },
     title: { fontSize: 24, fontWeight: "bold" },
     subtitle: { fontSize: 12, marginTop: 4 },
     tabsRow: {
       flexDirection: "row-reverse",
       paddingHorizontal: 20,
       gap: 8,
-      height: 46,
+      minHeight: 46,
       marginBottom: 16,
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
     },
     tabButton: {
       flexDirection: "row-reverse",
@@ -486,18 +500,25 @@ const getStyles = (themeColors: { background: string; cardBg: string; cardBorder
       borderWidth: 1,
       borderRadius: 12,
       paddingHorizontal: 16,
-      height: 38,
+      minHeight: 38,
+      paddingVertical: 9,
     },
     tabButtonActive: { backgroundColor: "#ea580c", borderColor: "#ea580c" },
     tabButtonActivePrint: { backgroundColor: "#3b82f6", borderColor: "#3b82f6" },
     tabButtonActiveLib: { backgroundColor: "#10b981", borderColor: "#10b981" },
     tabIcon: { marginLeft: 6 },
-    tabText: { fontSize: 12, fontWeight: "bold" },
+    tabText: { fontSize: 12, fontWeight: "bold", flexShrink: 1, textAlign: "center" },
     tabTextActive: { color: "#ffffff" },
     emptyCard: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
     emptyTitle: { fontSize: 16, fontWeight: "bold", marginTop: 16, marginBottom: 8 },
     emptySubtitle: { fontSize: 13, textAlign: "center", lineHeight: 18 },
-    listContent: { paddingHorizontal: 20, paddingBottom: 40 },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 40,
+      width: "100%",
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
+    },
     orderCard: {
       borderWidth: 1,
       borderRadius: 20,
@@ -506,12 +527,14 @@ const getStyles = (themeColors: { background: string; cardBg: string; cardBorder
     },
     cardTop: {
       flexDirection: "row-reverse",
+      flexWrap: "wrap",
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: 10,
     },
     cardTopLeft: {
       flexDirection: "row-reverse",
+      flexWrap: "wrap",
       alignItems: "center",
       gap: 8,
       flex: 1,
@@ -556,21 +579,21 @@ const getStyles = (themeColors: { background: string; cardBg: string; cardBorder
       marginBottom: 12,
     },
     metaGrid: {
-      flexDirection: "row-reverse",
+      flexDirection: isCompact ? "column" : "row-reverse",
       gap: 12,
       marginBottom: 12,
     },
-    metaItem: { flex: 1, alignItems: "flex-end" },
+    metaItem: { flex: isCompact ? 0 : 1, alignItems: "flex-end" },
     metaLabel: { fontSize: 10, marginBottom: 2 },
     metaValue: { fontSize: 13, fontWeight: "700" },
     datesRow: {
-      flexDirection: "row-reverse",
+      flexDirection: isCompact ? "column" : "row-reverse",
       gap: 12,
       borderTopWidth: 1,
       borderTopColor: themeColors.cardBorder,
       paddingTop: 10,
     },
-    dateCol: { flex: 1, alignItems: "flex-end" },
+    dateCol: { flex: isCompact ? 0 : 1, alignItems: "flex-end" },
     dateLabel: { fontSize: 10, marginBottom: 2 },
     dateValue: { fontSize: 11, fontWeight: "500" },
     rejectedNotice: {

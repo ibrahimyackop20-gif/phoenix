@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -44,6 +45,9 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { fullName: ctxName, avatarUrl: ctxAvatar, refreshProfile } = useProfile();
   const { t, i18n } = useTranslation();
+  const { width, fontScale } = useWindowDimensions();
+  const isCompact = width < 390 || fontScale >= 1.3;
+  const isTablet = width >= 700;
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,7 +57,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
 
   const { theme: currentTheme, setTheme: handleThemeToggle, themeColors } = useAppTheme();
-  const styles = getStyles(themeColors);
+  const styles = getStyles(themeColors, isCompact, isTablet);
   const currentLanguage = i18n.language || "ar";
 
   const handleLanguageChange = async (lang: "ar" | "en") => {
@@ -484,7 +488,7 @@ export default function ProfileScreen() {
                 </Text>
               </TouchableOpacity>
               {newLat && (newLandmark || newArea) ? (
-                <Text style={[styles.selectedLocationHint, { color: themeColors.textMuted }]} numberOfLines={2}>
+                <Text style={[styles.selectedLocationHint, { color: themeColors.textMuted }]}>
                   {newLandmark || newArea}
                 </Text>
               ) : null}
@@ -714,7 +718,7 @@ const getStyles = (themeColors: {
   inputBg: string;
   inputBorder: string;
   disabledBg: string;
-}) =>
+}, isCompact: boolean, isTablet: boolean) =>
   StyleSheet.create({
   container: {
     flex: 1,
@@ -752,6 +756,9 @@ const getStyles = (themeColors: {
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    width: "100%",
+    maxWidth: isTablet ? 900 : undefined,
+    alignSelf: "center",
   },
   header: {
     alignItems: "flex-end",
@@ -808,11 +815,15 @@ const getStyles = (themeColors: {
     fontWeight: "bold",
     color: themeColors.text,
     marginTop: 12,
+    textAlign: "center",
+    flexShrink: 1,
   },
   userEmail: {
     fontSize: 12,
     color: themeColors.textMuted,
     marginTop: 2,
+    textAlign: "center",
+    flexShrink: 1,
   },
   avatarTip: {
     fontSize: 11,
@@ -846,8 +857,9 @@ const getStyles = (themeColors: {
     borderColor: themeColors.inputBorder,
     borderWidth: 1,
     borderRadius: 12,
-    height: 44,
+    minHeight: 44,
     paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   inputWrapperDisabled: {
     opacity: 0.5,
@@ -870,7 +882,9 @@ const getStyles = (themeColors: {
     textAlign: "right",
   },
   primaryButton: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     backgroundColor: "#ea580c",
     borderRadius: 12,
     alignItems: "center",
@@ -883,9 +897,10 @@ const getStyles = (themeColors: {
     fontWeight: "bold",
   },
   addressesHeader: {
-    flexDirection: "row",
+    flexDirection: isCompact ? "column-reverse" : "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isCompact ? "flex-end" : "center",
+    gap: 10,
     marginBottom: 20,
   },
   addAddressBtn: {
@@ -916,12 +931,15 @@ const getStyles = (themeColors: {
   },
   titlesTabsRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 16,
   },
   titleTab: {
-    flex: 1,
-    height: 32,
+    flexGrow: 1,
+    flexBasis: isCompact ? "46%" : 0,
+    minHeight: 32,
+    paddingVertical: 7,
     borderRadius: 8,
     backgroundColor: themeColors.cardBg,
     borderColor: themeColors.cardBorder,
@@ -945,7 +963,9 @@ const getStyles = (themeColors: {
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "center",
-    height: 38,
+    minHeight: 38,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     backgroundColor: "rgba(234, 88, 12, 0.08)",
     borderColor: "rgba(234, 88, 12, 0.15)",
     borderWidth: 1,
@@ -978,13 +998,15 @@ const getStyles = (themeColors: {
     textAlign: "right",
   },
   formActions: {
-    flexDirection: "row",
+    flexDirection: isCompact ? "column" : "row",
     gap: 8,
     marginTop: 8,
   },
   primaryButtonCompact: {
     flex: 1,
-    height: 38,
+    minHeight: 38,
+    paddingVertical: 9,
+    width: isCompact ? "100%" : undefined,
     backgroundColor: "#ea580c",
     borderRadius: 10,
     alignItems: "center",
@@ -997,7 +1019,9 @@ const getStyles = (themeColors: {
   },
   secondaryButtonCompact: {
     flex: 1,
-    height: 38,
+    minHeight: 38,
+    paddingVertical: 9,
+    width: isCompact ? "100%" : undefined,
     backgroundColor: themeColors.cardBg,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
@@ -1014,8 +1038,9 @@ const getStyles = (themeColors: {
     gap: 12,
   },
   addressCard: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
+    flexDirection: isCompact ? "column-reverse" : "row-reverse",
+    alignItems: isCompact ? "flex-end" : "center",
+    gap: isCompact ? 8 : 0,
     padding: 12,
     backgroundColor: themeColors.background,
     borderColor: themeColors.cardBorder,
@@ -1032,7 +1057,7 @@ const getStyles = (themeColors: {
   },
   addressInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: isCompact ? 0 : 12,
     alignItems: "flex-end",
   },
   addressTitle: {
@@ -1044,6 +1069,8 @@ const getStyles = (themeColors: {
     fontSize: 11,
     color: themeColors.textMuted,
     marginTop: 2,
+    textAlign: "right",
+    flexShrink: 1,
   },
   addressPhoneText: {
     fontSize: 10,
@@ -1072,9 +1099,10 @@ const getStyles = (themeColors: {
     textAlign: "center",
   },
   preferenceRow: {
-    flexDirection: "row",
+    flexDirection: isCompact ? "column-reverse" : "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isCompact ? "stretch" : "center",
+    gap: isCompact ? 12 : 0,
     paddingVertical: 12,
   },
   prefRowBorder: {
@@ -1103,11 +1131,14 @@ const getStyles = (themeColors: {
     borderWidth: 1,
     borderRadius: 8,
     overflow: "hidden",
+    alignSelf: isCompact ? "stretch" : "auto",
   },
   langBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: themeColors.background,
+    flex: isCompact ? 1 : 0,
+    alignItems: "center",
   },
   langBtnActive: {
     backgroundColor: "rgba(234, 88, 12, 0.1)",
@@ -1126,6 +1157,7 @@ const getStyles = (themeColors: {
     borderWidth: 1,
     borderRadius: 8,
     overflow: "hidden",
+    alignSelf: isCompact ? "stretch" : "auto",
   },
   themeBtn: {
     flexDirection: "row-reverse",
@@ -1134,6 +1166,8 @@ const getStyles = (themeColors: {
     paddingVertical: 6,
     backgroundColor: themeColors.background,
     gap: 4,
+    flex: isCompact ? 1 : 0,
+    justifyContent: "center",
   },
   themeBtnActive: {
     backgroundColor: "rgba(234, 88, 12, 0.1)",

@@ -306,7 +306,8 @@ const styles = StyleSheet.create({
   },
   appBar: {
     flexDirection: "row-reverse",
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -323,9 +324,15 @@ const styles = StyleSheet.create({
   appBarTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 40,
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   sectionDesc: {
     fontSize: 13,
@@ -350,16 +357,20 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
     alignItems: "flex-end",
+    minWidth: 0,
   },
   cardTitle: {
     fontSize: 14,
     fontWeight: "bold",
+    textAlign: "right",
+    flexShrink: 1,
   },
   cardDesc: {
     fontSize: 11,
     marginTop: 4,
     lineHeight: 16,
     textAlign: "right",
+    flexShrink: 1,
   },
   iconWrapper: {
     width: 40,

@@ -375,6 +375,7 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: themeColors.cardBorder,
+      minHeight: 56,
     },
     backBtn: {
       width: 40,
@@ -386,11 +387,16 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       fontSize: 16,
       fontWeight: "700",
       color: themeColors.text,
+      textAlign: "center",
+      flexShrink: 1,
     },
     scroll: {
       padding: 20,
       paddingBottom: 40,
       gap: 14,
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
     },
     headerTitle: {
       fontSize: 26,
@@ -436,6 +442,7 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       color: themeColors.text,
       marginBottom: 14,
       textAlign: "center",
+      flexShrink: 1,
     },
     cardActions: {
       flexDirection: "row",
@@ -452,11 +459,15 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 12,
+      minHeight: 44,
+      maxWidth: "100%",
     },
     primaryBtnText: {
       color: "#ffffff",
       fontSize: 13,
       fontWeight: "700",
+      textAlign: "center",
+      flexShrink: 1,
     },
     secondaryBtn: {
       flexDirection: "row",
@@ -468,11 +479,15 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 12,
+      minHeight: 44,
+      maxWidth: "100%",
     },
     secondaryBtnText: {
       color: themeColors.text,
       fontSize: 13,
       fontWeight: "600",
+      textAlign: "center",
+      flexShrink: 1,
     },
     formCard: {
       backgroundColor: themeColors.cardBg,
@@ -505,6 +520,7 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       paddingVertical: 12,
       color: themeColors.text,
       fontSize: 14,
+      minHeight: 48,
     },
     messageInput: {
       minHeight: 120,
@@ -526,6 +542,8 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       color: "#ffffff",
       fontSize: 15,
       fontWeight: "800",
+      textAlign: "center",
+      flexShrink: 1,
     },
     sendingHint: {
       marginTop: 8,
@@ -582,11 +600,13 @@ const getStyles = (themeColors: any, _isDark: boolean) =>
       paddingHorizontal: 10,
       alignItems: "center",
       gap: 6,
+      minHeight: 72,
     },
     quickBtnText: {
       fontSize: 12,
       fontWeight: "600",
       color: themeColors.text,
       textAlign: "center",
+      flexShrink: 1,
     },
   });

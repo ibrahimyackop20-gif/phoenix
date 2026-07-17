@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
@@ -31,6 +32,7 @@ interface Governorate {
 }
 
 export default function SellerShippingSettingsScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const router = useRouter();
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
@@ -38,6 +40,7 @@ export default function SellerShippingSettingsScreen() {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const contentWidth = Math.min(windowWidth, 900);
 
   // Status feedback states
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -188,7 +191,12 @@ export default function SellerShippingSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { width: contentWidth, alignSelf: "center" },
+        ]}
+      >
         {successMsg && (
           <View style={styles.toastSuccess}>
             <Text style={styles.toastText}>{successMsg}</Text>
@@ -319,15 +327,19 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
   headerText: {
+    flex: 1,
+    minWidth: 180,
     alignItems: "flex-end",
   },
   titleRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
   },
@@ -335,17 +347,21 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   subtitle: {
     fontSize: 12,
     color: "#a1a1aa",
     marginTop: 4,
+    flexShrink: 1,
+    textAlign: "right",
   },
   saveButton: {
     backgroundColor: "#ea580c",
     borderRadius: 10,
     paddingHorizontal: 16,
-    height: 38,
+    minHeight: 38,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -364,6 +380,7 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     backgroundColor: "rgba(96, 165, 250, 0.08)",
     borderColor: "rgba(96, 165, 250, 0.15)",
     borderWidth: 1,
@@ -442,6 +459,7 @@ const styles = StyleSheet.create({
   },
   zoneRow: {
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -450,12 +468,16 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(39, 39, 42, 0.5)",
   },
   zoneInfo: {
+    flex: 1,
+    minWidth: 140,
     alignItems: "flex-end",
   },
   zoneName: {
     fontSize: 13,
     fontWeight: "600",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   defaultCostText: {
     fontSize: 10,
@@ -464,6 +486,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     flexDirection: "row-reverse",
+    flexShrink: 0,
     alignItems: "center",
     gap: 6,
   },
@@ -473,7 +496,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     width: 80,
-    height: 32,
+    minHeight: 32,
+    paddingVertical: 4,
     color: "#f4f4f5",
     fontSize: 12,
   },

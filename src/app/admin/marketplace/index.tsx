@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -59,6 +60,9 @@ function parseSaleItems(items: unknown): { name: string; quantity: number; price
 }
 
 export default function AdminMarketplaceScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isNarrow = width < 420;
   const [tab, setTab] = useState<"categories" | "stores" | "sales">("categories");
   const [categories, setCategories] = useState<Category[]>([]);
   const [stores, setStores] = useState<StoreData[]>([]);
@@ -220,14 +224,14 @@ export default function AdminMarketplaceScreen() {
       )}
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>إدارة السوق</Text>
           <Text style={styles.headerSubtitle}>إدارة التصنيفات، المتاجر وطلبات المبيعات</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         {/* Navigation Tabs */}
         <View style={styles.tabsRow}>
           <TouchableOpacity
@@ -263,7 +267,7 @@ export default function AdminMarketplaceScreen() {
           <View style={styles.tabContent}>
             <View style={styles.card}>
               <Text style={styles.cardTitle}>إضافة تصنيف جديد</Text>
-              <View style={styles.addCatForm}>
+              <View style={[styles.addCatForm, isNarrow && styles.stackOnNarrow]}>
                 <TextInput
                   value={newCatName}
                   onChangeText={setNewCatName}
@@ -465,6 +469,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -475,17 +481,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   scrollContent: {
     padding: 20,
     gap: 20,
   },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1000,
+    alignSelf: "center",
+  },
   tabsRow: {
     flexDirection: "row-reverse",
     gap: 8,
+    flexWrap: "wrap",
   },
   tabBtn: {
     flex: 1,
+    minWidth: 90,
+    minHeight: 48,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: "center",
@@ -503,6 +518,8 @@ const styles = StyleSheet.create({
   tabBtnText: {
     fontSize: 13,
     fontWeight: "600",
+    textAlign: "center",
+    flexShrink: 1,
   },
   whiteText: {
     color: "#ffffff",
@@ -531,9 +548,12 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: 10,
   },
+  stackOnNarrow: {
+    flexDirection: "column",
+  },
   textInput: {
     flex: 1,
-    height: 44,
+    minHeight: 48,
     backgroundColor: "#09090b",
     borderRadius: 10,
     borderWidth: 1,
@@ -548,6 +568,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 48,
+    paddingVertical: 10,
   },
   submitBtnText: {
     color: "#ffffff",
@@ -573,10 +595,14 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     borderRadius: 12,
     padding: 14,
+    gap: 12,
+    flexWrap: "wrap",
   },
   listItemText: {
     color: "#f4f4f5",
     fontSize: 14,
+    flexShrink: 1,
+    textAlign: "right",
   },
   deleteBtn: {
     width: 28,
@@ -591,6 +617,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderWidth: 1,
+    minHeight: 44,
+    justifyContent: "center",
   },
   verifiedBtnBg: {
     backgroundColor: "rgba(239, 68, 68, 0.1)",
@@ -603,6 +631,7 @@ const styles = StyleSheet.create({
   verifyBtnText: {
     fontSize: 11,
     fontWeight: "bold",
+    textAlign: "center",
   },
   verifiedText: {
     color: "#ef4444",
@@ -612,6 +641,8 @@ const styles = StyleSheet.create({
   },
   storeInfoContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    minWidth: 140,
   },
   storeNameRow: {
     flexDirection: "row-reverse",
@@ -621,6 +652,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   storeOwnerText: {
     fontSize: 11,
@@ -648,6 +681,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: "#27272a",
     paddingBottom: 10,
+    gap: 8,
+    flexWrap: "wrap",
   },
   orderCode: {
     fontSize: 13,
@@ -682,6 +717,8 @@ const styles = StyleSheet.create({
   orderText: {
     fontSize: 12,
     color: "#a1a1aa",
+    textAlign: "right",
+    flexShrink: 1,
   },
   itemsBox: {
     width: "100%",
@@ -695,6 +732,8 @@ const styles = StyleSheet.create({
   itemRowText: {
     fontSize: 11,
     color: "#71717a",
+    textAlign: "right",
+    flexShrink: 1,
   },
   orderTotalText: {
     fontSize: 13,
@@ -718,9 +757,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 12,
+    minHeight: 44,
   },
   statusActionBtnText: {
     color: "#a1a1aa",
     fontSize: 11,
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

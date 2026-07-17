@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -22,6 +23,8 @@ interface PricingRow {
 }
 
 export default function AdminPricingScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const [rows, setRows] = useState<PricingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -99,14 +102,14 @@ export default function AdminPricingScreen() {
       )}
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>أسعار الطباعة</Text>
           <Text style={styles.headerSubtitle}>تعديل أسعار جميع أنواع الورق (رول + A4)</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         {/* Roll Pricing */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -248,6 +251,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -258,10 +263,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   scrollContent: {
     padding: 20,
     gap: 20,
+  },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 900,
+    alignSelf: "center",
   },
   card: {
     backgroundColor: "#18181b",
@@ -278,11 +289,14 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     paddingBottom: 12,
     marginBottom: 16,
+    flexWrap: "wrap",
   },
   cardTitle: {
     fontSize: 13,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   inputsList: {
     gap: 16,
@@ -294,11 +308,14 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
+    flexWrap: "wrap",
   },
   inputLabel: {
     fontSize: 13,
     fontWeight: "600",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   paperTypeLabel: {
     fontSize: 10,
@@ -312,7 +329,7 @@ const styles = StyleSheet.create({
     borderColor: "#27272a",
     borderRadius: 10,
     paddingHorizontal: 12,
-    height: 44,
+    minHeight: 48,
   },
   unitText: {
     color: "#71717a",
@@ -323,7 +340,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#f4f4f5",
     fontSize: 13,
-    height: "100%",
+    minHeight: 46,
   },
   emptyText: {
     color: "#71717a",
@@ -333,7 +350,9 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     backgroundColor: "#ea580c",
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -347,11 +366,15 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "center",
   },
   submitBtnText: {
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "bold",
+    textAlign: "center",
+    flexShrink: 1,
   },
   noteCard: {
     backgroundColor: "rgba(16, 185, 129, 0.04)",

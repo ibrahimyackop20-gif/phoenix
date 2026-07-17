@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -28,6 +29,9 @@ interface DayData {
 }
 
 export default function ReportsScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isNarrow = width < 390;
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -145,7 +149,7 @@ export default function ReportsScreen() {
       )}
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>التقارير والإحصائيات</Text>
           <Text style={styles.headerSubtitle}>مؤشرات أداء الطباعة الإجمالية وحالة الطلبات</Text>
@@ -160,11 +164,11 @@ export default function ReportsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         {/* Metric Cards Grid */}
         <View style={styles.metricGrid}>
           {/* Students */}
-          <View style={styles.metricCard}>
+          <View style={[styles.metricCard, { width: isNarrow ? "100%" : isTablet ? "23.5%" : "48%" }]}>
             <View style={styles.metricHeader}>
               <View style={[styles.iconWrapper, { backgroundColor: "rgba(96, 165, 250, 0.1)" }]}>
                 <Feather name="users" size={16} color="#60a5fa" />
@@ -175,7 +179,7 @@ export default function ReportsScreen() {
           </View>
 
           {/* Orders */}
-          <View style={styles.metricCard}>
+          <View style={[styles.metricCard, { width: isNarrow ? "100%" : isTablet ? "23.5%" : "48%" }]}>
             <View style={styles.metricHeader}>
               <View style={[styles.iconWrapper, { backgroundColor: "rgba(234, 88, 12, 0.1)" }]}>
                 <Feather name="package" size={16} color="#ea580c" />
@@ -186,7 +190,7 @@ export default function ReportsScreen() {
           </View>
 
           {/* Completed */}
-          <View style={styles.metricCard}>
+          <View style={[styles.metricCard, { width: isNarrow ? "100%" : isTablet ? "23.5%" : "48%" }]}>
             <View style={styles.metricHeader}>
               <View style={[styles.iconWrapper, { backgroundColor: "rgba(16, 185, 129, 0.1)" }]}>
                 <Feather name="check-circle" size={16} color="#10b981" />
@@ -197,14 +201,14 @@ export default function ReportsScreen() {
           </View>
 
           {/* Revenue */}
-          <View style={styles.metricCard}>
+          <View style={[styles.metricCard, { width: isNarrow ? "100%" : isTablet ? "23.5%" : "48%" }]}>
             <View style={styles.metricHeader}>
               <View style={[styles.iconWrapper, { backgroundColor: "rgba(251, 191, 36, 0.1)" }]}>
                 <Feather name="dollar-sign" size={16} color="#fbbf24" />
               </View>
               <Text style={styles.metricLabel}>الإيرادات المقدّرة</Text>
             </View>
-            <Text style={[styles.metricValue, { fontSize: 13 }]} numberOfLines={1}>
+            <Text style={[styles.metricValue, { fontSize: 13 }]}>
               {totalRevenue.toLocaleString()} د.ع
             </Text>
           </View>
@@ -313,6 +317,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -323,6 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   refreshBtn: {
     width: 36,
@@ -338,25 +345,31 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
   },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1100,
+    alignSelf: "center",
+  },
   metricGrid: {
     flexDirection: "row-reverse",
     flexWrap: "wrap",
     gap: 12,
   },
   metricCard: {
-    width: "48%",
     backgroundColor: "#18181b",
     borderWidth: 1,
     borderColor: "#27272a",
     borderRadius: 16,
     padding: 16,
     alignItems: "flex-end",
+    minHeight: 112,
   },
   metricHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
     marginBottom: 8,
+    flexWrap: "wrap",
   },
   iconWrapper: {
     width: 28,
@@ -369,11 +382,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#71717a",
     fontWeight: "500",
+    flexShrink: 1,
+    textAlign: "right",
   },
   metricValue: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   card: {
     backgroundColor: "#18181b",
@@ -431,6 +448,8 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
   },
   distLabel: {
     fontSize: 12,

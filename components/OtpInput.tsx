@@ -3,10 +3,11 @@ import {
   StyleSheet,
   TextInput,
   Animated,
-  Dimensions,
+  useWindowDimensions,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from "react-native";
+import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
 
 interface OtpInputProps {
   length?: number;
@@ -14,12 +15,6 @@ interface OtpInputProps {
   disabled?: boolean;
   error?: boolean;
 }
-
-const { width: screenWidth } = Dimensions.get("window");
-const isSmallScreen = screenWidth < 380;
-
-const INPUT_SIZE = isSmallScreen ? 40 : 52;
-const INPUT_HEIGHT = isSmallScreen ? 50 : 64;
 
 export default function OtpInput({
   length = 6,
@@ -31,6 +26,19 @@ export default function OtpInput({
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const { width, fontScale } = useWindowDimensions();
+  const { isCompactWidth } = useLayoutMetrics();
+  const gap = isCompactWidth ? 6 : 10;
+  const availableWidth = Math.min(width - 32, 480);
+  const normalInputWidth = isCompactWidth ? 40 : 52;
+  const fontSafeWidth = Math.ceil((isCompactWidth ? 18 : 22) * fontScale + 20);
+  const shouldWrap = fontSafeWidth * length + gap * (length - 1) > availableWidth;
+  const columns = shouldWrap ? Math.min(3, length) : length;
+  const inputWidth = Math.min(
+    Math.max(normalInputWidth, fontSafeWidth),
+    Math.floor((availableWidth - gap * (columns - 1)) / columns)
+  );
+  const rowWidth = inputWidth * columns + gap * (columns - 1);
 
   // Focus first input on mount
   useEffect(() => {
@@ -116,6 +124,8 @@ export default function OtpInput({
         styles.container,
         {
           transform: [{ translateX: shakeAnim }],
+          gap,
+          maxWidth: rowWidth,
         },
       ]}
     >
@@ -138,7 +148,14 @@ export default function OtpInput({
             ref={(el) => {
               inputRefs.current[i] = el;
             }}
-            style={inputStyle}
+            style={[
+              inputStyle,
+              {
+                width: inputWidth,
+                minHeight: isCompactWidth ? 50 : 64,
+                fontSize: isCompactWidth ? 18 : 22,
+              },
+            ]}
             keyboardType="numeric"
             maxLength={1}
             value={val}
@@ -164,18 +181,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: isSmallScreen ? 6 : 10,
+    alignSelf: "center",
+    flexWrap: "wrap",
   },
   input: {
-    width: INPUT_SIZE,
-    height: INPUT_HEIGHT,
     borderRadius: 12,
     borderWidth: 2,
     backgroundColor: "rgba(24, 24, 27, 0.65)",
     color: "#ffffff",
-    fontSize: isSmallScreen ? 18 : 22,
     fontWeight: "bold",
     textAlign: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 8,
   },
   inputDefault: {
     borderColor: "#3f3f46", // border-border

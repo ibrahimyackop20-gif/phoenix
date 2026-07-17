@@ -9,6 +9,7 @@ import {
   TextInput,
   Image,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -32,6 +33,9 @@ interface Category {
 }
 
 export default function AdminLibraryScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isNarrow = width < 420;
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -249,7 +253,7 @@ export default function AdminLibraryScreen() {
       )}
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.centeredContent]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>المنتجات الرسمية</Text>
           <Text style={styles.headerSubtitle}>إدارة منتجات مكتبة العنقاء الرسمية</Text>
@@ -260,7 +264,7 @@ export default function AdminLibraryScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.centeredContent]}>
         {/* Form Card */}
         {showForm && (
           <View style={styles.card}>
@@ -281,7 +285,7 @@ export default function AdminLibraryScreen() {
                 />
               </View>
 
-              <View style={styles.rowInputs}>
+              <View style={[styles.rowInputs, isNarrow && styles.stackOnNarrow]}>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
                   <Text style={styles.inputLabel}>السعر (د.ع)</Text>
                   <TextInput
@@ -385,7 +389,7 @@ export default function AdminLibraryScreen() {
           ) : (
             <View style={styles.productsGrid}>
               {products.map((prod) => (
-                <View key={prod.id} style={styles.productCard}>
+                <View key={prod.id} style={[styles.productCard, isTablet && styles.tabletProductCard]}>
                   <View style={styles.cardImageWrapper}>
                     {prod.image_url ? (
                       <Image source={{ uri: prod.image_url }} style={styles.cardImage} />
@@ -395,7 +399,7 @@ export default function AdminLibraryScreen() {
                   </View>
 
                   <View style={styles.cardInfo}>
-                    <Text style={styles.cardName} numberOfLines={1}>
+                    <Text style={styles.cardName}>
                       {prod.name}
                     </Text>
                     <Text style={styles.cardPrice}>{prod.price} د.ع</Text>
@@ -468,6 +472,8 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: "flex-end",
+    flex: 1,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 22,
@@ -478,6 +484,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#71717a",
     marginTop: 4,
+    textAlign: "right",
   },
   addBtn: {
     width: 36,
@@ -490,6 +497,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     gap: 20,
+  },
+  centeredContent: {
+    width: "100%",
+    maxWidth: 1100,
+    alignSelf: "center",
   },
   card: {
     backgroundColor: "#18181b",
@@ -518,7 +530,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   textInput: {
-    height: 44,
+    minHeight: 48,
     backgroundColor: "#09090b",
     borderRadius: 10,
     borderWidth: 1,
@@ -531,6 +543,9 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: 12,
   },
+  stackOnNarrow: {
+    flexDirection: "column",
+  },
   catsList: {
     flexDirection: "row-reverse",
     gap: 8,
@@ -540,6 +555,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
+    minHeight: 40,
+    justifyContent: "center",
   },
   catBadgeActive: {
     backgroundColor: "#ea580c",
@@ -563,7 +580,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   imageSelectorBox: {
-    height: 80,
+    minHeight: 80,
     backgroundColor: "#09090b",
     borderWidth: 1,
     borderColor: "#27272a",
@@ -572,6 +589,8 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
   },
   uploadedImagePreview: {
     width: 56,
@@ -584,6 +603,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
+    minHeight: 44,
+    justifyContent: "center",
   },
   uploadBtnText: {
     color: "#f4f4f5",
@@ -594,11 +615,14 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: 8,
     marginTop: 12,
+    flexWrap: "wrap",
   },
   submitBtn: {
     flex: 1,
+    minWidth: 160,
     backgroundColor: "#ea580c",
-    height: 44,
+    minHeight: 48,
+    paddingVertical: 10,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -610,7 +634,8 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     backgroundColor: "#27272a",
-    height: 44,
+    minHeight: 48,
+    paddingVertical: 10,
     borderRadius: 10,
     paddingHorizontal: 20,
     alignItems: "center",
@@ -645,6 +670,8 @@ const styles = StyleSheet.create({
   },
   productsGrid: {
     gap: 12,
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
   },
   productCard: {
     flexDirection: "row-reverse",
@@ -655,6 +682,11 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: "center",
     gap: 12,
+    width: "100%",
+    flexWrap: "wrap",
+  },
+  tabletProductCard: {
+    width: "48.5%",
   },
   cardImageWrapper: {
     width: 48,
@@ -673,11 +705,14 @@ const styles = StyleSheet.create({
   cardInfo: {
     flex: 1,
     alignItems: "flex-end",
+    minWidth: 120,
   },
   cardName: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#f4f4f5",
+    flexShrink: 1,
+    textAlign: "right",
   },
   cardPrice: {
     fontSize: 12,
