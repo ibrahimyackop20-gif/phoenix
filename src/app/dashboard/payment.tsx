@@ -221,14 +221,14 @@ export default function PaymentScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color="#ea580c" />
+      <View style={[styles.loadingContainer, { backgroundColor: "#0F172A" }]}>
+        <ActivityIndicator size="large" color="#FF5A1F" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: "#0F172A" }]}>
       <ScrollView
         contentContainerStyle={[styles.scrollContent, isTablet && styles.tabletContent]}
         keyboardShouldPersistTaps="handled"
@@ -246,46 +246,46 @@ export default function PaymentScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: themeColors.text }]}>{t("payment_management")}</Text>
-          <Text style={[styles.subtitle, { color: themeColors.textMuted }]}>{t("payment_management_desc")}</Text>
+          <Text style={[styles.title, { color: "#FFFFFF" }]}>{t("payment_management")}</Text>
+          <Text style={[styles.subtitle, { color: "#94A3B8" }]}>{t("payment_management_desc")}</Text>
         </View>
 
         {/* Balance cards grid */}
         <View style={[styles.metricsRow, isCompact && styles.stackedRow]}>
-          <View style={[styles.metricCard, styles.metricCardPrimary, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <Ionicons name="wallet-outline" size={18} color="#ea580c" />
+          <View style={[styles.metricCard, styles.metricCardPrimary, { backgroundColor: "rgba(255,90,31,0.12)", borderColor: "rgba(255,90,31,0.32)" }]}>
+            <Ionicons name="wallet-outline" size={24} color="#FF5A1F" />
             <Text style={styles.metricValuePrimary}>{walletBalance.toLocaleString()} {t("currency")}</Text>
             <Text style={styles.metricLabel}>{t("wallet_balance")}</Text>
           </View>
 
-          <View style={[styles.metricCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <Feather name="dollar-sign" size={18} color="#fb923c" />
-            <Text style={[styles.metricValue, { color: themeColors.text }]}>{totalDue.toLocaleString()} {t("currency")}</Text>
+          <View style={[styles.metricCard, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
+            <Feather name="dollar-sign" size={24} color="#F59E0B" />
+            <Text style={[styles.metricValue, { color: "#FFFFFF" }]}>{totalDue.toLocaleString()} {t("currency")}</Text>
             <Text style={styles.metricLabel}>{t("total_due")}</Text>
           </View>
 
-          <View style={[styles.metricCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <Feather name="check-circle" size={18} color="#34d399" />
-            <Text style={[styles.metricValue, { color: themeColors.text }]}>{completedTotal.toLocaleString()} {t("currency")}</Text>
+          <View style={[styles.metricCard, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
+            <Feather name="check-circle" size={24} color="#10B981" />
+            <Text style={[styles.metricValue, { color: "#FFFFFF" }]}>{completedTotal.toLocaleString()} {t("currency")}</Text>
             <Text style={styles.metricLabel}>{t("completed")}</Text>
           </View>
         </View>
 
         {/* Transfer Instructions */}
-        <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+        <View style={[styles.glassCard, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
           <View style={styles.cardHeader}>
-            <Feather name="info" size={16} color="#ea580c" />
-            <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("transfer_instructions")}</Text>
+            <Feather name="info" size={20} color="#FF5A1F" />
+            <Text style={[styles.cardTitle, { color: "#FFFFFF" }]}>{t("transfer_instructions")}</Text>
           </View>
 
           <View style={styles.instructionsContainer}>
             {zaincashNum ? (
-              <View style={[styles.paymentAccountBox, { backgroundColor: themeColors.background, borderColor: themeColors.cardBorder }]}>
+              <View style={[styles.paymentAccountBox, { backgroundColor: "#0F172A", borderColor: "rgba(255,255,255,0.08)" }]}>
                 <View style={styles.paymentAccountHeader}>
                   <TouchableOpacity onPress={() => copyPaymentNumber(zaincashNum)} style={styles.copyBtn}>
-                    <Feather name="copy" size={14} color="#ea580c" />
+                    <Feather name="copy" size={18} color="#FF5A1F" />
                   </TouchableOpacity>
-                  <Text style={[styles.paymentAccountTitle, { color: themeColors.text }]}>{paymentLabels["Zain Cash"]}</Text>
+                  <Text style={[styles.paymentAccountTitle, { color: "#FFFFFF" }]}>{paymentLabels["Zain Cash"]}</Text>
                 </View>
                 <Text style={styles.paymentAccountNum}>{zaincashNum}</Text>
                 <Text style={styles.paymentAccountDesc}>{t("send_invoice_amount")}</Text>
@@ -293,19 +293,19 @@ export default function PaymentScreen() {
             ) : null}
 
             {asiaNum ? (
-              <View style={[styles.paymentAccountBox, { backgroundColor: themeColors.background, borderColor: themeColors.cardBorder }]}>
+              <View style={[styles.paymentAccountBox, { backgroundColor: "#0F172A", borderColor: "rgba(255,255,255,0.08)" }]}>
                 <View style={styles.paymentAccountHeader}>
                   <TouchableOpacity onPress={() => copyPaymentNumber(asiaNum)} style={styles.copyBtn}>
-                    <Feather name="copy" size={14} color="#ea580c" />
+                    <Feather name="copy" size={18} color="#FF5A1F" />
                   </TouchableOpacity>
-                  <Text style={[styles.paymentAccountTitle, { color: themeColors.text }]}>{paymentLabels["AsiaHawala"]}</Text>
+                  <Text style={[styles.paymentAccountTitle, { color: "#FFFFFF" }]}>{paymentLabels["AsiaHawala"]}</Text>
                 </View>
                 <Text style={styles.paymentAccountNum}>{asiaNum}</Text>
                 <Text style={styles.paymentAccountDesc}>{t("send_invoice_amount")}</Text>
               </View>
             ) : null}
 
-            <View style={[styles.paymentAccountBox, { backgroundColor: themeColors.background, borderColor: themeColors.cardBorder }]}>
+            <View style={[styles.paymentAccountBox, { backgroundColor: "#0F172A", borderColor: "rgba(255,255,255,0.08)" }]}>
               <Text style={styles.cashTitle}>{t("cod_label")}</Text>
               <Text style={styles.paymentAccountDesc}>{t("cod_desc")}</Text>
             </View>
@@ -313,33 +313,33 @@ export default function PaymentScreen() {
         </View>
 
         {/* Wallet topup form */}
-        <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+        <View style={[styles.glassCard, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
           <View style={styles.cardHeader}>
-            <Feather name="file-text" size={16} color="#ea580c" />
-            <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("wallet_topup_request")}</Text>
+            <Feather name="file-text" size={20} color="#FF5A1F" />
+            <Text style={[styles.cardTitle, { color: "#FFFFFF" }]}>{t("wallet_topup_request")}</Text>
           </View>
-          <Text style={[styles.topupTip, { color: themeColors.textMuted }]}>
+          <Text style={[styles.topupTip, { color: "#94A3B8" }]}>
             {t("topup_tip")}
           </Text>
 
           {uploadSuccess && screenshotUrl ? (
             <View style={styles.successBlock}>
-              <Feather name="check" size={24} color="#34d399" style={styles.successIcon} />
+              <Feather name="check" size={28} color="#10B981" style={styles.successIcon} />
               <Text style={styles.successTitleText}>{t("wallet_topup_success")}</Text>
               <Text style={styles.successDescText}>{t("wallet_topup_success_desc")}</Text>
             </View>
           ) : (
             <View style={styles.topupForm}>
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: themeColors.text }]}>{t("topup_amount_label")}</Text>
-                <View style={[styles.inputWrapper, { backgroundColor: themeColors.background, borderColor: themeColors.cardBorder }]}>
+                <Text style={[styles.inputLabel, { color: "#FFFFFF" }]}>{t("topup_amount_label")}</Text>
+                <View style={[styles.inputWrapper, { backgroundColor: "#0F172A", borderColor: "rgba(255,255,255,0.1)" }]}>
                   <TextInput
                     value={topupAmount}
                     onChangeText={setTopupAmount}
                     keyboardType="number-pad"
                     placeholder={t("topup_amount_placeholder")}
                     placeholderTextColor={themeColors.textMuted}
-                    style={[styles.textInput, { color: themeColors.text }]}
+                    style={[styles.textInput, { color: "#FFFFFF" }]}
                     textAlign="right"
                   />
                 </View>
@@ -350,16 +350,16 @@ export default function PaymentScreen() {
                 disabled={uploading || !topupAmount || Number(topupAmount) <= 0}
                 style={[
                   styles.screenshotPickerDashed,
-                  { borderColor: themeColors.cardBorder },
+                  { borderColor: "#FF5A1F" },
                   (!topupAmount || Number(topupAmount) <= 0) && styles.screenshotPickerDisabled,
                 ]}
               >
                 {uploading ? (
-                  <ActivityIndicator size="small" color="#ea580c" />
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <View style={styles.screenshotPickerInner}>
-                    <Feather name="upload" size={18} color={themeColors.textMuted} />
-                    <Text style={[styles.screenshotPickerText, { color: themeColors.textMuted }]}>{t("upload_screenshot_btn")}</Text>
+                    <Feather name="upload" size={20} color="#FFFFFF" />
+                    <Text style={[styles.screenshotPickerText, { color: "#FFFFFF" }]}>{t("upload_screenshot_btn")}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -368,25 +368,25 @@ export default function PaymentScreen() {
         </View>
 
         {/* Quick order stats summary */}
-        <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+        <View style={[styles.glassCard, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
           <View style={styles.cardHeader}>
-            <Feather name="clock" size={16} color="#ea580c" />
-            <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("order_summary")}</Text>
+            <Feather name="clock" size={20} color="#FF5A1F" />
+            <Text style={[styles.cardTitle, { color: "#FFFFFF" }]}>{t("order_summary")}</Text>
           </View>
           <View style={styles.orderSummaryGrid}>
             <View style={styles.summaryBox}>
-              <Text style={[styles.summaryVal, { color: themeColors.text }]}>{orders.length}</Text>
-              <Text style={[styles.summaryLbl, { color: themeColors.textMuted }]}>{t("total_orders")}</Text>
+              <Text style={[styles.summaryVal, { color: "#FFFFFF" }]}>{orders.length}</Text>
+              <Text style={[styles.summaryLbl, { color: "#94A3B8" }]}>{t("total_orders")}</Text>
             </View>
             <View style={styles.summaryBox}>
-              <Text style={[styles.summaryVal, { color: "#fb923c" }]}>
+              <Text style={[styles.summaryVal, { color: "#F59E0B" }]}>
                 {orders.filter((o) => o.status === "Pending").length}
               </Text>
-              <Text style={[styles.summaryLbl, { color: themeColors.textMuted }]}>{t("pending")}</Text>
+              <Text style={[styles.summaryLbl, { color: "#94A3B8" }]}>{t("pending")}</Text>
             </View>
             <View style={styles.summaryBox}>
-              <Text style={[styles.summaryVal, { color: "#34d399" }]}>{completedOrders.length}</Text>
-              <Text style={[styles.summaryLbl, { color: themeColors.textMuted }]}>{t("completed")}</Text>
+              <Text style={[styles.summaryVal, { color: "#10B981" }]}>{completedOrders.length}</Text>
+              <Text style={[styles.summaryLbl, { color: "#94A3B8" }]}>{t("completed")}</Text>
             </View>
           </View>
         </View>
@@ -398,213 +398,302 @@ export default function PaymentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0F172A",
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#0F172A",
   },
   toastSuccess: {
-    backgroundColor: "rgba(52, 211, 153, 0.1)",
-    borderColor: "rgba(52, 211, 153, 0.2)",
+    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: "rgba(16,185,129,0.28)",
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginHorizontal: 20,
-    marginTop: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   toastError: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderColor: "rgba(239, 68, 68, 0.2)",
+    backgroundColor: "rgba(239,68,68,0.12)",
+    borderColor: "rgba(239,68,68,0.28)",
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginHorizontal: 20,
-    marginTop: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   toastText: {
-    color: "#f4f4f5",
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "600",
     textAlign: "center",
+    flexShrink: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 16,
+    paddingBottom: 56,
     width: "100%",
   },
   tabletContent: {
-    maxWidth: 900,
+    maxWidth: 960,
     alignSelf: "center",
+    paddingHorizontal: 24,
   },
   header: {
     alignItems: "flex-end",
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 30,
+    lineHeight: 40,
+    fontWeight: "900",
+    letterSpacing: -0.4,
+    color: "#FFFFFF",
+    textAlign: "right",
+    flexShrink: 1,
   },
   subtitle: {
-    fontSize: 13,
-    marginTop: 4,
+    fontSize: 15,
+    lineHeight: 23,
+    color: "#94A3B8",
+    marginTop: 8,
+    textAlign: "right",
+    flexShrink: 1,
   },
   metricsRow: {
     flexDirection: "row-reverse",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 24,
   },
   metricCard: {
     flex: 1,
-    minWidth: 100,
+    minWidth: 120,
+    minHeight: 128,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 20,
+    padding: 20,
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#1E293B",
+    borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 3,
   },
   stackedRow: {
     flexDirection: "column",
   },
   metricCardPrimary: {
-    backgroundColor: "rgba(234, 88, 12, 0.05)",
+    backgroundColor: "rgba(255,90,31,0.12)",
+    borderColor: "rgba(255,90,31,0.32)",
   },
   metricValuePrimary: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#ea580c",
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: "900",
+    color: "#FF5A1F",
+    textAlign: "center",
+    flexShrink: 1,
   },
   metricValue: {
-    fontSize: 15,
-    fontWeight: "bold",
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    textAlign: "center",
+    flexShrink: 1,
   },
   metricLabel: {
-    fontSize: 9,
-    color: "#71717a",
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#94A3B8",
+    fontWeight: "600",
     textAlign: "center",
     flexShrink: 1,
   },
   glassCard: {
     borderWidth: 1,
     borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
+    padding: 24,
+    marginBottom: 24,
+    backgroundColor: "#1E293B",
+    borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 20,
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    textAlign: "right",
+    flexShrink: 1,
   },
   instructionsContainer: {
-    gap: 12,
+    gap: 16,
   },
   paymentAccountBox: {
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 20,
+    padding: 20,
+    minHeight: 112,
     alignItems: "flex-end",
+    justifyContent: "center",
+    backgroundColor: "#0F172A",
+    borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   paymentAccountHeader: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     width: "100%",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   paymentAccountTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
     flexShrink: 1,
     textAlign: "right",
   },
   copyBtn: {
-    padding: 4,
+    width: 44,
+    minHeight: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,90,31,0.12)",
   },
   paymentAccountNum: {
-    fontSize: 14,
-    color: "#ea580c",
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: "800",
+    color: "#FF5A1F",
     fontFamily: "monospace",
-    marginVertical: 4,
+    marginVertical: 6,
+    textAlign: "right",
+    flexShrink: 1,
   },
   paymentAccountDesc: {
-    fontSize: 10,
-    color: "#71717a",
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#94A3B8",
     textAlign: "right",
     flexShrink: 1,
   },
   cashTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#fb923c",
-    marginBottom: 4,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "800",
+    color: "#F59E0B",
+    marginBottom: 8,
   },
   topupTip: {
-    fontSize: 11,
-    marginBottom: 16,
+    fontSize: 13,
+    marginBottom: 20,
     textAlign: "right",
-    lineHeight: 16,
+    lineHeight: 20,
+    color: "#94A3B8",
+    flexShrink: 1,
   },
   successBlock: {
     alignItems: "center",
-    backgroundColor: "rgba(52, 211, 153, 0.08)",
-    borderColor: "rgba(52, 211, 153, 0.15)",
+    backgroundColor: "rgba(16,185,129,0.1)",
+    borderColor: "rgba(16,185,129,0.26)",
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
   },
   successIcon: {
     marginBottom: 8,
   },
   successTitleText: {
-    color: "#34d399",
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: 4,
+    color: "#10B981",
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "800",
+    marginBottom: 8,
+    textAlign: "center",
+    flexShrink: 1,
   },
   successDescText: {
-    color: "#71717a",
-    fontSize: 11,
+    color: "#94A3B8",
+    fontSize: 13,
+    lineHeight: 20,
     textAlign: "center",
+    flexShrink: 1,
   },
   topupForm: {
-    gap: 16,
+    gap: 20,
   },
   inputGroup: {
-    gap: 8,
+    gap: 10,
   },
   inputLabel: {
-    fontSize: 13,
-    fontWeight: "bold",
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "700",
+    color: "#FFFFFF",
     textAlign: "right",
+    flexShrink: 1,
   },
   inputWrapper: {
     borderWidth: 1,
-    borderRadius: 12,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 16,
+    minHeight: 56,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#0F172A",
+    borderColor: "rgba(255,255,255,0.1)",
   },
   textInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#FFFFFF",
+    paddingVertical: 0,
   },
   screenshotPickerDashed: {
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderRadius: 12,
-    minHeight: 52,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 18,
+    minHeight: 56,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FF5A1F",
+    borderColor: "#FF5A1F",
+    shadowColor: "#FF5A1F",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 6,
   },
   screenshotPickerDisabled: {
-    opacity: 0.5,
+    opacity: 0.45,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   screenshotPickerInner: {
     flexDirection: "row-reverse",
@@ -614,8 +703,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   screenshotPickerText: {
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
     textAlign: "center",
     flexShrink: 1,
   },
@@ -623,20 +714,32 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 12,
   },
   summaryBox: {
     flex: 1,
-    minWidth: 90,
+    minWidth: 104,
+    minHeight: 88,
     alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
   },
   summaryVal: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: "900",
+    marginBottom: 6,
+    color: "#FFFFFF",
   },
   summaryLbl: {
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#94A3B8",
+    fontWeight: "600",
     textAlign: "center",
     flexShrink: 1,
   },

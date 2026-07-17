@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { useRouter, usePathname, Link } from "expo-router";
 import { supabase } from "@/lib/supabaseClient";
@@ -18,8 +19,7 @@ import {
   signInWithGoogle,
 } from "@/lib/googleAuth";
 import { markPostAuthNavigation } from "@/lib/postAuthNavigation";
-import GoogleSignInButton from "@/../components/GoogleSignInButton";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { AntDesign, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
 
@@ -252,13 +252,20 @@ export default function LoginPage() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
           {pageState === "login" && (
-            <View style={styles.cardWrapper}>
-              <View style={styles.header}>
-                <Text style={styles.title}>{t("auth_login_title")}</Text>
-                <Text style={styles.subtitle}>{t("auth_login_subtitle")}</Text>
+            <View style={styles.loginScreen}>
+              <View style={styles.brandSection}>
+                <View style={styles.logoSurface}>
+                  <Image
+                    source={require("../../../assets/images/logo.png")}
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.brandTitle}>{t("brand_name")}</Text>
+                <Text style={styles.brandSubtitle}>{t("auth_login_subtitle")}</Text>
               </View>
 
-              <View style={styles.glassCard}>
+              <View style={styles.loginForm}>
                 {error ? (
                   <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error}</Text>
@@ -278,6 +285,8 @@ export default function LoginPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="left"
+                      selectionColor="#FF5A1F"
+                      cursorColor="#FF5A1F"
                     />
                   </View>
                 </View>
@@ -295,6 +304,8 @@ export default function LoginPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={[styles.textInput, styles.passwordInput]}
                       textAlign="left"
+                      selectionColor="#FF5A1F"
+                      cursorColor="#FF5A1F"
                     />
                     <TouchableOpacity
                       onPress={() => setShowPassword(!showPassword)}
@@ -308,6 +319,16 @@ export default function LoginPage() {
                     </TouchableOpacity>
                   </View>
                 </View>
+
+                <TouchableOpacity
+                  onPress={handleForgotPassword}
+                  disabled={sendingReset || loading || googleLoading}
+                  style={styles.forgotButton}
+                >
+                  <Text style={styles.forgotText}>
+                    {sendingReset ? t("auth_reset_send") : t("auth_forgot_password")}
+                  </Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={handleLogin}
@@ -330,20 +351,26 @@ export default function LoginPage() {
                   <View style={styles.orLine} />
                 </View>
 
-                <GoogleSignInButton
-                  onPress={handleGoogleSignIn}
-                  loading={googleLoading}
-                  disabled={loading}
-                />
-
                 <TouchableOpacity
-                  onPress={handleForgotPassword}
-                  disabled={sendingReset || loading || googleLoading}
-                  style={styles.forgotButton}
+                  onPress={handleGoogleSignIn}
+                  disabled={loading || googleLoading}
+                  style={[
+                    styles.googleButton,
+                    (loading || googleLoading) && styles.disabledButton,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("auth_google_continue")}
                 >
-                  <Text style={styles.forgotText}>
-                    {sendingReset ? t("auth_reset_send") : t("auth_forgot_password")}
-                  </Text>
+                  {googleLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <View style={styles.googleButtonInner}>
+                      <AntDesign name="google" size={20} color="#4285F4" />
+                      <Text style={styles.googleButtonText}>
+                        {t("auth_google_continue")}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               </View>
 
@@ -493,17 +520,65 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
   StyleSheet.create({
     keyboardView: {
       flex: 1,
-      backgroundColor: themeColors.background,
+      backgroundColor: "#0F172A",
     },
     scrollContent: {
       flexGrow: 1,
       justifyContent: "center",
-      paddingVertical: 24,
+      paddingVertical: 32,
     },
     container: {
-      padding: 16,
+      flex: 1,
+      paddingHorizontal: 24,
       alignItems: "center",
       justifyContent: "center",
+      width: "100%",
+    },
+    loginScreen: {
+      flex: 1,
+      width: "100%",
+      maxWidth: 440,
+      alignSelf: "center",
+      justifyContent: "center",
+      paddingVertical: 24,
+    },
+    brandSection: {
+      alignItems: "center",
+      marginBottom: 40,
+    },
+    logoSurface: {
+      width: 80,
+      height: 80,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#1E293B",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.08)",
+      marginBottom: 20,
+    },
+    logo: {
+      width: 64,
+      height: 64,
+    },
+    brandTitle: {
+      color: "#FFFFFF",
+      fontSize: 32,
+      lineHeight: 40,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+      textAlign: "center",
+      flexShrink: 1,
+    },
+    brandSubtitle: {
+      color: "#94A3B8",
+      fontSize: 15,
+      lineHeight: 22,
+      textAlign: "center",
+      marginTop: 8,
+      flexShrink: 1,
+    },
+    loginForm: {
       width: "100%",
     },
     cardWrapper: {
@@ -545,9 +620,10 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       backgroundColor: "rgba(239, 68, 68, 0.1)",
       borderColor: "rgba(239, 68, 68, 0.2)",
       borderWidth: 1,
-      borderRadius: 8,
-      padding: 10,
-      marginBottom: 16,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: 24,
     },
     errorText: {
       color: "#ef4444",
@@ -556,64 +632,67 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       fontWeight: "600",
     },
     inputGroup: {
-      marginBottom: 16,
+      marginBottom: 20,
     },
     inputLabel: {
-      fontSize: 12,
-      fontWeight: "500",
-      color: themeColors.textMuted,
+      fontSize: 13,
+      lineHeight: 20,
+      fontWeight: "600",
+      color: "#CBD5E1",
       marginBottom: 8,
       textAlign: "right",
     },
     inputWrapper: {
-      flexDirection: "row",
+      flexDirection: "row-reverse",
       alignItems: "center",
-      backgroundColor: themeColors.inputBg,
-      borderColor: themeColors.cardBorder,
+      backgroundColor: "#1E293B",
+      borderColor: "rgba(255,255,255,0.08)",
       borderWidth: 1,
-      borderRadius: 12,
-      minHeight: 48,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      borderRadius: 16,
+      minHeight: 56,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
     },
     inputIcon: {
-      marginRight: 8,
+      marginLeft: 12,
     },
     textInput: {
       flex: 1,
-      color: themeColors.text,
-      fontSize: 14,
+      color: "#FFFFFF",
+      fontSize: 16,
+      lineHeight: 22,
       minHeight: 40,
       paddingVertical: 8,
     },
     passwordInput: {
-      paddingRight: 8,
+      paddingHorizontal: 4,
     },
     eyeIcon: {
-      padding: 8,
+      minWidth: 40,
+      minHeight: 40,
+      alignItems: "center",
+      justifyContent: "center",
       flexShrink: 0,
     },
     primaryButton: {
-      minHeight: 48,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      backgroundColor: "#ea580c",
-      borderRadius: 12,
+      minHeight: 56,
+      paddingVertical: 15,
+      paddingHorizontal: 20,
+      backgroundColor: "#FF5A1F",
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 8,
-      shadowColor: "#ea580c",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 6,
-      elevation: 4,
+      shadowColor: "#FF5A1F",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.28,
+      shadowRadius: 14,
+      elevation: 8,
     },
     orRow: {
       flexDirection: "row",
       alignItems: "center",
-      marginTop: 16,
-      marginBottom: 4,
-      gap: 10,
+      marginVertical: 24,
+      gap: 16,
     },
     orLine: {
       flex: 1,
@@ -621,9 +700,10 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       backgroundColor: themeColors.cardBorder,
     },
     orText: {
-      fontSize: 12,
-      color: themeColors.textMuted,
-      fontWeight: "500",
+      fontSize: 13,
+      lineHeight: 20,
+      color: "#94A3B8",
+      fontWeight: "600",
     },
     buttonInner: {
       flexDirection: "row-reverse",
@@ -637,38 +717,78 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     },
     buttonText: {
       color: "#ffffff",
-      fontSize: 14,
-      fontWeight: "bold",
+      fontSize: 16,
+      lineHeight: 22,
+      fontWeight: "700",
       textAlign: "center",
       flexShrink: 1,
     },
     forgotButton: {
-      alignItems: "center",
-      paddingVertical: 12,
-      marginTop: 8,
+      alignItems: "flex-end",
+      alignSelf: "stretch",
+      paddingVertical: 4,
+      paddingHorizontal: 2,
+      marginTop: -8,
+      marginBottom: 24,
     },
     forgotText: {
-      color: "#fb923c",
-      fontSize: 12,
+      color: "#FF7A45",
+      fontSize: 14,
+      lineHeight: 20,
       fontWeight: "600",
+      textAlign: "right",
+      flexShrink: 1,
+    },
+    googleButton: {
+      width: "100%",
+      minHeight: 56,
+      paddingVertical: 15,
+      paddingHorizontal: 20,
+      borderRadius: 18,
+      backgroundColor: "#1E293B",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.08)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+    googleButtonInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      flexWrap: "wrap",
+    },
+    googleButtonText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      lineHeight: 22,
+      fontWeight: "600",
+      textAlign: "center",
+      flexShrink: 1,
     },
     footerRow: {
       flexDirection: "row-reverse",
       justifyContent: "center",
       alignItems: "center",
-      marginTop: 24,
+      marginTop: 40,
       flexWrap: "wrap",
+      gap: 4,
     },
     footerText: {
-      color: themeColors.textMuted,
-      fontSize: 13,
+      color: "#94A3B8",
+      fontSize: 14,
+      lineHeight: 22,
       textAlign: "center",
       flexShrink: 1,
     },
     linkText: {
-      color: "#fb923c",
-      fontSize: 13,
-      fontWeight: "bold",
+      color: "#FF7A45",
+      fontSize: 14,
+      lineHeight: 22,
+      fontWeight: "700",
     },
     keyIconBadge: {
       width: 56,

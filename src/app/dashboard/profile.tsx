@@ -57,7 +57,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
 
   const { theme: currentTheme, setTheme: handleThemeToggle, themeColors } = useAppTheme();
-  const styles = getStyles(themeColors, isCompact, isTablet);
+  const styles = getStyles(themeColors, isCompact, isTablet, i18n.language === "en");
   const currentLanguage = i18n.language || "ar";
 
   const handleLanguageChange = async (lang: "ar" | "en") => {
@@ -352,7 +352,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#ea580c" />
+        <ActivityIndicator size="large" color="#FF5A1F" />
       </View>
     );
   }
@@ -384,7 +384,7 @@ export default function ProfileScreen() {
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
               ) : (
-                <Feather name="user" size={44} color="#ea580c" />
+                <Feather name="user" size={48} color="#FF5A1F" />
               )}
               <View style={styles.cameraOverlay}>
                 {uploading ? (
@@ -404,7 +404,7 @@ export default function ProfileScreen() {
         {/* Personal Details Form */}
         <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <View style={styles.cardHeader}>
-            <Feather name="user" size={16} color="#ea580c" />
+            <Feather name="user" size={20} color="#FF5A1F" />
             <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("personal_information")}</Text>
           </View>
 
@@ -417,7 +417,7 @@ export default function ProfileScreen() {
                 placeholder={t("enter_full_name")}
                 placeholderTextColor={themeColors.textMuted}
                 style={[styles.textInput, { color: themeColors.text }]}
-                textAlign="right"
+                textAlign={currentLanguage === "en" ? "left" : "right"}
               />
             </View>
           </View>
@@ -448,12 +448,12 @@ export default function ProfileScreen() {
         <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <View style={styles.addressesHeader}>
             <TouchableOpacity onPress={() => setShowAddressForm(!showAddressForm)} style={styles.addAddressBtn}>
-              <Feather name="plus" size={12} color="#ea580c" style={styles.buttonIcon} />
+              <Feather name="plus" size={16} color="#FF5A1F" style={styles.buttonIcon} />
               <Text style={styles.addAddressText}>{t("add_address")}</Text>
             </TouchableOpacity>
             <View style={styles.titleRow}>
               <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("saved_addresses")}</Text>
-              <Feather name="map-pin" size={16} color="#ea580c" />
+              <Feather name="map-pin" size={20} color="#FF5A1F" />
             </View>
           </View>
 
@@ -482,7 +482,7 @@ export default function ProfileScreen() {
 
               {/* Full-screen location picker */}
               <TouchableOpacity onPress={() => setShowMap(true)} style={styles.mapToggleButton}>
-                <Feather name="map" size={14} color="#ea580c" style={styles.buttonIcon} />
+                <Feather name="map" size={18} color="#FF5A1F" style={styles.buttonIcon} />
                 <Text style={styles.mapToggleButtonText}>
                   {newLat ? t("profile_toast_change_location") : t("profile_toast_pick_location")}
                 </Text>
@@ -515,7 +515,7 @@ export default function ProfileScreen() {
                     placeholder={t("area_placeholder")}
                     placeholderTextColor={themeColors.textMuted}
                     style={[styles.textInput, { color: themeColors.text }]}
-                    textAlign="right"
+                    textAlign={currentLanguage === "en" ? "left" : "right"}
                   />
                 </View>
               </View>
@@ -529,7 +529,7 @@ export default function ProfileScreen() {
                     placeholder={t("landmark_placeholder")}
                     placeholderTextColor={themeColors.textMuted}
                     style={[styles.textInput, { color: themeColors.text }]}
-                    textAlign="right"
+                    textAlign={currentLanguage === "en" ? "left" : "right"}
                   />
                 </View>
               </View>
@@ -551,7 +551,7 @@ export default function ProfileScreen() {
                     placeholderTextColor={themeColors.textMuted}
                     keyboardType="phone-pad"
                     style={[styles.textInput, { color: themeColors.text }]}
-                    textAlign="right"
+                    textAlign={currentLanguage === "en" ? "left" : "right"}
                     maxLength={11}
                   />
                 </View>
@@ -590,7 +590,7 @@ export default function ProfileScreen() {
               {addresses.map((addr) => (
                 <View key={addr.id} style={[styles.addressCard, { backgroundColor: themeColors.inputBg, borderColor: themeColors.cardBorder }]}>
                   <TouchableOpacity onPress={() => handleDeleteAddress(addr.id)} style={styles.trashBtn}>
-                    <Feather name="trash-2" size={14} color="#ef4444" />
+                    <Feather name="trash-2" size={18} color="#EF4444" />
                   </TouchableOpacity>
 
                   <View style={styles.addressInfo}>
@@ -612,7 +612,7 @@ export default function ProfileScreen() {
                   </View>
 
                   <View style={styles.homeIconWrapper}>
-                    <Feather name="home" size={16} color="#ea580c" />
+                    <Feather name="home" size={20} color="#FF5A1F" />
                   </View>
                 </View>
               ))}
@@ -631,7 +631,7 @@ export default function ProfileScreen() {
         {/* System Preferences Form */}
         <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <View style={styles.cardHeader}>
-            <Feather name="globe" size={16} color="#ea580c" />
+            <Feather name="globe" size={20} color="#FF5A1F" />
             <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("system_preferences")}</Text>
           </View>
 
@@ -684,19 +684,32 @@ export default function ProfileScreen() {
             <TouchableOpacity
               onPress={() => router.push("/dashboard/privacy" as any)}
               style={{
-                flexDirection: "row-reverse",
+                flexDirection: currentLanguage === "en" ? "row" : "row-reverse",
                 alignItems: "center",
                 gap: 6,
                 backgroundColor: "rgba(234, 88, 12, 0.08)",
                 borderColor: "rgba(234, 88, 12, 0.15)",
                 borderWidth: 1,
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
+                borderRadius: 14,
+                minHeight: 44,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                justifyContent: "center",
               }}
             >
-              <Feather name="shield" size={14} color="#ea580c" />
-              <Text style={{ fontSize: 10, color: "#ea580c", fontWeight: "bold" }}>{t("privacy_profile_link_cta")}</Text>
+              <Feather name="shield" size={18} color="#FF5A1F" />
+              <Text
+                style={{
+                  fontSize: currentLanguage === "en" ? 12 : 13,
+                  lineHeight: 19,
+                  color: "#FF5A1F",
+                  fontWeight: "800",
+                  flexShrink: 1,
+                  textAlign: currentLanguage === "en" ? "left" : "right",
+                }}
+              >
+                {t("privacy_profile_link_cta")}
+              </Text>
             </TouchableOpacity>
             <View style={styles.prefLabels}>
               <Text style={[styles.prefTitle, { color: themeColors.text }]}>{t("privacy_profile_link_title")}</Text>
@@ -718,7 +731,7 @@ const getStyles = (themeColors: {
   inputBg: string;
   inputBorder: string;
   disabledBg: string;
-}, isCompact: boolean, isTablet: boolean) =>
+}, isCompact: boolean, isTablet: boolean, isEnglish: boolean) =>
   StyleSheet.create({
   container: {
     flex: 1,
@@ -731,72 +744,92 @@ const getStyles = (themeColors: {
     justifyContent: "center",
   },
   toastSuccess: {
-    backgroundColor: "rgba(52, 211, 153, 0.1)",
-    borderColor: "rgba(52, 211, 153, 0.2)",
+    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: "rgba(16,185,129,0.28)",
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginHorizontal: 20,
-    marginTop: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   toastError: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderColor: "rgba(239, 68, 68, 0.2)",
+    backgroundColor: "rgba(239,68,68,0.12)",
+    borderColor: "rgba(239,68,68,0.28)",
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginHorizontal: 20,
-    marginTop: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   toastText: {
     color: themeColors.text,
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "600",
     textAlign: "center",
+    flexShrink: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: isCompact ? 16 : 24,
+    paddingBottom: 48,
     width: "100%",
-    maxWidth: isTablet ? 900 : undefined,
+    maxWidth: isTablet ? 960 : undefined,
     alignSelf: "center",
   },
   header: {
-    alignItems: "flex-end",
-    marginBottom: 24,
+    alignItems: isEnglish ? "flex-start" : "flex-end",
+    marginTop: 4,
+    marginBottom: 28,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: "900",
+    letterSpacing: -0.4,
     color: themeColors.text,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: isEnglish ? 13 : 14,
+    lineHeight: 22,
+    fontWeight: "500",
     color: themeColors.textMuted,
-    marginTop: 4,
+    marginTop: 6,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   glassCard: {
     backgroundColor: themeColors.cardBg,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
     borderRadius: 20,
-    padding: 20,
+    padding: isCompact ? 18 : 22,
     marginBottom: 20,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 3,
   },
   avatarContainer: {
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 16,
   },
   avatarWrapper: {
     position: "relative",
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
-    borderColor: "rgba(234, 88, 12, 0.2)",
-    borderWidth: 2,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255,90,31,0.12)",
+    borderColor: "rgba(255,90,31,0.36)",
+    borderWidth: 3,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    shadowColor: "#FF5A1F",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   avatarImage: {
     width: "100%",
@@ -805,50 +838,70 @@ const getStyles = (themeColors: {
   },
   cameraOverlay: {
     position: "absolute",
-    inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    right: 6,
+    bottom: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FF5A1F",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   userName: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: "800",
     color: themeColors.text,
-    marginTop: 12,
+    marginTop: 16,
     textAlign: "center",
     flexShrink: 1,
   },
   userEmail: {
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "500",
     color: themeColors.textMuted,
-    marginTop: 2,
+    marginTop: 4,
     textAlign: "center",
     flexShrink: 1,
   },
   avatarTip: {
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "500",
     color: themeColors.textMuted,
-    marginTop: 12,
+    marginTop: 10,
+    textAlign: "center",
+    flexShrink: 1,
   },
   cardHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: isEnglish ? "row" : "row-reverse",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 20,
+    gap: 10,
+    marginBottom: 16,
+    flexWrap: isEnglish ? "wrap" : "nowrap",
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
+    fontSize: isEnglish ? 16 : 17,
+    lineHeight: 24,
+    fontWeight: "800",
     color: themeColors.text,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   inputGroup: {
     marginBottom: 16,
   },
   inputLabel: {
-    fontSize: 12,
-    color: themeColors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "700",
+    color: themeColors.text,
     marginBottom: 8,
-    textAlign: "right",
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   inputWrapper: {
     flexDirection: "row-reverse",
@@ -856,13 +909,13 @@ const getStyles = (themeColors: {
     backgroundColor: themeColors.inputBg,
     borderColor: themeColors.inputBorder,
     borderWidth: 1,
-    borderRadius: 12,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 16,
+    minHeight: 56,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   inputWrapperDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
   inputWrapperError: {
     borderColor: "#ef4444",
@@ -870,54 +923,79 @@ const getStyles = (themeColors: {
   textInput: {
     flex: 1,
     color: themeColors.text,
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingVertical: 0,
   },
   textInputDisabled: {
     color: themeColors.textMuted,
   },
   readOnlyText: {
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 17,
+    fontWeight: "500",
     color: themeColors.textMuted,
     marginTop: 4,
-    textAlign: "right",
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   primaryButton: {
-    minHeight: 44,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    backgroundColor: "#ea580c",
-    borderRadius: 12,
+    minHeight: 56,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#FF5A1F",
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
+    shadowColor: "#FF5A1F",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.26,
+    shadowRadius: 14,
+    elevation: 6,
   },
   buttonText: {
     color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "800",
+    textAlign: "center",
+    flexShrink: 1,
   },
   addressesHeader: {
     flexDirection: isCompact ? "column-reverse" : "row",
     justifyContent: "space-between",
     alignItems: isCompact ? "flex-end" : "center",
-    gap: 10,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 16,
+    flexWrap: isEnglish ? "wrap" : "nowrap",
   },
   addAddressBtn: {
-    flexDirection: "row-reverse",
+    flexDirection: isEnglish ? "row" : "row-reverse",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,90,31,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,90,31,0.2)",
   },
   addAddressText: {
-    color: "#ea580c",
-    fontSize: 12,
-    fontWeight: "bold",
+    color: "#FF5A1F",
+    fontSize: isEnglish ? 12 : 13,
+    lineHeight: 19,
+    fontWeight: "800",
+    textAlign: "center",
+    flexShrink: 1,
   },
   buttonIcon: {
     marginLeft: 4,
   },
   titleRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isEnglish ? "row" : "row-reverse",
     alignItems: "center",
     gap: 8,
   },
@@ -925,22 +1003,23 @@ const getStyles = (themeColors: {
     backgroundColor: themeColors.background,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 16,
   },
   titlesTabsRow: {
     flexDirection: "row-reverse",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
     marginBottom: 16,
   },
   titleTab: {
     flexGrow: 1,
     flexBasis: isCompact ? "46%" : 0,
-    minHeight: 32,
-    paddingVertical: 7,
-    borderRadius: 8,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 14,
     backgroundColor: themeColors.cardBg,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
@@ -948,42 +1027,49 @@ const getStyles = (themeColors: {
     justifyContent: "center",
   },
   titleTabActive: {
-    borderColor: "rgba(234, 88, 12, 0.4)",
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
+    borderColor: "#FF5A1F",
+    backgroundColor: "rgba(255,90,31,0.12)",
   },
   titleTabText: {
-    color: "#71717a",
-    fontSize: 11,
-    fontWeight: "bold",
+    color: themeColors.textMuted,
+    fontSize: isEnglish ? 12 : 13,
+    lineHeight: 19,
+    fontWeight: "600",
+    textAlign: "center",
+    flexShrink: 1,
   },
   titleTabTextActive: {
-    color: "#ea580c",
+    color: "#FF5A1F",
   },
   mapToggleButton: {
-    flexDirection: "row-reverse",
+    flexDirection: isEnglish ? "row" : "row-reverse",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 38,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    backgroundColor: "rgba(234, 88, 12, 0.08)",
-    borderColor: "rgba(234, 88, 12, 0.15)",
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255,90,31,0.1)",
+    borderColor: "rgba(255,90,31,0.22)",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 16,
     marginBottom: 16,
-    gap: 6,
+    gap: 8,
   },
   mapToggleButtonText: {
-    color: "#ea580c",
-    fontSize: 11,
-    fontWeight: "bold",
+    color: "#FF5A1F",
+    fontSize: isEnglish ? 13 : 14,
+    lineHeight: 21,
+    fontWeight: "800",
+    textAlign: "center",
+    flexShrink: 1,
   },
   selectedLocationHint: {
-    fontSize: 11,
-    textAlign: "right",
+    fontSize: 12,
+    fontWeight: "500",
+    textAlign: isEnglish ? "left" : "right",
     marginTop: -10,
     marginBottom: 12,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   mapSection: {
     height: 180,
@@ -992,195 +1078,250 @@ const getStyles = (themeColors: {
     marginBottom: 16,
   },
   errorText: {
-    color: "#ef4444",
-    fontSize: 10,
-    marginTop: 4,
-    textAlign: "right",
+    color: "#EF4444",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   formActions: {
     flexDirection: isCompact ? "column" : "row",
-    gap: 8,
-    marginTop: 8,
+    gap: 12,
+    marginTop: 12,
   },
   primaryButtonCompact: {
     flex: 1,
-    minHeight: 38,
-    paddingVertical: 9,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     width: isCompact ? "100%" : undefined,
-    backgroundColor: "#ea580c",
-    borderRadius: 10,
+    backgroundColor: "#FF5A1F",
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   buttonTextCompact: {
     color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "700",
+    textAlign: "center",
+    flexShrink: 1,
   },
   secondaryButtonCompact: {
     flex: 1,
-    minHeight: 38,
-    paddingVertical: 9,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     width: isCompact ? "100%" : undefined,
     backgroundColor: themeColors.cardBg,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   secondaryButtonTextCompact: {
     color: themeColors.text,
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "700",
+    textAlign: "center",
+    flexShrink: 1,
   },
   addressesList: {
-    gap: 12,
+    gap: 14,
   },
   addressCard: {
     flexDirection: isCompact ? "column-reverse" : "row-reverse",
     alignItems: isCompact ? "flex-end" : "center",
-    gap: isCompact ? 8 : 0,
-    padding: 12,
+    gap: isCompact ? 12 : 0,
+    minHeight: 96,
+    padding: 16,
     backgroundColor: themeColors.background,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 18,
   },
   homeIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,90,31,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
   addressInfo: {
     flex: 1,
-    marginRight: isCompact ? 0 : 12,
-    alignItems: "flex-end",
+    marginRight: isCompact || isEnglish ? 0 : 16,
+    marginLeft: isCompact || !isEnglish ? 0 : 16,
+    alignItems: isEnglish ? "flex-start" : "flex-end",
   },
   addressTitle: {
-    fontSize: 13,
-    fontWeight: "bold",
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "700",
     color: themeColors.text,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   addressDetailText: {
-    fontSize: 11,
+    fontSize: 13,
+    lineHeight: 20,
     color: themeColors.textMuted,
-    marginTop: 2,
-    textAlign: "right",
+    fontWeight: "500",
+    marginTop: 4,
+    textAlign: isEnglish ? "left" : "right",
     flexShrink: 1,
   },
   addressPhoneText: {
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 18,
     color: themeColors.textMuted,
-    marginTop: 4,
+    fontWeight: "500",
+    marginTop: 6,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   trashBtn: {
-    padding: 8,
+    width: 44,
+    minHeight: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(239,68,68,0.1)",
   },
   emptyAddresses: {
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
   },
   emptyPinIcon: {
     marginBottom: 8,
   },
   emptyTitleText: {
-    fontSize: 13,
-    fontWeight: "bold",
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "700",
     color: themeColors.text,
+    textAlign: "center",
+    flexShrink: 1,
   },
   emptyDescText: {
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "500",
     color: themeColors.textMuted,
-    marginTop: 4,
+    marginTop: 6,
     textAlign: "center",
+    flexShrink: 1,
   },
   preferenceRow: {
     flexDirection: isCompact ? "column-reverse" : "row",
     justifyContent: "space-between",
     alignItems: isCompact ? "stretch" : "center",
-    gap: isCompact ? 12 : 0,
-    paddingVertical: 12,
+    gap: isCompact ? 14 : 20,
+    paddingVertical: 14,
   },
   prefRowBorder: {
     borderTopWidth: 1,
     borderTopColor: themeColors.cardBorder,
     paddingTop: 16,
-    marginTop: 8,
+    marginTop: 4,
   },
   prefLabels: {
-    alignItems: "flex-end",
+    alignItems: isEnglish ? "flex-start" : "flex-end",
     flex: 1,
   },
   prefTitle: {
-    fontSize: 13,
-    fontWeight: "bold",
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "700",
     color: themeColors.text,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   prefDesc: {
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 18,
     color: themeColors.textMuted,
-    marginTop: 2,
+    fontWeight: "500",
+    marginTop: 4,
+    textAlign: isEnglish ? "left" : "right",
+    flexShrink: 1,
   },
   langToggles: {
-    flexDirection: "row-reverse",
+    flexDirection: isEnglish ? "row" : "row-reverse",
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 16,
     overflow: "hidden",
     alignSelf: isCompact ? "stretch" : "auto",
+    backgroundColor: themeColors.background,
+    padding: 4,
+    gap: 4,
   },
   langBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: themeColors.background,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     flex: isCompact ? 1 : 0,
     alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
   },
   langBtnActive: {
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
+    backgroundColor: "rgba(255,90,31,0.14)",
   },
   langBtnText: {
-    fontSize: 11,
-    color: "#71717a",
-    fontWeight: "bold",
+    fontSize: 13,
+    lineHeight: 19,
+    color: themeColors.textMuted,
+    fontWeight: "700",
+    textAlign: "center",
+    flexShrink: 1,
   },
   langBtnTextActive: {
-    color: "#ea580c",
+    color: "#FF5A1F",
   },
   themeToggles: {
-    flexDirection: "row-reverse",
+    flexDirection: isEnglish ? "row" : "row-reverse",
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 16,
     overflow: "hidden",
     alignSelf: isCompact ? "stretch" : "auto",
+    backgroundColor: themeColors.background,
+    padding: 4,
+    gap: 4,
   },
   themeBtn: {
-    flexDirection: "row-reverse",
+    flexDirection: isEnglish ? "row" : "row-reverse",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: themeColors.background,
-    gap: 4,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 6,
     flex: isCompact ? 1 : 0,
     justifyContent: "center",
+    borderRadius: 12,
   },
   themeBtnActive: {
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
+    backgroundColor: "rgba(255,90,31,0.14)",
   },
   themeIcon: {
     marginLeft: 2,
   },
   themeBtnText: {
-    fontSize: 10,
-    color: "#71717a",
-    fontWeight: "bold",
+    fontSize: 13,
+    lineHeight: 19,
+    color: themeColors.textMuted,
+    fontWeight: "700",
+    textAlign: "center",
+    flexShrink: 1,
   },
   themeBtnTextActive: {
-    color: "#ea580c",
+    color: "#FF5A1F",
   },
 });

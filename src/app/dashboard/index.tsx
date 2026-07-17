@@ -138,68 +138,69 @@ export default function DashboardIndex() {
         isTablet && styles.tabletContent,
         isCompact && styles.compactContent,
       ]}
-      style={[styles.container, { backgroundColor: themeColors.background }]}
+      style={styles.container}
     >
-      {/* Welcome Banner */}
+      {/* Greeting */}
       <View style={styles.welcomeContainer}>
-        <Text style={[styles.welcomeTitle, { color: themeColors.text }]}>
-          {t("welcome_title")} <Text style={styles.gradientText}>{fullName || t("welcome_fallback")}</Text>
+        <Text style={styles.welcomeTitle}>
+          {t("welcome_title")}{" "}
+          <Text style={styles.gradientText}>{fullName || t("welcome_fallback")}</Text>
+          {" 👋"}
         </Text>
-        <Text style={[styles.welcomeSubtitle, { color: themeColors.textMuted }]}>{t("welcome_dashboard")}</Text>
+        <Text style={styles.welcomeSubtitle}>{t("welcome_dashboard")}</Text>
       </View>
 
-      {/* Stats Grid */}
+      {/* Primary Action */}
+      <Link href={"/dashboard/new-order" as any} asChild>
+        <TouchableOpacity style={styles.primaryAction}>
+          <View style={[styles.primaryActionInner, isCompact && styles.actionInnerCompact]}>
+            <View style={styles.primaryActionIcon}>
+              <Feather name="printer" size={30} color="#FFFFFF" />
+            </View>
+            <View style={styles.primaryActionTexts}>
+              <Text style={styles.primaryActionTitle}>{t("new_print_order")}</Text>
+              <Text style={styles.primaryActionSubtitle}>{t("new_print_order_desc")}</Text>
+            </View>
+            <View style={styles.primaryActionArrow}>
+              <Feather name="arrow-left" size={22} color="#FFFFFF" />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Link>
+
+      {/* Statistics */}
       <View style={styles.gridContainer}>
         {stats.map((stat) => (
           <View
             key={stat.key}
-            style={[
-              styles.statCard,
-              isCompact && styles.statCardCompact,
-              { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder },
-            ]}
+            style={styles.statCard}
           >
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconWrapper, { backgroundColor: stat.bgColor }]}>
-                <Feather name={stat.icon} size={20} color={stat.iconColor} />
-              </View>
-              <Text style={[styles.statValue, { color: themeColors.text }]}>{stat.value}</Text>
+            <View style={[styles.iconWrapper, { backgroundColor: stat.bgColor }]}>
+              <Feather name={stat.icon} size={26} color={stat.iconColor} />
             </View>
-            <Text style={[styles.statLabel, { color: themeColors.textMuted }]}>{t(stat.labelKey)}</Text>
+            <Text style={styles.statValue}>{stat.value}</Text>
+            <Text style={styles.statLabel}>{t(stat.labelKey)}</Text>
           </View>
         ))}
       </View>
 
-      {/* Quick Actions */}
-      <View style={styles.actionsContainer}>
-        <Link href={"/dashboard/new-order" as any} asChild>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <View style={[styles.actionInner, isCompact && styles.actionInnerCompact]}>
-              <View style={[styles.actionIconWrapper, styles.primaryIconBg]}>
-                <Feather name="plus-circle" size={24} color="#ea580c" />
-              </View>
-              <View style={styles.actionTexts}>
-                <Text style={[styles.actionTitle, { color: themeColors.text }]}>{t("new_print_order")}</Text>
-                <Text style={[styles.actionSubtitle, { color: themeColors.textMuted }]}>{t("new_print_order_desc")}</Text>
-              </View>
+      {/* My Orders */}
+      <Link href={"/dashboard/orders" as any} asChild>
+        <TouchableOpacity style={styles.ordersCard}>
+          <View style={[styles.ordersCardInner, isCompact && styles.actionInnerCompact]}>
+            <View style={styles.ordersIcon}>
+              <Feather name="clipboard" size={26} color="#FF7A45" />
             </View>
-          </TouchableOpacity>
-        </Link>
-
-        <Link href={"/dashboard/orders" as any} asChild>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-            <View style={[styles.actionInner, isCompact && styles.actionInnerCompact]}>
-              <View style={[styles.actionIconWrapper, styles.secondaryIconBg]}>
-                <Feather name="clipboard" size={24} color="#fb923c" />
-              </View>
-              <View style={styles.actionTexts}>
-                <Text style={[styles.actionTitle, { color: themeColors.text }]}>{t("my_orders")}</Text>
-                <Text style={[styles.actionSubtitle, { color: themeColors.textMuted }]}>{t("my_orders_desc")}</Text>
-              </View>
+            <View style={styles.ordersTexts}>
+              <Text style={styles.ordersTitle}>{t("my_orders")}</Text>
+              <Text style={styles.ordersSubtitle}>{t("my_orders_desc")}</Text>
             </View>
-          </TouchableOpacity>
-        </Link>
-      </View>
+            <View style={styles.ordersArrow}>
+              <Feather name="chevron-left" size={22} color="#94A3B8" />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Link>
     </ScrollView>
   );
 }
@@ -207,14 +208,15 @@ export default function DashboardIndex() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0F172A",
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 24,
+    paddingBottom: 48,
     width: "100%",
   },
   tabletContent: {
-    maxWidth: 900,
+    maxWidth: 960,
     alignSelf: "center",
   },
   compactContent: {
@@ -226,100 +228,192 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   welcomeContainer: {
-    marginBottom: 24,
+    marginBottom: 32,
     alignItems: "flex-end",
   },
   welcomeTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontSize: 30,
+    lineHeight: 40,
+    fontWeight: "800",
+    letterSpacing: -0.4,
+    textAlign: "right",
+    flexShrink: 1,
   },
   gradientText: {
-    color: "#ea580c",
+    color: "#FF7A45",
   },
   welcomeSubtitle: {
+    color: "#94A3B8",
+    fontSize: 15,
+    lineHeight: 23,
+    marginTop: 8,
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  primaryAction: {
+    width: "100%",
+    minHeight: 128,
+    padding: 24,
+    backgroundColor: "#FF5A1F",
+    borderRadius: 20,
+    marginBottom: 32,
+    shadowColor: "#FF5A1F",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  primaryActionInner: {
+    flex: 1,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 16,
+  },
+  primaryActionIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  primaryActionTexts: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "flex-end",
+  },
+  primaryActionTitle: {
+    color: "#FFFFFF",
+    fontSize: 21,
+    lineHeight: 29,
+    fontWeight: "800",
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  primaryActionSubtitle: {
+    color: "rgba(255,255,255,0.82)",
     fontSize: 14,
-    marginTop: 4,
+    lineHeight: 22,
+    fontWeight: "500",
+    marginTop: 5,
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  primaryActionArrow: {
+    width: 40,
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   gridContainer: {
     flexDirection: "row-reverse",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 28,
+    alignItems: "stretch",
+    gap: 16,
+    marginBottom: 32,
   },
   statCard: {
-    width: "48%",
+    flexBasis: "46%",
+    flexGrow: 1,
+    minWidth: 140,
+    minHeight: 152,
+    backgroundColor: "#1E293B",
+    borderColor: "rgba(255,255,255,0.08)",
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-  },
-  statCardCompact: {
-    width: "100%",
-  },
-  cardHeader: {
-    flexDirection: "row-reverse",
+    borderRadius: 20,
+    padding: 18,
+    alignItems: "flex-end",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
   },
   iconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 16,
   },
   statValue: {
-    fontSize: 22,
-    fontWeight: "bold",
-  },
-  statLabel: {
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: "800",
     textAlign: "right",
   },
-  actionsContainer: {
-    gap: 16,
+  statLabel: {
+    color: "#94A3B8",
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "600",
+    textAlign: "right",
+    flexShrink: 1,
   },
-  actionButton: {
+  ordersCard: {
+    width: "100%",
+    minHeight: 112,
+    backgroundColor: "#1E293B",
+    borderColor: "rgba(255,255,255,0.08)",
     borderWidth: 1,
     borderRadius: 20,
     padding: 20,
-    minHeight: 92,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  actionInner: {
+  ordersCardInner: {
+    flex: 1,
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 16,
   },
   actionInnerCompact: {
-    alignItems: "flex-start",
+    gap: 12,
   },
-  actionIconWrapper: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+  ordersIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,90,31,0.12)",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  primaryIconBg: {
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
-  },
-  secondaryIconBg: {
-    backgroundColor: "rgba(251, 146, 60, 0.1)",
-  },
-  actionTexts: {
+  ordersTexts: {
     flex: 1,
+    minWidth: 0,
     alignItems: "flex-end",
   },
-  actionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 4,
+  ordersTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: "700",
+    textAlign: "right",
     flexShrink: 1,
   },
-  actionSubtitle: {
-    fontSize: 13,
+  ordersSubtitle: {
+    color: "#94A3B8",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 4,
     flexShrink: 1,
     textAlign: "right",
+  },
+  ordersArrow: {
+    width: 36,
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
 });

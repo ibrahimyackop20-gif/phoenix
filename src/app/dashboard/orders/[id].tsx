@@ -320,8 +320,8 @@ export default function OrderDetailScreen() {
 
   const renderInfoRow = (label: string, value: string) => (
     <View style={styles.infoRow} key={label}>
-      <Text style={[styles.infoValue, { color: themeColors.text }]}>{value}</Text>
-      <Text style={[styles.infoLabel, { color: themeColors.textMuted }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: "#FFFFFF" }]}>{value}</Text>
+      <Text style={[styles.infoLabel, { color: "#94A3B8" }]}>{label}</Text>
     </View>
   );
 
@@ -334,7 +334,7 @@ export default function OrderDetailScreen() {
           <Feather name="x-circle" size={22} color="#ef4444" />
           <View style={styles.cancelledTextWrap}>
             <Text style={styles.cancelledTitle}>{t("timeline_cancelled")}</Text>
-            <Text style={[styles.cancelledDesc, { color: themeColors.textMuted }]}>
+            <Text style={[styles.cancelledDesc, { color: "#94A3B8" }]}>
               {t("timeline_cancelled_desc")}
             </Text>
           </View>
@@ -381,7 +381,7 @@ export default function OrderDetailScreen() {
                   <Feather
                     name={step.icon}
                     size={12}
-                    color={isCurrent || isCompleted ? "#fff" : themeColors.textMuted}
+                    color={isCurrent || isCompleted ? "#fff" : "#94A3B8"}
                   />
                 )}
               </Animated.View>
@@ -389,13 +389,13 @@ export default function OrderDetailScreen() {
                 <Text
                   style={[
                     styles.timelineTitle,
-                    { color: isCurrent ? PHOENIX_ORANGE : isCompleted ? themeColors.text : themeColors.textMuted },
+                    { color: isCurrent ? "#FF5A1F" : isCompleted ? "#FFFFFF" : "#94A3B8" },
                     isCurrent && styles.timelineTitleActive,
                   ]}
                 >
                   {t(`timeline_${step.key}`)}
                 </Text>
-                <Text style={[styles.timelineDesc, { color: themeColors.textMuted }]}>
+                <Text style={[styles.timelineDesc, { color: "#94A3B8" }]}>
                   {t(`timeline_${step.key}_desc`)}
                 </Text>
                 {(isCompleted || isCurrent) && timestamp ? (
@@ -428,12 +428,12 @@ export default function OrderDetailScreen() {
                   },
                 ]}
               >
-                <Feather name={step.icon} size={12} color={done ? "#fff" : themeColors.textMuted} />
+                <Feather name={step.icon} size={12} color={done ? "#fff" : "#94A3B8"} />
               </View>
               <Text
                 style={[
                   styles.libStepLabel,
-                  { color: done ? step.color : themeColors.textMuted },
+                  { color: done ? step.color : "#94A3B8" },
                 ]}
               >
                 {t(step.labelKey)}
@@ -447,7 +447,7 @@ export default function OrderDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: "#0F172A" }]}>
         <DetailSkeleton isDark={isDark} />
       </SafeAreaView>
     );
@@ -455,10 +455,10 @@ export default function OrderDetailScreen() {
 
   if (notFound || !orderType) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: "#0F172A" }]}>
         <View style={styles.notFound}>
-          <Feather name="alert-circle" size={48} color={themeColors.textMuted} />
-          <Text style={[styles.notFoundText, { color: themeColors.text }]}>
+          <Feather name="alert-circle" size={48} color="#94A3B8" />
+          <Text style={[styles.notFoundText, { color: "#FFFFFF" }]}>
             {t("order_detail_not_found")}
           </Text>
           <TouchableOpacity style={styles.backBtnPrimary} onPress={() => router.back()}>
@@ -473,17 +473,19 @@ export default function OrderDetailScreen() {
   const headerStatus = printOrder?.status || libraryOrder?.status || "";
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
-      <View style={[styles.appBar, { borderBottomColor: themeColors.cardBorder }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: "#0F172A" }]}>
+      <View style={[styles.appBar, { borderBottomColor: "rgba(255,255,255,0.08)" }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
-          <Feather name={rtl ? "arrow-right" : "arrow-left"} size={22} color={themeColors.text} />
+          <Feather name={rtl ? "arrow-right" : "arrow-left"} size={22} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.appBarCenter}>
-          <Text style={[styles.appBarTitle, { color: themeColors.text }]}>
+          <Text style={[styles.appBarTitle, { color: "#FFFFFF" }]}>
             {displayOrderId(headerId)}
           </Text>
           {orderType === "print" ? (
-            <StatusBadge status={headerStatus} />
+            <View style={styles.statusBadgeWrap}>
+              <StatusBadge status={headerStatus} />
+            </View>
           ) : (
             <View style={styles.libBadge}>
               <Text style={styles.libBadgeText}>
@@ -496,17 +498,17 @@ export default function OrderDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+        <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
           {t("order_detail_timeline")}
         </Text>
-        <View style={[styles.card, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+        <View style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
           {orderType === "print" ? renderPrintTimeline() : renderLibraryTimeline()}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+        <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
           {t("order_detail_info")}
         </Text>
-        <View style={[styles.card, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+        <View style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
           {orderType === "print" && printOrder ? (
             <>
               {renderInfoRow(t("order_detail_order_number"), displayOrderId(printOrder.id))}
@@ -583,10 +585,10 @@ export default function OrderDetailScreen() {
           ) : null}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+        <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
           {t("order_detail_files")}
         </Text>
-        <View style={[styles.card, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+        <View style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
           {orderType === "print" && printOrder ? (
             isTelegramOrder(printOrder) ? (
               <View style={styles.fileRow}>
@@ -594,14 +596,14 @@ export default function OrderDetailScreen() {
                   <FontAwesome name="telegram" size={22} color="#29b6f6" />
                 </View>
                 <View style={styles.fileMeta}>
-                  <Text style={[styles.fileTitle, { color: themeColors.text }]}>
+                  <Text style={[styles.fileTitle, { color: "#FFFFFF" }]}>
                     {t("order_detail_telegram_upload")}
                   </Text>
-                  <Text style={[styles.fileSub, { color: themeColors.textMuted }]}>
+                  <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
                     {t("order_detail_bot_code")}: {printOrder.external_file_link || "—"}
                   </Text>
                   {printOrder.total_pages != null ? (
-                    <Text style={[styles.fileSub, { color: themeColors.textMuted }]}>
+                    <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
                       {t("order_detail_pages")}: {printOrder.total_pages}
                     </Text>
                   ) : null}
@@ -624,11 +626,11 @@ export default function OrderDetailScreen() {
                         <Feather name="file-text" size={20} color="#60a5fa" />
                       </View>
                       <View style={styles.fileMeta}>
-                        <Text style={[styles.fileTitle, { color: themeColors.text }]}>
+                        <Text style={[styles.fileTitle, { color: "#FFFFFF" }]}>
                           {name}
                         </Text>
                         {printOrder.total_pages != null ? (
-                          <Text style={[styles.fileSub, { color: themeColors.textMuted }]}>
+                          <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
                             {t("order_detail_pages")}: {printOrder.total_pages}
                           </Text>
                         ) : null}
@@ -645,8 +647,8 @@ export default function OrderDetailScreen() {
                   <Feather name="shopping-bag" size={18} color="#34d399" />
                 </View>
                 <View style={styles.fileMeta}>
-                  <Text style={[styles.fileTitle, { color: themeColors.text }]}>{item.name}</Text>
-                  <Text style={[styles.fileSub, { color: themeColors.textMuted }]}>
+                  <Text style={[styles.fileTitle, { color: "#FFFFFF" }]}>{item.name}</Text>
+                  <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
                     ×{item.quantity} — {item.subtotal} {t("currency")}
                   </Text>
                 </View>
@@ -657,11 +659,11 @@ export default function OrderDetailScreen() {
 
         {orderType === "print" && history.length > 0 ? (
           <>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
               {t("order_detail_history")}
             </Text>
             <View
-              style={[styles.card, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
+              style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}
             >
               {history.map((entry, idx) => (
                 <View
@@ -670,7 +672,7 @@ export default function OrderDetailScreen() {
                     styles.historyRow,
                     idx < history.length - 1 && {
                       borderBottomWidth: 1,
-                      borderBottomColor: themeColors.cardBorder,
+                      borderBottomColor: "rgba(255,255,255,0.08)",
                     },
                   ]}
                 >
@@ -678,7 +680,7 @@ export default function OrderDetailScreen() {
                     {formatOrderDate(entry.time, i18n.language, "time")}
                   </Text>
                   <View style={styles.historyBody}>
-                    <Text style={[styles.historyLabel, { color: themeColors.text }]}>
+                    <Text style={[styles.historyLabel, { color: "#FFFFFF" }]}>
                       {entry.labelKey === "order_detail_history_status"
                         ? getPrintStatusLabel(entry.status || "", t)
                         : entry.labelKey === "order_detail_history_updated"
@@ -711,163 +713,272 @@ const getStyles = (
   isTablet: boolean
 ) =>
   StyleSheet.create({
-    safe: { flex: 1 },
+    safe: { flex: 1, backgroundColor: "#0F172A" },
     appBar: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: isCompact ? 16 : 24,
+      paddingTop: 20,
+      paddingBottom: 24,
       borderBottomWidth: 1,
+      backgroundColor: "#0F172A",
       width: "100%",
-      maxWidth: isTablet ? 900 : undefined,
+      maxWidth: isTablet ? 960 : undefined,
       alignSelf: "center",
     },
-    backBtn: { width: 40, minHeight: 40, alignItems: "center", justifyContent: "center" },
-    appBarCenter: { alignItems: "center", gap: 8, flex: 1, paddingHorizontal: 8 },
-    appBarTitle: { fontSize: 16, fontWeight: "700", fontFamily: "monospace", textAlign: "center" },
+    backBtn: {
+      width: 48,
+      minHeight: 48,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    appBarCenter: {
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
+      paddingHorizontal: 12,
+    },
+    statusBadgeWrap: {
+      transform: [{ scale: 1.15 }],
+      marginVertical: 4,
+      maxWidth: "86%",
+    },
+    appBarTitle: {
+      fontSize: isCompact ? 24 : 30,
+      lineHeight: isCompact ? 32 : 40,
+      fontWeight: "900",
+      fontFamily: "monospace",
+      letterSpacing: 0.8,
+      textAlign: "center",
+      color: "#FFFFFF",
+      flexShrink: 1,
+    },
     scroll: {
-      padding: 20,
-      paddingBottom: 48,
+      paddingHorizontal: isCompact ? 16 : 24,
+      paddingTop: 8,
+      paddingBottom: 56,
       width: "100%",
-      maxWidth: isTablet ? 900 : undefined,
+      maxWidth: isTablet ? 960 : undefined,
       alignSelf: "center",
     },
     sectionTitle: {
-      fontSize: 15,
-      fontWeight: "700",
-      marginBottom: 10,
-      marginTop: 8,
+      fontSize: 18,
+      lineHeight: 26,
+      fontWeight: "800",
+      marginBottom: 12,
+      marginTop: 24,
       textAlign: "right",
+      color: "#FFFFFF",
+      flexShrink: 1,
     },
     card: {
       borderRadius: 20,
       borderWidth: 1,
-      padding: 16,
-      marginBottom: 8,
+      padding: isCompact ? 18 : 24,
+      marginBottom: 4,
+      backgroundColor: "#1E293B",
+      borderColor: "rgba(255,255,255,0.08)",
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.14,
+      shadowRadius: 16,
+      elevation: 3,
     },
     timeline: { gap: 0 },
     timelineStep: {
       flexDirection: "row-reverse",
       alignItems: "flex-start",
-      minHeight: 72,
+      minHeight: 88,
       position: "relative",
     },
     timelineLine: {
       position: "absolute",
-      top: 28,
-      width: 2,
-      height: 52,
+      top: 32,
+      width: 3,
+      height: 64,
+      borderRadius: 2,
     },
     timelineDot: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       borderWidth: 2,
       alignItems: "center",
       justifyContent: "center",
-      marginLeft: 12,
+      marginLeft: 16,
     },
-    timelineContent: { flex: 1, alignItems: "flex-end", paddingBottom: 16 },
+    timelineContent: { flex: 1, alignItems: "flex-end", paddingBottom: 20 },
     timelineContentRtl: { alignItems: "flex-end" },
-    timelineTitle: { fontSize: 14, fontWeight: "600", marginBottom: 2 },
+    timelineTitle: {
+      fontSize: 15,
+      lineHeight: 22,
+      fontWeight: "700",
+      marginBottom: 4,
+      textAlign: "right",
+      flexShrink: 1,
+    },
     timelineTitleActive: { fontWeight: "800" },
-    timelineDesc: { fontSize: 11, lineHeight: 16, textAlign: "right" },
-    timelineTime: { fontSize: 10, color: PHOENIX_ORANGE, marginTop: 4, fontWeight: "600" },
+    timelineDesc: { fontSize: 13, lineHeight: 20, textAlign: "right", flexShrink: 1 },
+    timelineTime: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: "#FF5A1F",
+      marginTop: 6,
+      fontWeight: "700",
+      textAlign: "right",
+    },
     cancelledCard: {
       flexDirection: "row-reverse",
       alignItems: "center",
-      gap: 12,
-      padding: 12,
-      borderRadius: 14,
+      gap: 16,
+      padding: 18,
+      borderRadius: 18,
       borderWidth: 1,
       backgroundColor: "rgba(239,68,68,0.08)",
     },
     cancelledTextWrap: { flex: 1, alignItems: "flex-end" },
-    cancelledTitle: { color: "#ef4444", fontWeight: "700", fontSize: 14 },
-    cancelledDesc: { fontSize: 11, marginTop: 4, textAlign: "right" },
+    cancelledTitle: { color: "#EF4444", fontWeight: "800", fontSize: 16, lineHeight: 24 },
+    cancelledDesc: { fontSize: 13, lineHeight: 20, marginTop: 4, textAlign: "right" },
     infoRow: {
       flexDirection: isCompact ? "column" : "row-reverse",
       justifyContent: "space-between",
       alignItems: "flex-start",
-      paddingVertical: 8,
-      gap: 12,
+      minHeight: 48,
+      paddingVertical: 12,
+      gap: isCompact ? 4 : 20,
     },
-    infoLabel: { fontSize: 12, flex: isCompact ? 0 : 1, textAlign: "right", width: isCompact ? "100%" : undefined },
-    infoValue: {
-      fontSize: 12,
+    infoLabel: {
+      fontSize: 13,
+      lineHeight: 20,
       fontWeight: "600",
+      flex: isCompact ? 0 : 1,
+      textAlign: "right",
+      width: isCompact ? "100%" : undefined,
+      color: "#94A3B8",
+      flexShrink: 1,
+    },
+    infoValue: {
+      fontSize: 15,
+      lineHeight: 23,
+      fontWeight: "700",
       flex: isCompact ? 0 : 1.2,
       textAlign: isCompact ? "right" : "left",
       width: isCompact ? "100%" : undefined,
       flexShrink: 1,
+      color: "#FFFFFF",
     },
     fileRow: {
       flexDirection: isCompact ? "column" : "row-reverse",
       alignItems: isCompact ? "flex-end" : "center",
-      gap: 12,
-      paddingVertical: 10,
+      gap: 16,
+      minHeight: 88,
+      padding: 16,
+      marginBottom: 12,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.08)",
+      backgroundColor: "#0F172A",
     },
     fileIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+      width: 56,
+      height: 56,
+      borderRadius: 16,
       backgroundColor: "rgba(96,165,250,0.12)",
       alignItems: "center",
       justifyContent: "center",
     },
     telegramIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+      width: 56,
+      height: 56,
+      borderRadius: 16,
       backgroundColor: "rgba(41,182,246,0.12)",
       alignItems: "center",
       justifyContent: "center",
     },
     fileMeta: { flex: isCompact ? 0 : 1, alignItems: "flex-end", width: isCompact ? "100%" : undefined },
-    fileTitle: { fontSize: 13, fontWeight: "600", textAlign: "right", flexShrink: 1 },
-    fileSub: { fontSize: 11, marginTop: 2, textAlign: "right", flexShrink: 1 },
+    fileTitle: {
+      fontSize: 15,
+      lineHeight: 22,
+      fontWeight: "700",
+      textAlign: "right",
+      flexShrink: 1,
+    },
+    fileSub: {
+      fontSize: 13,
+      lineHeight: 20,
+      marginTop: 4,
+      textAlign: "right",
+      flexShrink: 1,
+    },
     historyRow: {
       flexDirection: isCompact ? "column" : "row-reverse",
       alignItems: "flex-start",
-      gap: 12,
-      paddingVertical: 10,
+      gap: 16,
+      paddingVertical: 16,
     },
     historyTime: {
-      fontSize: 12,
+      fontSize: 13,
+      lineHeight: 20,
       fontWeight: "700",
-      color: PHOENIX_ORANGE,
-      minWidth: 48,
+      color: "#FF5A1F",
+      minWidth: 64,
       textAlign: "right",
     },
     historyBody: { flex: 1, alignItems: "flex-end" },
-    historyLabel: { fontSize: 13, fontWeight: "500", textAlign: "right" },
+    historyLabel: {
+      fontSize: 14,
+      lineHeight: 21,
+      fontWeight: "600",
+      textAlign: "right",
+      flexShrink: 1,
+    },
     supportBtn: {
       flexDirection: "row-reverse",
       alignItems: "center",
       justifyContent: "center",
-      gap: 8,
-      backgroundColor: PHOENIX_ORANGE,
-      borderRadius: 16,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      minHeight: 48,
-      marginTop: 20,
+      gap: 10,
+      backgroundColor: "#FF5A1F",
+      borderRadius: 18,
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+      minHeight: 56,
+      marginTop: 28,
+      shadowColor: "#FF5A1F",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.26,
+      shadowRadius: 14,
+      elevation: 6,
     },
-    supportBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+    supportBtnText: {
+      color: "#FFFFFF",
+      fontWeight: "800",
+      fontSize: 16,
+      lineHeight: 24,
+      textAlign: "center",
+      flexShrink: 1,
+    },
     libBadge: {
-      backgroundColor: "rgba(52,211,153,0.12)",
-      borderColor: "rgba(52,211,153,0.25)",
+      backgroundColor: "rgba(16,185,129,0.14)",
+      borderColor: "rgba(16,185,129,0.32)",
       borderWidth: 1,
       borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 3,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
     },
-    libBadgeText: { color: "#34d399", fontSize: 11, fontWeight: "600" },
+    libBadgeText: {
+      color: "#10B981",
+      fontSize: 13,
+      lineHeight: 19,
+      fontWeight: "800",
+      textAlign: "center",
+      flexShrink: 1,
+    },
     libTimelineRow: {
       flexDirection: isCompact ? "column" : "row-reverse",
       justifyContent: "space-between",
-      gap: isCompact ? 10 : 0,
+      gap: isCompact ? 14 : 8,
     },
     libStep: {
       alignItems: "center",
@@ -876,22 +987,30 @@ const getStyles = (
       gap: isCompact ? 10 : 0,
     },
     libStepCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       borderWidth: 2,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: 6,
+      marginBottom: 8,
     },
-    libStepLabel: { fontSize: 9, textAlign: isCompact ? "right" : "center", flexShrink: 1 },
+    libStepLabel: {
+      fontSize: 11,
+      lineHeight: 17,
+      fontWeight: "700",
+      textAlign: isCompact ? "right" : "center",
+      flexShrink: 1,
+    },
     notFound: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 },
     notFoundText: { fontSize: 15, textAlign: "center" },
     backBtnPrimary: {
-      backgroundColor: PHOENIX_ORANGE,
-      borderRadius: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
+      backgroundColor: "#FF5A1F",
+      borderRadius: 18,
+      paddingHorizontal: 24,
+      paddingVertical: 16,
+      minHeight: 56,
+      justifyContent: "center",
     },
-    backBtnPrimaryText: { color: "#fff", fontWeight: "700" },
+    backBtnPrimaryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
   });
