@@ -50,6 +50,9 @@
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
   },
+  "overrides": {
+    "eslint-import-resolver-typescript": "3.8.7"
+  },
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
