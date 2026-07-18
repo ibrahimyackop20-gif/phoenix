@@ -22,6 +22,7 @@ import { markPostAuthNavigation } from "@/lib/postAuthNavigation";
 import { AntDesign, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
 
 type PageState = "login" | "otp" | "success";
 
@@ -249,6 +250,7 @@ export default function LoginPage() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.keyboardView}
     >
+      <ScreenTransition style={styles.keyboardView}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
           {pageState === "login" && (
@@ -512,6 +514,7 @@ export default function LoginPage() {
           )}
         </View>
       </ScrollView>
+      </ScreenTransition>
     </KeyboardAvoidingView>
   );
 }

@@ -12,6 +12,16 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeOutUp,
+  SlideInRight,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 import { useRouter, usePathname, useGlobalSearchParams } from "expo-router";
 import { supabase } from "../lib/supabaseClient";
@@ -23,6 +33,77 @@ import { useTranslation } from "react-i18next";
 import { useAppTheme } from "./ThemeProvider";
 import { isAdminUser } from "../lib/adminAccess";
 import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
+import { LibraryEnabled } from "../src/config/features";
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
+interface DrawerNavItemProps {
+  label: string;
+  icon: string;
+  isActive: boolean;
+  inactiveTextColor: string;
+  inactiveIconColor: string;
+  onPress: () => void;
+}
+
+/**
+ * Drawer navigation row with a smoothly animated active state
+ * (highlight fade, edge indicator, subtle icon scale). Presentational only.
+ */
+function DrawerNavItem({
+  label,
+  icon,
+  isActive,
+  inactiveTextColor,
+  inactiveIconColor,
+  onPress,
+}: DrawerNavItemProps) {
+  const active = useSharedValue(isActive ? 1 : 0);
+
+  useEffect(() => {
+    active.value = withTiming(isActive ? 1 : 0, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [isActive, active]);
+
+  const highlightStyle = useAnimatedStyle(() => ({ opacity: active.value }));
+  const indicatorStyle = useAnimatedStyle(() => ({
+    opacity: active.value,
+    transform: [{ scaleY: 0.5 + active.value * 0.5 }],
+  }));
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + active.value * 0.12 }],
+  }));
+
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.drawerItem}>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.drawerItemHighlight, highlightStyle]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.drawerActiveIndicator, indicatorStyle]}
+      />
+      <Text
+        style={[
+          styles.drawerItemLabel,
+          isActive ? styles.activeText : { color: inactiveTextColor },
+        ]}
+      >
+        {label}
+      </Text>
+      <Animated.View style={iconStyle}>
+        <Feather
+          name={icon as any}
+          size={18}
+          color={isActive ? "#ea580c" : inactiveIconColor}
+        />
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
 
 interface NavbarProps {
   role?: string;
@@ -118,12 +199,12 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
         icon: "printer",
         visible: true,
       },
-      // Always visible (matches website drawer). Opens Coming Soon until Library ships.
+      // Library/Marketplace entry — hidden until the module ships (LibraryEnabled).
       {
         href: "/coming-soon?feature=library",
         label: "library",
         icon: "book-open",
-        visible: true,
+        visible: LibraryEnabled,
       },
       {
         href: "/dashboard/orders",
@@ -131,11 +212,12 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
         icon: "package",
         visible: true,
       },
+      // Marketplace purchases (shopping-bag) — hidden until Library ships (LibraryEnabled).
       {
         href: "/dashboard/purchases",
         label: "my_purchases",
         icon: "shopping-bag",
-        visible: true,
+        visible: LibraryEnabled,
       },
     ];
 
@@ -219,18 +301,20 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
             )}
           </TouchableOpacity>
 
-          {/* Chat Link */}
-          <TouchableOpacity
-            onPress={() => router.push("/dashboard/chat" as any)}
-            style={styles.actionIcon}
-          >
-            <Feather name="message-square" size={20} color={themeColors.text} />
-            {unreadChatCount > 0 && (
-              <View style={[styles.badge, styles.badgeDanger]}>
-                <Text style={styles.badgeText}>{unreadChatCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {/* Chat Link — hidden until Library/Marketplace ships (LibraryEnabled) */}
+          {LibraryEnabled && (
+            <TouchableOpacity
+              onPress={() => router.push("/dashboard/chat" as any)}
+              style={styles.actionIcon}
+            >
+              <Feather name="message-square" size={20} color={themeColors.text} />
+              {unreadChatCount > 0 && (
+                <View style={[styles.badge, styles.badgeDanger]}>
+                  <Text style={styles.badgeText}>{unreadChatCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Balance Tracker */}
           <TouchableOpacity
@@ -247,17 +331,22 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
       </View>
 
       {/* Real-time Toast Messages */}
-      {latestToast && (
-        <View style={styles.toastOverlay}>
-          <View style={[styles.toastCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+      <View style={styles.toastOverlay} pointerEvents="box-none">
+        {latestToast && (
+          <Animated.View
+            key={latestToast}
+            entering={FadeInDown.duration(240).easing(Easing.out(Easing.cubic))}
+            exiting={FadeOutUp.duration(200).easing(Easing.in(Easing.cubic))}
+            style={[styles.toastCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
+          >
             <Feather name="info" size={16} color="#ea580c" />
             <Text style={[styles.toastText, { color: themeColors.text }]}>{latestToast}</Text>
             <TouchableOpacity onPress={clearToast} style={styles.toastClose}>
               <Text style={[styles.toastCloseText, { color: themeColors.textMuted }]}>×</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      )}
+          </Animated.View>
+        )}
+      </View>
 
       {/* Notification Dropdown Overlay Modal */}
       <Modal
@@ -368,14 +457,18 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
       >
         <View style={styles.drawerContainer}>
           {/* Backdrop */}
-          <TouchableOpacity
+          <AnimatedTouchableOpacity
+            entering={FadeIn.duration(200)}
             style={styles.drawerBackdrop}
             activeOpacity={1}
             onPress={() => setMenuOpen(false)}
           />
 
           {/* Drawer Content (Slides from Right in RTL context) */}
-          <View style={[styles.drawerPanel, { backgroundColor: themeColors.cardBg, borderLeftColor: themeColors.cardBorder, width: drawerWidth }]}>
+          <Animated.View
+            entering={SlideInRight.duration(260).easing(Easing.out(Easing.cubic))}
+            style={[styles.drawerPanel, { backgroundColor: themeColors.cardBg, borderLeftColor: themeColors.cardBorder, width: drawerWidth }]}
+          >
             <SafeAreaView style={styles.drawerSafeArea}>
               {/* Drawer Header */}
               <View style={[styles.drawerHeader, { borderBottomColor: themeColors.cardBorder }]}>
@@ -465,31 +558,18 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
                     );
                   })();
                   return (
-                    <TouchableOpacity
+                    <DrawerNavItem
                       key={`${link.label}-${link.href}`}
+                      label={t(link.label)}
+                      icon={link.icon}
+                      isActive={isActive}
+                      inactiveTextColor={themeColors.text}
+                      inactiveIconColor={themeColors.textMuted}
                       onPress={() => {
                         setMenuOpen(false);
                         router.push(link.href as any);
                       }}
-                      style={[
-                        styles.drawerItem,
-                        isActive && styles.drawerItemActive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.drawerItemLabel,
-                          isActive ? styles.activeText : { color: themeColors.text },
-                        ]}
-                      >
-                        {t(link.label)}
-                      </Text>
-                      <Feather
-                        name={link.icon as any}
-                        size={18}
-                        color={isActive ? "#ea580c" : themeColors.textMuted}
-                      />
-                    </TouchableOpacity>
+                    />
                   );
                 })}
               </ScrollView>
@@ -505,7 +585,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
                 </TouchableOpacity>
               </View>
             </SafeAreaView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -813,11 +893,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 12,
     minHeight: 44,
+    position: "relative",
+    overflow: "hidden",
   },
   drawerItemActive: {
     backgroundColor: "rgba(234, 88, 12, 0.12)",
     borderColor: "rgba(234, 88, 12, 0.2)",
     borderWidth: 1,
+  },
+  drawerItemHighlight: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 12,
+    backgroundColor: "rgba(234, 88, 12, 0.12)",
+  },
+  drawerActiveIndicator: {
+    position: "absolute",
+    right: 0,
+    top: 8,
+    bottom: 8,
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: "#ea580c",
   },
   drawerItemLabel: {
     fontSize: 13,

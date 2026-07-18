@@ -15,6 +15,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../../../../lib/supabaseClient";
 import { useCart } from "../../../../../components/CartProvider";
 import { Feather, FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LibraryEnabled } from "../../../../config/features";
+import { ScreenTransition } from "../../../../components/anim/ScreenTransition";
 
 interface StoreInfo {
   id: string;
@@ -266,6 +268,7 @@ export default function StoreDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ScreenTransition style={styles.safeArea}>
       {/* Toast Alert */}
       {toast && (
         <View
@@ -288,17 +291,20 @@ export default function StoreDetailScreen() {
           <Text style={styles.backLinkText}>العودة لجميع المتاجر</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => router.push("/dashboard/cart" as any)}
-          style={styles.cartBtn}
-        >
-          <Feather name="shopping-cart" size={18} color="#ffffff" />
-          {cartCount > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Cart Button — hidden until Library/Marketplace ships (LibraryEnabled) */}
+        {LibraryEnabled && (
+          <TouchableOpacity
+            onPress={() => router.push("/dashboard/cart" as any)}
+            style={styles.cartBtn}
+          >
+            <Feather name="shopping-cart" size={18} color="#ffffff" />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -348,8 +354,8 @@ export default function StoreDetailScreen() {
             </View>
           </View>
 
-          {/* Contact Seller */}
-          {storeOwnerId && currentUserId && storeOwnerId !== currentUserId && (
+          {/* Contact Seller (chat) — hidden until Library/Marketplace ships (LibraryEnabled) */}
+          {LibraryEnabled && storeOwnerId && currentUserId && storeOwnerId !== currentUserId && (
             <TouchableOpacity
               onPress={handleContactSeller}
               disabled={contactingSeller}
@@ -442,6 +448,7 @@ export default function StoreDetailScreen() {
           />
         )}
       </ScrollView>
+      </ScreenTransition>
     </SafeAreaView>
   );
 }

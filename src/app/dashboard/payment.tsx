@@ -16,6 +16,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
 
 interface Order {
   id: string;
@@ -229,6 +230,7 @@ export default function PaymentScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: "#0F172A" }]}>
+      <ScreenTransition style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.scrollContent, isTablet && styles.tabletContent]}
         keyboardShouldPersistTaps="handled"
@@ -391,6 +393,7 @@ export default function PaymentScreen() {
           </View>
         </View>
       </ScrollView>
+      </ScreenTransition>
     </SafeAreaView>
   );
 }

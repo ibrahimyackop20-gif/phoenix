@@ -23,6 +23,7 @@ import GoogleSignInButton from "@/../components/GoogleSignInButton";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 type Step = "register" | "verify";
@@ -406,6 +407,7 @@ export default function SignupPage() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.keyboardView}
     >
+      <ScreenTransition style={styles.keyboardView}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.container}>
           {step === "register" && (
@@ -638,6 +640,7 @@ export default function SignupPage() {
           )}
         </View>
       </ScrollView>
+      </ScreenTransition>
     </KeyboardAvoidingView>
   );
 }

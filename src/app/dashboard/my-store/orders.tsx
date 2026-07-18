@@ -19,6 +19,7 @@ import {
   teardownRealtimeChannel,
 } from "../../../../lib/realtimeChannel";
 import { Feather } from "@expo/vector-icons";
+import { LibraryEnabled } from "../../../config/features";
 
 interface OrderItem {
   product_id: string;
@@ -384,6 +385,10 @@ export default function SellerOrdersScreen() {
         <FlatList
           data={orders}
           keyExtractor={(item) => item.id}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={11}
+          updateCellsBatchingPeriod={50}
           contentContainerStyle={[
             styles.listContent,
             { width: contentWidth, alignSelf: "center" },
@@ -505,7 +510,8 @@ export default function SellerOrdersScreen() {
                     </View>
                   )}
 
-                  {!isRejected && (
+                  {/* Chat with buyer — hidden until Library/Marketplace ships (LibraryEnabled) */}
+                  {LibraryEnabled && !isRejected && (
                     <Link
                       href={{
                         pathname: "/dashboard/chat" as any,

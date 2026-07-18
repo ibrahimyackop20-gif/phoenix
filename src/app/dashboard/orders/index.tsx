@@ -4,7 +4,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   FlatList,
   ScrollView,
   I18nManager,
@@ -21,6 +20,9 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../../components/ThemeProvider";
 import StatusBadge from "../../../../components/StatusBadge";
+import { AnimatedCard } from "../../../components/anim/AnimatedCard";
+import { ScreenTransition } from "../../../components/anim/ScreenTransition";
+import { SkeletonCard } from "../../../components/anim/Skeleton";
 import {
   displayOrderId,
   formatOrderDate,
@@ -253,6 +255,8 @@ export default function OrdersScreen() {
   const printCount = useMemo(() => orders.filter((o) => o.type === "print").length, [orders]);
   const libCount = useMemo(() => orders.filter((o) => o.type === "library").length, [orders]);
 
+  const keyExtractor = useCallback((item: UnifiedOrder) => item.id, []);
+
   const getOrderPrice = (item: UnifiedOrder) => {
     if (item.type === "library") {
       return `${item.total.toLocaleString()} ${t("currency")}`;
@@ -267,14 +271,19 @@ export default function OrdersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#ea580c" />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.skeletonList}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenTransition style={styles.container}>
       {successMsg && (
         <View style={styles.toastSuccess}>
           <Text style={styles.toastText}>{successMsg}</Text>
@@ -342,13 +351,18 @@ export default function OrdersScreen() {
       ) : (
         <FlatList
           data={filteredOrders}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={11}
+          updateCellsBatchingPeriod={50}
+          renderItem={({ item, index }) => {
             const isPrint = item.type === "print";
             const updatedAt = item.updated_at || item.created_at;
 
             return (
+              <AnimatedCard index={index}>
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() => openOrderDetail(item)}
@@ -429,10 +443,12 @@ export default function OrdersScreen() {
                   </View>
                 )}
               </TouchableOpacity>
+              </AnimatedCard>
             );
           }}
         />
       )}
+      </ScreenTransition>
     </SafeAreaView>
   );
 }
@@ -512,6 +528,14 @@ const getStyles = (
     emptyCard: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
     emptyTitle: { fontSize: 16, fontWeight: "bold", marginTop: 16, marginBottom: 8 },
     emptySubtitle: { fontSize: 13, textAlign: "center", lineHeight: 18 },
+    skeletonList: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      gap: 12,
+      width: "100%",
+      maxWidth: isTablet ? 900 : undefined,
+      alignSelf: "center",
+    },
     listContent: {
       paddingHorizontal: 20,
       paddingBottom: 40,

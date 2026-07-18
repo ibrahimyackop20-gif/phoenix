@@ -21,6 +21,7 @@ import LocationPickerModal from "../../../components/LocationPickerModal";
 import { Feather, Ionicons, FontAwesome } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
 
 import { countPdfPagesFromUri } from "../../../lib/pdfPageCount";
 import { isPdfFile } from "../../../lib/normalizeDocumentAsset";
@@ -881,6 +882,7 @@ export default function NewOrderScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenTransition style={styles.container}>
       {toastMsg && (
         <View style={toastType === "success" ? styles.toastSuccess : styles.toastError}>
           <Text style={styles.toastText}>{toastMsg}</Text>
@@ -1654,6 +1656,7 @@ export default function NewOrderScreen() {
           </View>
         </View>
       </Modal>
+      </ScreenTransition>
     </SafeAreaView>
   );
 }

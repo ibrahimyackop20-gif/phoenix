@@ -13,6 +13,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
 
 interface StatItem {
   key: string;
@@ -132,6 +133,7 @@ export default function DashboardIndex() {
   }
 
   return (
+    <ScreenTransition style={styles.container}>
     <ScrollView
       contentContainerStyle={[
         styles.scrollContent,
@@ -202,6 +204,7 @@ export default function DashboardIndex() {
         </TouchableOpacity>
       </Link>
     </ScrollView>
+    </ScreenTransition>
   );
 }
 

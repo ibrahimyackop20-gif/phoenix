@@ -21,6 +21,7 @@ import {
   teardownRealtimeChannel,
 } from "../../../../lib/realtimeChannel";
 import { useAppTheme } from "../../../../components/ThemeProvider";
+import { ScreenTransition } from "../../../components/anim/ScreenTransition";
 import StatusBadge from "../../../../components/StatusBadge";
 import {
   buildPrintStatusHistory,
@@ -474,6 +475,7 @@ export default function OrderDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: "#0F172A" }]}>
+      <ScreenTransition style={styles.safe}>
       <View style={[styles.appBar, { borderBottomColor: "rgba(255,255,255,0.08)" }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
           <Feather name={rtl ? "arrow-right" : "arrow-left"} size={22} color="#FFFFFF" />
@@ -702,6 +704,7 @@ export default function OrderDetailScreen() {
           <Text style={styles.supportBtnText}>{t("order_detail_contact_support")}</Text>
         </TouchableOpacity>
       </ScrollView>
+      </ScreenTransition>
     </SafeAreaView>
   );
 }

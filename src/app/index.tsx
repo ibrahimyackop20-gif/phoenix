@@ -3,7 +3,6 @@ import {
   StyleSheet,
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +13,9 @@ import { markPostAuthNavigation } from "@/../lib/postAuthNavigation";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../components/ThemeProvider";
+import { HeroIllustration } from "../components/landing/HeroIllustration";
+import { ScreenTransition } from "../components/anim/ScreenTransition";
+import { PressableScale } from "../components/anim/PressableScale";
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -45,8 +47,20 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ScreenTransition>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroSection}>
+          {/* Hero visual: transparent PNG floating over subtle depth (Views only) */}
+          <View style={styles.heroVisual}>
+            {/* Decorative depth behind ONLY the printer — no gradients, no cards */}
+            <View style={styles.bgGlow} pointerEvents="none" />
+            <View style={styles.bgCircleLarge} pointerEvents="none" />
+            <View style={styles.bgCircleSmall} pointerEvents="none" />
+
+            {/* Official hero illustration */}
+            <HeroIllustration />
+          </View>
+
           <View style={styles.badgeContainer}>
             <Ionicons name="sparkles" size={14} color="#ea580c" />
             <Text style={styles.badgeText}>{t("land_badge")}</Text>
@@ -60,20 +74,20 @@ export default function HomeScreen() {
           <Text style={styles.subtitleText}>{t("land_subtitle")}</Text>
 
           <View style={styles.ctaContainer}>
-            <TouchableOpacity
+            <PressableScale
               style={styles.primaryButton}
               onPress={() => router.push("/auth/signup" as any)}
             >
               <Text style={styles.primaryButtonText}>{t("land_cta_start")}</Text>
               <Feather name="arrow-left" size={18} color="#ffffff" style={styles.buttonIcon} />
-            </TouchableOpacity>
+            </PressableScale>
 
-            <TouchableOpacity
+            <PressableScale
               style={styles.secondaryButton}
               onPress={() => router.push("/auth/login" as any)}
             >
               <Text style={styles.secondaryButtonText}>{t("auth_login_btn")}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
 
@@ -125,6 +139,7 @@ export default function HomeScreen() {
           </Text>
         </View>
       </ScrollView>
+      </ScreenTransition>
     </SafeAreaView>
   );
 }
@@ -143,8 +158,51 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     },
     heroSection: {
       alignItems: "center",
-      paddingVertical: 60,
+      paddingTop: 20,
+      paddingBottom: 52,
       paddingHorizontal: 24,
+      position: "relative",
+    },
+    heroVisual: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    bgGlow: {
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      marginTop: -150,
+      marginLeft: -150,
+      width: 300,
+      height: 300,
+      borderRadius: 150,
+      backgroundColor: "rgba(255, 90, 31, 0.12)",
+    },
+    bgCircleLarge: {
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      marginTop: -190,
+      marginLeft: -190,
+      width: 380,
+      height: 380,
+      borderRadius: 190,
+      borderWidth: 1,
+      borderColor: "rgba(255, 90, 31, 0.06)",
+    },
+    bgCircleSmall: {
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      marginTop: -115,
+      marginLeft: -115,
+      width: 230,
+      height: 230,
+      borderRadius: 115,
+      borderWidth: 1,
+      borderColor: "rgba(255, 90, 31, 0.10)",
     },
     badgeContainer: {
       flexDirection: "row-reverse",
@@ -156,7 +214,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderRadius: 9999,
       paddingVertical: 6,
       paddingHorizontal: 16,
-      marginBottom: 24,
+      marginTop: 24,
       maxWidth: "100%",
     },
     badgeText: {
@@ -171,7 +229,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       fontWeight: "900",
       textAlign: "center",
       lineHeight: 46,
-      marginBottom: 16,
+      marginTop: 16,
       flexShrink: 1,
     },
     orangeText: {
@@ -186,14 +244,15 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       textAlign: "center",
       lineHeight: 22,
       maxWidth: 320,
-      marginBottom: 36,
+      marginTop: 12,
     },
     ctaContainer: {
       flexDirection: "column",
       width: "100%",
-      gap: 12,
+      gap: 16,
       paddingHorizontal: 16,
       maxWidth: 440,
+      marginTop: 32,
     },
     primaryButton: {
       backgroundColor: "#ea580c",

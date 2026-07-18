@@ -22,6 +22,7 @@ import { useProfile } from "../../../components/ProfileProvider";
 import { useAppTheme } from "../../../components/ThemeProvider";
 import LocationPickerModal from "../../../components/LocationPickerModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
 
 interface DeliveryAddress {
   id: string;
@@ -359,6 +360,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenTransition style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {successMsg && (
           <View style={styles.toastSuccess}>
@@ -718,6 +720,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      </ScreenTransition>
     </SafeAreaView>
   );
 }

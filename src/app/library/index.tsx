@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   FlatList,
   Image,
   useWindowDimensions,
@@ -21,6 +20,9 @@ import { useCart } from "../../../components/CartProvider";
 import { Feather, FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { LibraryEnabled } from "../../config/features";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
+import { SkeletonCard } from "../../components/anim/Skeleton";
 
 interface StoreCard {
   id: string;
@@ -138,9 +140,13 @@ export default function LibraryScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#ea580c" />
-      </View>
+      <SafeAreaView style={styles.safeArea as any}>
+        <View style={{ padding: 16, gap: 12 }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -221,6 +227,7 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea as any}>
+      <ScreenTransition style={styles.safeArea as any}>
       <View style={[styles.header as any, { width: contentWidth, alignSelf: "center" }]}>
         <View style={styles.headerTitleContainer as any}>
           <View style={styles.headerTitleRow as any}>
@@ -230,24 +237,30 @@ export default function LibraryScreen() {
           <Text style={styles.headerSubtitle as any}>تصفح المتاجر المعتمدة واستعرض منتجاتها</Text>
         </View>
 
-        {/* Cart Button */}
-        <TouchableOpacity
-          onPress={() => router.push("/dashboard/cart" as any)}
-          style={styles.cartButton as any}
-        >
-          <Feather name="shopping-cart" size={20} color="#ffffff" />
-          {cartCount > 0 && (
-            <View style={styles.cartBadge as any}>
-              <Text style={styles.cartBadgeText as any}>{cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Cart Button — hidden until Library/Marketplace ships (LibraryEnabled) */}
+        {LibraryEnabled && (
+          <TouchableOpacity
+            onPress={() => router.push("/dashboard/cart" as any)}
+            style={styles.cartButton as any}
+          >
+            <Feather name="shopping-cart" size={20} color="#ffffff" />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge as any}>
+                <Text style={styles.cartBadgeText as any}>{cartCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       <FlatList
         data={stores}
         renderItem={renderStoreItem}
         keyExtractor={(item) => item.id}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={11}
+        updateCellsBatchingPeriod={50}
         contentContainerStyle={[
           styles.listContent as any,
           { width: contentWidth, alignSelf: "center" },
@@ -260,6 +273,7 @@ export default function LibraryScreen() {
           </View>
         }
       />
+      </ScreenTransition>
     </SafeAreaView>
   );
 }

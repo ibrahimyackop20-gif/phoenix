@@ -4,7 +4,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   FlatList,
   ScrollView,
   useWindowDimensions,
@@ -16,6 +15,8 @@ import InvoiceGenerator from "../../../components/InvoiceGenerator";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
+import { ScreenTransition } from "../../components/anim/ScreenTransition";
+import { SkeletonCard } from "../../components/anim/Skeleton";
 
 interface OrderItem {
   product_id: string;
@@ -136,9 +137,13 @@ export default function PurchasesScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color="#ea580c" />
-      </View>
+      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={styles.skeletonList}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -167,6 +172,7 @@ export default function PurchasesScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <ScreenTransition style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push("/dashboard" as any)} style={styles.refreshButton}>
@@ -192,6 +198,10 @@ export default function PurchasesScreen() {
           data={orders}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={11}
+          updateCellsBatchingPeriod={50}
           renderItem={({ item }) => {
             const currentStep = getStepIndex(item.status);
             const itemsList = parseOrderItems(item.items);
@@ -346,6 +356,7 @@ export default function PurchasesScreen() {
           }}
         />
       )}
+      </ScreenTransition>
     </SafeAreaView>
   );
 }
@@ -466,6 +477,14 @@ const getStyles = (isCompact: boolean, isTablet: boolean) => StyleSheet.create({
     flexDirection: isCompact ? "column" : "row-reverse",
     gap: 16,
     width: "100%",
+  },
+  skeletonList: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 12,
+    width: "100%",
+    maxWidth: isTablet ? 900 : undefined,
+    alignSelf: "center",
   },
   listContent: {
     paddingHorizontal: 20,
