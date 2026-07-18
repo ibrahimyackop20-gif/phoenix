@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -12,7 +12,7 @@ import { useRouter, Link, usePathname, useNavigation } from "expo-router";
 import { supabase } from "../../../lib/supabaseClient";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { useAppTheme } from "../../../components/ThemeProvider";
+import { useAppTheme, type ThemeColors } from "../../../components/ThemeProvider";
 import { ScreenTransition } from "../../components/anim/ScreenTransition";
 
 interface StatItem {
@@ -27,6 +27,7 @@ interface StatItem {
 export default function DashboardIndex() {
   const { t } = useTranslation();
   const { themeColors } = useAppTheme();
+  const styles = useMemo(() => getStyles(themeColors), [themeColors]);
   const router = useRouter();
   const pathname = usePathname();
   const navigation = useNavigation();
@@ -83,32 +84,32 @@ export default function DashboardIndex() {
           labelKey: "total_orders",
           value: totalOrders,
           icon: "package",
-          iconColor: "#ea580c",
-          bgColor: "rgba(234, 88, 12, 0.1)",
+          iconColor: themeColors.primary,
+          bgColor: themeColors.primarySoftBg,
         },
         {
           key: "pending",
           labelKey: "pending",
           value: pendingOrders,
           icon: "clock",
-          iconColor: "#fbbf24",
-          bgColor: "rgba(251, 191, 36, 0.1)",
+          iconColor: themeColors.statAmber,
+          bgColor: themeColors.statAmberBg,
         },
         {
           key: "printing",
           labelKey: "printing",
           value: printingOrders,
           icon: "printer",
-          iconColor: "#60a5fa",
-          bgColor: "rgba(96, 165, 250, 0.1)",
+          iconColor: themeColors.statBlue,
+          bgColor: themeColors.statBlueBg,
         },
         {
           key: "completed",
           labelKey: "completed",
           value: completedOrders,
           icon: "check-circle",
-          iconColor: "#34d399",
-          bgColor: "rgba(52, 211, 153, 0.1)",
+          iconColor: themeColors.statGreen,
+          bgColor: themeColors.statGreenBg,
         },
       ];
 
@@ -126,8 +127,8 @@ export default function DashboardIndex() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color="#ea580c" />
+      <View style={[styles.loadingContainer, { backgroundColor: themeColors.screenBg }]}>
+        <ActivityIndicator size="large" color={themeColors.primary} />
       </View>
     );
   }
@@ -157,14 +158,14 @@ export default function DashboardIndex() {
         <TouchableOpacity style={styles.primaryAction}>
           <View style={[styles.primaryActionInner, isCompact && styles.actionInnerCompact]}>
             <View style={styles.primaryActionIcon}>
-              <Feather name="printer" size={30} color="#FFFFFF" />
+              <Feather name="printer" size={30} color={themeColors.onAccent} />
             </View>
             <View style={styles.primaryActionTexts}>
               <Text style={styles.primaryActionTitle}>{t("new_print_order")}</Text>
               <Text style={styles.primaryActionSubtitle}>{t("new_print_order_desc")}</Text>
             </View>
             <View style={styles.primaryActionArrow}>
-              <Feather name="arrow-left" size={22} color="#FFFFFF" />
+              <Feather name="arrow-left" size={22} color={themeColors.onAccent} />
             </View>
           </View>
         </TouchableOpacity>
@@ -191,14 +192,14 @@ export default function DashboardIndex() {
         <TouchableOpacity style={styles.ordersCard}>
           <View style={[styles.ordersCardInner, isCompact && styles.actionInnerCompact]}>
             <View style={styles.ordersIcon}>
-              <Feather name="clipboard" size={26} color="#FF7A45" />
+              <Feather name="clipboard" size={26} color={themeColors.brandTint} />
             </View>
             <View style={styles.ordersTexts}>
               <Text style={styles.ordersTitle}>{t("my_orders")}</Text>
               <Text style={styles.ordersSubtitle}>{t("my_orders_desc")}</Text>
             </View>
             <View style={styles.ordersArrow}>
-              <Feather name="chevron-left" size={22} color="#94A3B8" />
+              <Feather name="chevron-left" size={22} color={themeColors.textSoft} />
             </View>
           </View>
         </TouchableOpacity>
@@ -208,10 +209,10 @@ export default function DashboardIndex() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: c.screenBg,
   },
   scrollContent: {
     padding: 24,
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   welcomeTitle: {
-    color: "#FFFFFF",
+    color: c.textStrong,
     fontSize: 30,
     lineHeight: 40,
     fontWeight: "800",
@@ -244,10 +245,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   gradientText: {
-    color: "#FF7A45",
+    color: c.brandTint,
   },
   welcomeSubtitle: {
-    color: "#94A3B8",
+    color: c.textSoft,
     fontSize: 15,
     lineHeight: 23,
     marginTop: 8,
@@ -258,10 +259,10 @@ const styles = StyleSheet.create({
     width: "100%",
     minHeight: 128,
     padding: 24,
-    backgroundColor: "#FF5A1F",
+    backgroundColor: c.accent,
     borderRadius: 20,
     marginBottom: 32,
-    shadowColor: "#FF5A1F",
+    shadowColor: c.accent,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.24,
     shadowRadius: 18,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: c.onAccentSoftBg,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   primaryActionTitle: {
-    color: "#FFFFFF",
+    color: c.onAccent,
     fontSize: 21,
     lineHeight: 29,
     fontWeight: "800",
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   primaryActionSubtitle: {
-    color: "rgba(255,255,255,0.82)",
+    color: c.onAccentMuted,
     fontSize: 14,
     lineHeight: 22,
     fontWeight: "500",
@@ -323,14 +324,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 140,
     minHeight: 152,
-    backgroundColor: "#1E293B",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: c.surface,
+    borderColor: c.borderSoft,
     borderWidth: 1,
     borderRadius: 20,
     padding: 18,
     alignItems: "flex-end",
     justifyContent: "space-between",
-    shadowColor: "#000000",
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -345,14 +346,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statValue: {
-    color: "#FFFFFF",
+    color: c.textStrong,
     fontSize: 30,
     lineHeight: 36,
     fontWeight: "800",
     textAlign: "right",
   },
   statLabel: {
-    color: "#94A3B8",
+    color: c.textSoft,
     fontSize: 13,
     lineHeight: 20,
     fontWeight: "600",
@@ -362,12 +363,12 @@ const styles = StyleSheet.create({
   ordersCard: {
     width: "100%",
     minHeight: 112,
-    backgroundColor: "#1E293B",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: c.surface,
+    borderColor: c.borderSoft,
     borderWidth: 1,
     borderRadius: 20,
     padding: 20,
-    shadowColor: "#000000",
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 18,
-    backgroundColor: "rgba(255,90,31,0.12)",
+    backgroundColor: c.accentSoftBg,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   ordersTitle: {
-    color: "#FFFFFF",
+    color: c.textStrong,
     fontSize: 18,
     lineHeight: 26,
     fontWeight: "700",
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   ordersSubtitle: {
-    color: "#94A3B8",
+    color: c.textSoft,
     fontSize: 14,
     lineHeight: 21,
     marginTop: 4,

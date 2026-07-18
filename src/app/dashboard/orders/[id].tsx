@@ -20,7 +20,7 @@ import {
   createRealtimeChannel,
   teardownRealtimeChannel,
 } from "../../../../lib/realtimeChannel";
-import { useAppTheme } from "../../../../components/ThemeProvider";
+import { useAppTheme, type ThemeColors } from "../../../../components/ThemeProvider";
 import { ScreenTransition } from "../../../components/anim/ScreenTransition";
 import StatusBadge from "../../../../components/StatusBadge";
 import {
@@ -46,19 +46,16 @@ import {
   type PrintOrder,
 } from "../../../../lib/ordersShared";
 
-const PHOENIX_ORANGE = "#ea580c";
-
 function SkeletonBlock({
   width,
   height,
   style,
-  isDark,
 }: {
   width: number | `${number}%`;
   height: number;
   style?: object;
-  isDark: boolean;
 }) {
+  const { themeColors } = useAppTheme();
   const anim = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
@@ -79,7 +76,7 @@ function SkeletonBlock({
           width,
           height,
           borderRadius: 10,
-          backgroundColor: isDark ? "#3f3f46" : "#e5e7eb",
+          backgroundColor: themeColors.skeleton,
           opacity: anim,
         },
         style,
@@ -88,14 +85,14 @@ function SkeletonBlock({
   );
 }
 
-function DetailSkeleton({ isDark }: { isDark: boolean }) {
+function DetailSkeleton() {
   return (
     <View style={{ padding: 20, gap: 16 }}>
-      <SkeletonBlock width="60%" height={28} isDark={isDark} />
-      <SkeletonBlock width="40%" height={20} isDark={isDark} />
-      <SkeletonBlock width="100%" height={120} isDark={isDark} />
-      <SkeletonBlock width="100%" height={200} isDark={isDark} />
-      <SkeletonBlock width="100%" height={160} isDark={isDark} />
+      <SkeletonBlock width="60%" height={28} />
+      <SkeletonBlock width="40%" height={20} />
+      <SkeletonBlock width="100%" height={120} />
+      <SkeletonBlock width="100%" height={200} />
+      <SkeletonBlock width="100%" height={160} />
     </View>
   );
 }
@@ -321,8 +318,8 @@ export default function OrderDetailScreen() {
 
   const renderInfoRow = (label: string, value: string) => (
     <View style={styles.infoRow} key={label}>
-      <Text style={[styles.infoValue, { color: "#FFFFFF" }]}>{value}</Text>
-      <Text style={[styles.infoLabel, { color: "#94A3B8" }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: themeColors.textStrong }]}>{value}</Text>
+      <Text style={[styles.infoLabel, { color: themeColors.textSoft }]}>{label}</Text>
     </View>
   );
 
@@ -331,11 +328,11 @@ export default function OrderDetailScreen() {
 
     if (cancelled) {
       return (
-        <View style={[styles.cancelledCard, { borderColor: "rgba(239,68,68,0.3)" }]}>
-          <Feather name="x-circle" size={22} color="#ef4444" />
+        <View style={[styles.cancelledCard, { borderColor: themeColors.dangerSoftBorder }]}>
+          <Feather name="x-circle" size={22} color={themeColors.danger} />
           <View style={styles.cancelledTextWrap}>
             <Text style={styles.cancelledTitle}>{t("timeline_cancelled")}</Text>
-            <Text style={[styles.cancelledDesc, { color: "#94A3B8" }]}>
+            <Text style={[styles.cancelledDesc, { color: themeColors.textSoft }]}>
               {t("timeline_cancelled_desc")}
             </Text>
           </View>
@@ -349,8 +346,8 @@ export default function OrderDetailScreen() {
           const isCompleted = timelineIndex > idx;
           const isCurrent = timelineIndex === idx;
           const isFuture = timelineIndex < idx;
-          const dotColor = isCurrent ? PHOENIX_ORANGE : isCompleted ? "#34d399" : isDark ? "#3f3f46" : "#d1d5db";
-          const lineColor = isCompleted ? "#34d399" : isDark ? "#27272a" : "#e5e7eb";
+          const dotColor = isCurrent ? themeColors.primary : isCompleted ? themeColors.statGreen : themeColors.borderStrong;
+          const lineColor = isCompleted ? themeColors.statGreen : themeColors.trackColor;
           const timestamp =
             idx === 0
               ? formatOrderDate(printOrder.created_at, i18n.language)
@@ -382,7 +379,7 @@ export default function OrderDetailScreen() {
                   <Feather
                     name={step.icon}
                     size={12}
-                    color={isCurrent || isCompleted ? "#fff" : "#94A3B8"}
+                    color={isCurrent || isCompleted ? themeColors.onAccent : themeColors.textSoft}
                   />
                 )}
               </Animated.View>
@@ -390,13 +387,13 @@ export default function OrderDetailScreen() {
                 <Text
                   style={[
                     styles.timelineTitle,
-                    { color: isCurrent ? "#FF5A1F" : isCompleted ? "#FFFFFF" : "#94A3B8" },
+                    { color: isCurrent ? themeColors.accent : isCompleted ? themeColors.textStrong : themeColors.textSoft },
                     isCurrent && styles.timelineTitleActive,
                   ]}
                 >
                   {t(`timeline_${step.key}`)}
                 </Text>
-                <Text style={[styles.timelineDesc, { color: "#94A3B8" }]}>
+                <Text style={[styles.timelineDesc, { color: themeColors.textSoft }]}>
                   {t(`timeline_${step.key}_desc`)}
                 </Text>
                 {(isCompleted || isCurrent) && timestamp ? (
@@ -424,17 +421,17 @@ export default function OrderDetailScreen() {
                 style={[
                   styles.libStepCircle,
                   {
-                    backgroundColor: done ? step.color : isDark ? "#27272a" : "#e5e7eb",
-                    borderColor: done ? step.color : isDark ? "#3f3f46" : "#d1d5db",
+                    backgroundColor: done ? step.color : themeColors.trackColor,
+                    borderColor: done ? step.color : themeColors.borderStrong,
                   },
                 ]}
               >
-                <Feather name={step.icon} size={12} color={done ? "#fff" : "#94A3B8"} />
+                <Feather name={step.icon} size={12} color={done ? themeColors.onAccent : themeColors.textSoft} />
               </View>
               <Text
                 style={[
                   styles.libStepLabel,
-                  { color: done ? step.color : "#94A3B8" },
+                  { color: done ? step.color : themeColors.textSoft },
                 ]}
               >
                 {t(step.labelKey)}
@@ -448,18 +445,18 @@ export default function OrderDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: "#0F172A" }]}>
-        <DetailSkeleton isDark={isDark} />
+      <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.screenBg }]}>
+        <DetailSkeleton />
       </SafeAreaView>
     );
   }
 
   if (notFound || !orderType) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: "#0F172A" }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.screenBg }]}>
         <View style={styles.notFound}>
-          <Feather name="alert-circle" size={48} color="#94A3B8" />
-          <Text style={[styles.notFoundText, { color: "#FFFFFF" }]}>
+          <Feather name="alert-circle" size={48} color={themeColors.textSoft} />
+          <Text style={[styles.notFoundText, { color: themeColors.textStrong }]}>
             {t("order_detail_not_found")}
           </Text>
           <TouchableOpacity style={styles.backBtnPrimary} onPress={() => router.back()}>
@@ -474,14 +471,14 @@ export default function OrderDetailScreen() {
   const headerStatus = printOrder?.status || libraryOrder?.status || "";
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: "#0F172A" }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.screenBg }]}>
       <ScreenTransition style={styles.safe}>
-      <View style={[styles.appBar, { borderBottomColor: "rgba(255,255,255,0.08)" }]}>
+      <View style={[styles.appBar, { borderBottomColor: themeColors.borderSoft }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
-          <Feather name={rtl ? "arrow-right" : "arrow-left"} size={22} color="#FFFFFF" />
+          <Feather name={rtl ? "arrow-right" : "arrow-left"} size={22} color={themeColors.textStrong} />
         </TouchableOpacity>
         <View style={styles.appBarCenter}>
-          <Text style={[styles.appBarTitle, { color: "#FFFFFF" }]}>
+          <Text style={[styles.appBarTitle, { color: themeColors.textStrong }]}>
             {displayOrderId(headerId)}
           </Text>
           {orderType === "print" ? (
@@ -500,17 +497,17 @@ export default function OrderDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
+        <Text style={[styles.sectionTitle, { color: themeColors.textStrong }]}>
           {t("order_detail_timeline")}
         </Text>
-        <View style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
+        <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft }]}>
           {orderType === "print" ? renderPrintTimeline() : renderLibraryTimeline()}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
+        <Text style={[styles.sectionTitle, { color: themeColors.textStrong }]}>
           {t("order_detail_info")}
         </Text>
-        <View style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
+        <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft }]}>
           {orderType === "print" && printOrder ? (
             <>
               {renderInfoRow(t("order_detail_order_number"), displayOrderId(printOrder.id))}
@@ -587,25 +584,25 @@ export default function OrderDetailScreen() {
           ) : null}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
+        <Text style={[styles.sectionTitle, { color: themeColors.textStrong }]}>
           {t("order_detail_files")}
         </Text>
-        <View style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}>
+        <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft }]}>
           {orderType === "print" && printOrder ? (
             isTelegramOrder(printOrder) ? (
               <View style={styles.fileRow}>
                 <View style={styles.telegramIcon}>
-                  <FontAwesome name="telegram" size={22} color="#29b6f6" />
+                  <FontAwesome name="telegram" size={22} color={themeColors.telegramTint} />
                 </View>
                 <View style={styles.fileMeta}>
-                  <Text style={[styles.fileTitle, { color: "#FFFFFF" }]}>
+                  <Text style={[styles.fileTitle, { color: themeColors.textStrong }]}>
                     {t("order_detail_telegram_upload")}
                   </Text>
-                  <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
+                  <Text style={[styles.fileSub, { color: themeColors.textSoft }]}>
                     {t("order_detail_bot_code")}: {printOrder.external_file_link || "—"}
                   </Text>
                   {printOrder.total_pages != null ? (
-                    <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
+                    <Text style={[styles.fileSub, { color: themeColors.textSoft }]}>
                       {t("order_detail_pages")}: {printOrder.total_pages}
                     </Text>
                   ) : null}
@@ -625,19 +622,19 @@ export default function OrderDetailScreen() {
                       onPress={() => openFile(url.trim())}
                     >
                       <View style={styles.fileIcon}>
-                        <Feather name="file-text" size={20} color="#60a5fa" />
+                        <Feather name="file-text" size={20} color={themeColors.statBlue} />
                       </View>
                       <View style={styles.fileMeta}>
-                        <Text style={[styles.fileTitle, { color: "#FFFFFF" }]}>
+                        <Text style={[styles.fileTitle, { color: themeColors.textStrong }]}>
                           {name}
                         </Text>
                         {printOrder.total_pages != null ? (
-                          <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
+                          <Text style={[styles.fileSub, { color: themeColors.textSoft }]}>
                             {t("order_detail_pages")}: {printOrder.total_pages}
                           </Text>
                         ) : null}
                       </View>
-                      <Feather name="eye" size={18} color={PHOENIX_ORANGE} />
+                      <Feather name="eye" size={18} color={themeColors.primary} />
                     </TouchableOpacity>
                   );
                 })
@@ -646,11 +643,11 @@ export default function OrderDetailScreen() {
             parseOrderItems(libraryOrder.items).map((item, idx) => (
               <View key={idx} style={styles.fileRow}>
                 <View style={styles.fileIcon}>
-                  <Feather name="shopping-bag" size={18} color="#34d399" />
+                  <Feather name="shopping-bag" size={18} color={themeColors.statGreen} />
                 </View>
                 <View style={styles.fileMeta}>
-                  <Text style={[styles.fileTitle, { color: "#FFFFFF" }]}>{item.name}</Text>
-                  <Text style={[styles.fileSub, { color: "#94A3B8" }]}>
+                  <Text style={[styles.fileTitle, { color: themeColors.textStrong }]}>{item.name}</Text>
+                  <Text style={[styles.fileSub, { color: themeColors.textSoft }]}>
                     ×{item.quantity} — {item.subtotal} {t("currency")}
                   </Text>
                 </View>
@@ -661,11 +658,11 @@ export default function OrderDetailScreen() {
 
         {orderType === "print" && history.length > 0 ? (
           <>
-            <Text style={[styles.sectionTitle, { color: "#FFFFFF" }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textStrong }]}>
               {t("order_detail_history")}
             </Text>
             <View
-              style={[styles.card, { backgroundColor: "#1E293B", borderColor: "rgba(255,255,255,0.08)" }]}
+              style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft }]}
             >
               {history.map((entry, idx) => (
                 <View
@@ -674,7 +671,7 @@ export default function OrderDetailScreen() {
                     styles.historyRow,
                     idx < history.length - 1 && {
                       borderBottomWidth: 1,
-                      borderBottomColor: "rgba(255,255,255,0.08)",
+                      borderBottomColor: themeColors.borderSoft,
                     },
                   ]}
                 >
@@ -682,7 +679,7 @@ export default function OrderDetailScreen() {
                     {formatOrderDate(entry.time, i18n.language, "time")}
                   </Text>
                   <View style={styles.historyBody}>
-                    <Text style={[styles.historyLabel, { color: "#FFFFFF" }]}>
+                    <Text style={[styles.historyLabel, { color: themeColors.textStrong }]}>
                       {entry.labelKey === "order_detail_history_status"
                         ? getPrintStatusLabel(entry.status || "", t)
                         : entry.labelKey === "order_detail_history_updated"
@@ -700,7 +697,7 @@ export default function OrderDetailScreen() {
           style={styles.supportBtn}
           onPress={() => router.push("/dashboard/contact" as any)}
         >
-          <Feather name="headphones" size={18} color="#fff" />
+          <Feather name="headphones" size={18} color={themeColors.onAccent} />
           <Text style={styles.supportBtnText}>{t("order_detail_contact_support")}</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -710,13 +707,13 @@ export default function OrderDetailScreen() {
 }
 
 const getStyles = (
-  themeColors: { background: string; cardBg: string; cardBorder: string; text: string; textMuted: string },
+  themeColors: ThemeColors,
   isDark: boolean,
   isCompact: boolean,
   isTablet: boolean
 ) =>
   StyleSheet.create({
-    safe: { flex: 1, backgroundColor: "#0F172A" },
+    safe: { flex: 1, backgroundColor: themeColors.screenBg },
     appBar: {
       flexDirection: "row",
       alignItems: "center",
@@ -725,7 +722,7 @@ const getStyles = (
       paddingTop: 20,
       paddingBottom: 24,
       borderBottomWidth: 1,
-      backgroundColor: "#0F172A",
+      backgroundColor: themeColors.screenBg,
       width: "100%",
       maxWidth: isTablet ? 960 : undefined,
       alignSelf: "center",
@@ -755,7 +752,7 @@ const getStyles = (
       fontFamily: "monospace",
       letterSpacing: 0.8,
       textAlign: "center",
-      color: "#FFFFFF",
+      color: themeColors.textStrong,
       flexShrink: 1,
     },
     scroll: {
@@ -773,7 +770,7 @@ const getStyles = (
       marginBottom: 12,
       marginTop: 24,
       textAlign: "right",
-      color: "#FFFFFF",
+      color: themeColors.textStrong,
       flexShrink: 1,
     },
     card: {
@@ -781,9 +778,9 @@ const getStyles = (
       borderWidth: 1,
       padding: isCompact ? 18 : 24,
       marginBottom: 4,
-      backgroundColor: "#1E293B",
-      borderColor: "rgba(255,255,255,0.08)",
-      shadowColor: "#000000",
+      backgroundColor: themeColors.surface,
+      borderColor: themeColors.borderSoft,
+      shadowColor: themeColors.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.14,
       shadowRadius: 16,
@@ -827,7 +824,7 @@ const getStyles = (
     timelineTime: {
       fontSize: 12,
       lineHeight: 18,
-      color: "#FF5A1F",
+      color: themeColors.accent,
       marginTop: 6,
       fontWeight: "700",
       textAlign: "right",
@@ -839,10 +836,10 @@ const getStyles = (
       padding: 18,
       borderRadius: 18,
       borderWidth: 1,
-      backgroundColor: "rgba(239,68,68,0.08)",
+      backgroundColor: themeColors.dangerSoftBg,
     },
     cancelledTextWrap: { flex: 1, alignItems: "flex-end" },
-    cancelledTitle: { color: "#EF4444", fontWeight: "800", fontSize: 16, lineHeight: 24 },
+    cancelledTitle: { color: themeColors.danger, fontWeight: "800", fontSize: 16, lineHeight: 24 },
     cancelledDesc: { fontSize: 13, lineHeight: 20, marginTop: 4, textAlign: "right" },
     infoRow: {
       flexDirection: isCompact ? "column" : "row-reverse",
@@ -859,7 +856,7 @@ const getStyles = (
       flex: isCompact ? 0 : 1,
       textAlign: "right",
       width: isCompact ? "100%" : undefined,
-      color: "#94A3B8",
+      color: themeColors.textSoft,
       flexShrink: 1,
     },
     infoValue: {
@@ -870,7 +867,7 @@ const getStyles = (
       textAlign: isCompact ? "right" : "left",
       width: isCompact ? "100%" : undefined,
       flexShrink: 1,
-      color: "#FFFFFF",
+      color: themeColors.textStrong,
     },
     fileRow: {
       flexDirection: isCompact ? "column" : "row-reverse",
@@ -881,14 +878,14 @@ const getStyles = (
       marginBottom: 12,
       borderRadius: 18,
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.08)",
-      backgroundColor: "#0F172A",
+      borderColor: themeColors.borderSoft,
+      backgroundColor: themeColors.surfaceMuted,
     },
     fileIcon: {
       width: 56,
       height: 56,
       borderRadius: 16,
-      backgroundColor: "rgba(96,165,250,0.12)",
+      backgroundColor: themeColors.statBlueBg,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -896,7 +893,7 @@ const getStyles = (
       width: 56,
       height: 56,
       borderRadius: 16,
-      backgroundColor: "rgba(41,182,246,0.12)",
+      backgroundColor: themeColors.telegramTintBg,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -925,7 +922,7 @@ const getStyles = (
       fontSize: 13,
       lineHeight: 20,
       fontWeight: "700",
-      color: "#FF5A1F",
+      color: themeColors.accent,
       minWidth: 64,
       textAlign: "right",
     },
@@ -942,20 +939,20 @@ const getStyles = (
       alignItems: "center",
       justifyContent: "center",
       gap: 10,
-      backgroundColor: "#FF5A1F",
+      backgroundColor: themeColors.accent,
       borderRadius: 18,
       paddingVertical: 16,
       paddingHorizontal: 20,
       minHeight: 56,
       marginTop: 28,
-      shadowColor: "#FF5A1F",
+      shadowColor: themeColors.accent,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.26,
       shadowRadius: 14,
       elevation: 6,
     },
     supportBtnText: {
-      color: "#FFFFFF",
+      color: themeColors.onAccent,
       fontWeight: "800",
       fontSize: 16,
       lineHeight: 24,
@@ -963,15 +960,15 @@ const getStyles = (
       flexShrink: 1,
     },
     libBadge: {
-      backgroundColor: "rgba(16,185,129,0.14)",
-      borderColor: "rgba(16,185,129,0.32)",
+      backgroundColor: themeColors.successSoftBg,
+      borderColor: themeColors.successSoftBorder,
       borderWidth: 1,
       borderRadius: 999,
       paddingHorizontal: 16,
       paddingVertical: 8,
     },
     libBadgeText: {
-      color: "#10B981",
+      color: themeColors.success,
       fontSize: 13,
       lineHeight: 19,
       fontWeight: "800",
@@ -1008,12 +1005,12 @@ const getStyles = (
     notFound: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 },
     notFoundText: { fontSize: 15, textAlign: "center" },
     backBtnPrimary: {
-      backgroundColor: "#FF5A1F",
+      backgroundColor: themeColors.accent,
       borderRadius: 18,
       paddingHorizontal: 24,
       paddingVertical: 16,
       minHeight: 56,
       justifyContent: "center",
     },
-    backBtnPrimaryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
+    backBtnPrimaryText: { color: themeColors.onAccent, fontWeight: "800", fontSize: 15 },
   });

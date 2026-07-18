@@ -514,10 +514,10 @@ export default function SignupPage() {
                   ]}
                 >
                   {loading ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
+                    <ActivityIndicator size="small" color={themeColors.onAccent} />
                   ) : (
                     <View style={styles.buttonInner}>
-                      <Feather name="user-plus" size={16} color="#ffffff" style={styles.buttonIcon} />
+                      <Feather name="user-plus" size={16} color={themeColors.onAccent} style={styles.buttonIcon} />
                       <Text style={styles.buttonText}>{t("auth_create_account")}</Text>
                     </View>
                   )}
@@ -552,21 +552,21 @@ export default function SignupPage() {
               {success ? (
                 <View style={[styles.glassCard, styles.successCard]}>
                   <View style={styles.successBadge}>
-                    <Feather name="check-circle" size={48} color="#22c55e" />
+                    <Feather name="check-circle" size={48} color={themeColors.success} />
                   </View>
                   <Text style={styles.successTitle}>{t("auth_signup_success")}</Text>
                   <Text style={styles.successSubtitle}>{t("auth_signup_success_subtitle")}</Text>
                   <View style={styles.sparklesRow}>
-                    <Ionicons name="sparkles" size={18} color="#22c55e" style={styles.sparkleIcon} />
-                    <Ionicons name="sparkles" size={12} color="rgba(34, 197, 94, 0.6)" style={styles.sparkleIcon} />
-                    <Ionicons name="sparkles" size={18} color="#22c55e" style={styles.sparkleIcon} />
+                    <Ionicons name="sparkles" size={18} color={themeColors.success} style={styles.sparkleIcon} />
+                    <Ionicons name="sparkles" size={12} color={themeColors.success} style={styles.sparkleIcon} />
+                    <Ionicons name="sparkles" size={18} color={themeColors.success} style={styles.sparkleIcon} />
                   </View>
                 </View>
               ) : (
                 <>
                   <View style={styles.header}>
                     <View style={styles.shieldIconBadge}>
-                      <Feather name="shield" size={24} color="#ffffff" />
+                      <Feather name="shield" size={24} color={themeColors.onAccent} />
                     </View>
                     <Text style={styles.title}>{t("auth_verify_title")}</Text>
                     <Text style={styles.subtitle}>{t("auth_verify_subtitle")}</Text>
@@ -590,7 +590,7 @@ export default function SignupPage() {
 
                     {verifying && (
                       <View style={styles.verifyingIndicator}>
-                        <ActivityIndicator size="small" color="#ea580c" />
+                        <ActivityIndicator size="small" color={themeColors.primary} />
                         <Text style={styles.verifyingText}>{t("auth_callback_verifying")}</Text>
                       </View>
                     )}
@@ -613,7 +613,7 @@ export default function SignupPage() {
                           style={styles.resendButton}
                           disabled={resending}
                         >
-                          <Feather name="refresh-cw" size={12} color="#ea580c" style={styles.resendButtonIcon} />
+                          <Feather name="refresh-cw" size={12} color={themeColors.primary} style={styles.resendButtonIcon} />
                           <Text style={styles.resendButtonText}>{t("auth_resend_otp")}</Text>
                         </TouchableOpacity>
                       )}
@@ -690,7 +690,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderWidth: 1,
       borderRadius: 24,
       padding: 24,
-      shadowColor: "#000",
+      shadowColor: themeColors.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: isDark ? 0.3 : 0.08,
       shadowRadius: 10,
@@ -698,15 +698,15 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       width: "100%",
     },
     errorContainer: {
-      backgroundColor: "rgba(239, 68, 68, 0.1)",
-      borderColor: "rgba(239, 68, 68, 0.2)",
+      backgroundColor: themeColors.dangerSoftBg,
+      borderColor: themeColors.dangerSoftBorder,
       borderWidth: 1,
       borderRadius: 8,
       padding: 10,
       marginBottom: 16,
     },
     errorText: {
-      color: "#ef4444",
+      color: themeColors.danger,
       fontSize: 12,
       textAlign: "center",
       fontWeight: "600",
@@ -753,12 +753,12 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       minHeight: 48,
       paddingVertical: 12,
       paddingHorizontal: 16,
-      backgroundColor: "#ea580c",
+      backgroundColor: themeColors.primary,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
       marginTop: 8,
-      shadowColor: "#ea580c",
+      shadowColor: themeColors.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 6,
@@ -795,7 +795,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       marginLeft: 4,
     },
     buttonText: {
-      color: "#ffffff",
+      color: themeColors.onAccent,
       fontSize: 14,
       fontWeight: "bold",
       textAlign: "center",
@@ -815,7 +815,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexShrink: 1,
     },
     linkText: {
-      color: "#fb923c",
+      color: themeColors.brandTint,
       fontSize: 13,
       fontWeight: "bold",
     },
@@ -823,7 +823,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       width: 56,
       height: 56,
       borderRadius: 16,
-      backgroundColor: "#ea580c",
+      backgroundColor: themeColors.primary,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 16,
@@ -884,7 +884,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     resendButtonText: {
       fontSize: 12,
       fontWeight: "600",
-      color: "#ea580c",
+      color: themeColors.primary,
     },
     backButton: {
       flexDirection: "row-reverse",
@@ -893,7 +893,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       paddingVertical: 12,
       marginTop: 8,
       borderRadius: 12,
-      backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : themeColors.inputBg,
+      backgroundColor: isDark ? themeColors.divider : themeColors.inputBg,
       borderColor: themeColors.cardBorder,
       borderWidth: 1,
       minHeight: 48,
@@ -920,7 +920,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     successTitle: {
       fontSize: 18,
       fontWeight: "bold",
-      color: "#22c55e",
+      color: themeColors.success,
       marginBottom: 8,
       textAlign: "center",
     },

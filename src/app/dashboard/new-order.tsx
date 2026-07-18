@@ -20,7 +20,7 @@ import FileUploader from "../../../components/FileUploader";
 import LocationPickerModal from "../../../components/LocationPickerModal";
 import { Feather, Ionicons, FontAwesome } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { useAppTheme } from "../../../components/ThemeProvider";
+import { useAppTheme, type ThemeColors } from "../../../components/ThemeProvider";
 import { ScreenTransition } from "../../components/anim/ScreenTransition";
 
 import { countPdfPagesFromUri } from "../../../lib/pdfPageCount";
@@ -900,12 +900,12 @@ export default function NewOrderScreen() {
                   setShowMap(false);
                 }}
               >
-                <Feather name="x" size={20} color="#a1a1aa" />
+                <Feather name="x" size={20} color={themeColors.textSoft} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>{t("no_add_address_title")}</Text>
             </View>
 
-            <ScrollView style={styles.modalScroll}>
+            <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
               <Text style={styles.inputLabel}>{t("no_address_type")}</Text>
               <View style={styles.titlesRow}>
                 {ADDRESS_TITLES.map((titleVal) => (
@@ -963,7 +963,7 @@ export default function NewOrderScreen() {
                 onPress={() => setShowMap(true)}
                 style={styles.mapToggleButton}
               >
-                <Feather name="map-pin" size={14} color="#ea580c" style={styles.buttonIcon} />
+                <Feather name="map-pin" size={14} color={themeColors.primary} style={styles.buttonIcon} />
                 <Text style={styles.mapToggleButtonText}>🗺️ {t("no_choose_address")}</Text>
               </TouchableOpacity>
               {newLat && (newLandmark || newArea) ? (
@@ -991,7 +991,7 @@ export default function NewOrderScreen() {
                 style={styles.primaryButtonCompact}
               >
                 {savingAddress ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
+                  <ActivityIndicator size="small" color={themeColors.onAccent} />
                 ) : (
                   <Text style={styles.buttonTextCompact}>{t("no_save_address")}</Text>
                 )}
@@ -1072,7 +1072,7 @@ export default function NewOrderScreen() {
                             {uf.name}
                           </Text>
                           <TouchableOpacity onPress={() => removeUploadedFile(uf.id)} style={styles.deleteFileBtn}>
-                            <Feather name="trash-2" size={16} color="#ef4444" />
+                            <Feather name="trash-2" size={16} color={themeColors.danger} />
                           </TouchableOpacity>
                         </View>
                         
@@ -1095,7 +1095,7 @@ export default function NewOrderScreen() {
                               <View style={styles.lockedPagesCol}>
                                 <View style={styles.readOnlyPagesBadge}>
                                   <Text style={styles.readOnlyPagesText}>{uf.numPages}</Text>
-                                  <Feather name="lock" size={10} color="#71717a" style={{ marginRight: 4 }} />
+                                  <Feather name="lock" size={10} color={themeColors.textFaint} style={{ marginRight: 4 }} />
                                 </View>
                                 <Text style={styles.pagesAutoNote}>{t("pages_detected_auto")}</Text>
                               </View>
@@ -1105,7 +1105,7 @@ export default function NewOrderScreen() {
                                   onPress={() => updateFilePages(uf.id, uf.numPages - 1)}
                                   style={styles.pageMiniBtn}
                                 >
-                                  <Feather name="minus" size={10} color="#f4f4f5" />
+                                  <Feather name="minus" size={10} color={themeColors.textStrong} />
                                 </TouchableOpacity>
                                 <TextInput
                                   value={String(uf.numPages)}
@@ -1121,7 +1121,7 @@ export default function NewOrderScreen() {
                                   onPress={() => updateFilePages(uf.id, uf.numPages + 1)}
                                   style={styles.pageMiniBtn}
                                 >
-                                  <Feather name="plus" size={10} color="#f4f4f5" />
+                                  <Feather name="plus" size={10} color={themeColors.textStrong} />
                                 </TouchableOpacity>
                               </View>
                             )}
@@ -1153,7 +1153,7 @@ export default function NewOrderScreen() {
                 }}
                 style={styles.telegramBotBtn}
               >
-                <FontAwesome name="telegram" size={18} color="#29b6f6" />
+                <FontAwesome name="telegram" size={18} color={themeColors.telegramTint} />
                 <Text style={styles.telegramBotBtnText}>
                   {t("no_telegram_open", { bot: TELEGRAM_BOT_USERNAME })}
                 </Text>
@@ -1223,7 +1223,7 @@ export default function NewOrderScreen() {
               ))}
             </View>
           ) : (
-            <ActivityIndicator size="small" color="#ea580c" />
+            <ActivityIndicator size="small" color={themeColors.primary} />
           )}
 
           {/* A4 properties */}
@@ -1274,7 +1274,7 @@ export default function NewOrderScreen() {
                   <Text style={styles.paramLabel}>{t("no_total_pages")}</Text>
                   <View style={styles.lockedPagesCol}>
                     <View style={styles.readOnlyPagesBadgeGlobal}>
-                      <Feather name="lock" size={12} color="#71717a" style={{ marginLeft: 6 }} />
+                      <Feather name="lock" size={12} color={themeColors.textFaint} style={{ marginLeft: 6 }} />
                       <Text style={styles.readOnlyPagesTextGlobal}>{numPages}</Text>
                     </View>
                     <Text style={styles.pagesAutoNote}>{t("pages_detected_auto")}</Text>
@@ -1299,7 +1299,7 @@ export default function NewOrderScreen() {
                     disabled={analyzingFile}
                     style={styles.counterBtn}
                   >
-                    <Feather name="minus" size={14} color="#f4f4f5" />
+                    <Feather name="minus" size={14} color={themeColors.textStrong} />
                   </TouchableOpacity>
                   <Text style={styles.counterValue}>{numCopies}</Text>
                   <TouchableOpacity
@@ -1307,7 +1307,7 @@ export default function NewOrderScreen() {
                     disabled={analyzingFile}
                     style={styles.counterBtn}
                   >
-                    <Feather name="plus" size={14} color="#f4f4f5" />
+                    <Feather name="plus" size={14} color={themeColors.textStrong} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1339,11 +1339,11 @@ export default function NewOrderScreen() {
                 <Text style={styles.paramLabel}>{t("no_roll_length")}</Text>
                 <View style={styles.counterRow}>
                   <TouchableOpacity onPress={() => setLength(Math.max(1, length - 1))} style={styles.counterBtn}>
-                    <Feather name="minus" size={14} color="#f4f4f5" />
+                    <Feather name="minus" size={14} color={themeColors.textStrong} />
                   </TouchableOpacity>
                   <Text style={styles.counterValue}>{length}</Text>
                   <TouchableOpacity onPress={() => setLength(length + 1)} style={styles.counterBtn}>
-                    <Feather name="plus" size={14} color="#f4f4f5" />
+                    <Feather name="plus" size={14} color={themeColors.textStrong} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1379,7 +1379,7 @@ export default function NewOrderScreen() {
               <Text style={styles.inputLabel}>{t("no_delivery_zone")}</Text>
               {zoneMatching ? (
                 <View style={styles.zoneMatchingRow}>
-                  <ActivityIndicator size="small" color="#ea580c" />
+                  <ActivityIndicator size="small" color={themeColors.primary} />
                   <Text style={styles.zoneMatchingText}>{t("no_zone_detecting")}</Text>
                 </View>
               ) : null}
@@ -1412,7 +1412,7 @@ export default function NewOrderScreen() {
               {/* Select existing addresses */}
               <View style={styles.addressSelectHeader}>
                 <TouchableOpacity onPress={() => setShowAddressModal(true)} style={styles.addAddressBtn}>
-                  <Feather name="plus" size={12} color="#ea580c" style={styles.buttonIcon} />
+                  <Feather name="plus" size={12} color={themeColors.primary} style={styles.buttonIcon} />
                   <Text style={styles.addAddressBtnText}>{t("no_new_address")}</Text>
                 </TouchableOpacity>
                 <Text style={styles.inputLabel}>{t("no_choose_address")}</Text>
@@ -1447,7 +1447,7 @@ export default function NewOrderScreen() {
           <View style={styles.promoFormRow}>
             <TouchableOpacity onPress={validateCoupon} disabled={promoLoading} style={styles.promoButton}>
               {promoLoading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={themeColors.onAccent} />
               ) : (
                 <Text style={styles.promoButtonText}>{t("no_coupon_apply")}</Text>
               )}
@@ -1465,7 +1465,7 @@ export default function NewOrderScreen() {
           {promoError ? <Text style={styles.promoErrorText}>{promoError}</Text> : null}
           {appliedCoupon ? (
             <View style={styles.appliedCouponTag}>
-              <Feather name="check" size={12} color="#34d399" />
+              <Feather name="check" size={12} color={themeColors.statGreen} />
               <Text style={styles.appliedCouponText}>{t("no_coupon_applied", { code: appliedCoupon.code })}</Text>
             </View>
           ) : null}
@@ -1480,7 +1480,7 @@ export default function NewOrderScreen() {
           </View>
           {couponDiscount > 0 ? (
             <View style={styles.billingRow}>
-              <Text style={[styles.billingValue, { color: "#34d399" }]}>-{couponDiscount.toLocaleString()} {t("currency")}</Text>
+              <Text style={[styles.billingValue, { color: themeColors.statGreen }]}>-{couponDiscount.toLocaleString()} {t("currency")}</Text>
               <Text style={styles.billingLabel}>{t("no_coupon_discount")}</Text>
             </View>
           ) : null}
@@ -1504,7 +1504,7 @@ export default function NewOrderScreen() {
               onPress={() => setPaymentMethod("electronic")}
               style={[styles.paymentMethodBox, paymentMethod === "electronic" && styles.paymentMethodActive]}
             >
-              <Feather name="credit-card" size={20} color={paymentMethod === "electronic" ? "#ea580c" : "#71717a"} />
+              <Feather name="credit-card" size={20} color={paymentMethod === "electronic" ? themeColors.primary : themeColors.textFaint} />
               <Text style={[styles.paymentMethodLabel, paymentMethod === "electronic" && styles.paymentMethodTextActive]}>{t("no_pay_electronic")}</Text>
             </TouchableOpacity>
 
@@ -1512,7 +1512,7 @@ export default function NewOrderScreen() {
               onPress={() => setPaymentMethod("wallet")}
               style={[styles.paymentMethodBox, paymentMethod === "wallet" && styles.paymentMethodActive]}
             >
-              <Ionicons name="wallet-outline" size={20} color={paymentMethod === "wallet" ? "#ea580c" : "#71717a"} />
+              <Ionicons name="wallet-outline" size={20} color={paymentMethod === "wallet" ? themeColors.primary : themeColors.textFaint} />
               <Text style={[styles.paymentMethodLabel, paymentMethod === "wallet" && styles.paymentMethodTextActive]}>{t("no_pay_wallet")}</Text>
             </TouchableOpacity>
 
@@ -1520,7 +1520,7 @@ export default function NewOrderScreen() {
               onPress={() => setPaymentMethod("cod")}
               style={[styles.paymentMethodBox, paymentMethod === "cod" && styles.paymentMethodActive]}
             >
-              <Feather name="dollar-sign" size={20} color={paymentMethod === "cod" ? "#ea580c" : "#71717a"} />
+              <Feather name="dollar-sign" size={20} color={paymentMethod === "cod" ? themeColors.primary : themeColors.textFaint} />
               <Text style={[styles.paymentMethodLabel, paymentMethod === "cod" && styles.paymentMethodTextActive]}>{t("no_pay_cod")}</Text>
             </TouchableOpacity>
           </View>
@@ -1544,7 +1544,7 @@ export default function NewOrderScreen() {
               {zaincashNum ? (
                 <View style={styles.paymentAccountRow}>
                   <TouchableOpacity onPress={() => copyPaymentNumber(zaincashNum)} style={styles.copyBtn}>
-                    <Feather name="copy" size={14} color="#ea580c" />
+                    <Feather name="copy" size={14} color={themeColors.primary} />
                   </TouchableOpacity>
                   <Text style={styles.paymentAccountText}>{t("no_zaincash")}: {zaincashNum}</Text>
                 </View>
@@ -1553,7 +1553,7 @@ export default function NewOrderScreen() {
               {asiaNum ? (
                 <View style={styles.paymentAccountRow}>
                   <TouchableOpacity onPress={() => copyPaymentNumber(asiaNum)} style={styles.copyBtn}>
-                    <Feather name="copy" size={14} color="#ea580c" />
+                    <Feather name="copy" size={14} color={themeColors.primary} />
                   </TouchableOpacity>
                   <Text style={styles.paymentAccountText}>{t("no_asia")}: {asiaNum}</Text>
                 </View>
@@ -1562,19 +1562,19 @@ export default function NewOrderScreen() {
               {/* Receipt image picker */}
               {receiptUrl ? (
                 <View style={styles.receiptPreviewWrapper}>
-                  <Feather name="image" size={18} color="#34d399" />
+                  <Feather name="image" size={18} color={themeColors.statGreen} />
                   <Text style={styles.receiptUploadedText}>{t("no_receipt_ok")}</Text>
                   <TouchableOpacity onPress={() => setReceiptUrl("")} style={styles.receiptRemoveBtn}>
-                    <Feather name="x" size={14} color="#ef4444" />
+                    <Feather name="x" size={14} color={themeColors.danger} />
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity onPress={handleReceiptPicker} disabled={uploadingReceipt} style={styles.receiptPickerBtn}>
                   {uploadingReceipt ? (
-                    <ActivityIndicator size="small" color="#ea580c" />
+                    <ActivityIndicator size="small" color={themeColors.primary} />
                   ) : (
                     <View style={styles.buttonInner}>
-                      <Feather name="upload" size={16} color="#71717a" style={styles.buttonIcon} />
+                      <Feather name="upload" size={16} color={themeColors.textFaint} style={styles.buttonIcon} />
                       <Text style={styles.receiptPickerBtnText}>{t("no_attach_receipt")}</Text>
                     </View>
                   )}
@@ -1594,10 +1594,10 @@ export default function NewOrderScreen() {
           ]}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+            <ActivityIndicator size="small" color={themeColors.onAccent} />
           ) : (
             <View style={styles.buttonInner}>
-              <Feather name="check" size={18} color="#ffffff" style={styles.buttonIcon} />
+              <Feather name="check" size={18} color={themeColors.onAccent} style={styles.buttonIcon} />
               <Text style={styles.submitOrderButtonText}>{t("no_submit")}</Text>
             </View>
           )}
@@ -1614,7 +1614,7 @@ export default function NewOrderScreen() {
         <View style={styles.uxModalOverlay}>
           <View style={styles.uxModalCard}>
             <View style={styles.uxModalIconWrap}>
-              <Feather name="alert-triangle" size={28} color="#ea580c" />
+              <Feather name="alert-triangle" size={28} color={themeColors.primary} />
             </View>
             <Text style={styles.uxModalTitle}>{t("large_file_title")}</Text>
             <Text style={styles.uxModalBody}>{t("large_file_body")}</Text>
@@ -1628,7 +1628,7 @@ export default function NewOrderScreen() {
               style={styles.uxModalPrimaryBtn}
               onPress={handleOpenBotFromLargeFile}
             >
-              <FontAwesome name="telegram" size={18} color="#ffffff" />
+              <FontAwesome name="telegram" size={18} color={themeColors.onAccent} />
               <Text style={styles.uxModalPrimaryBtnText}>{t("large_file_open_bot")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1645,7 +1645,7 @@ export default function NewOrderScreen() {
       <Modal visible={analyzingFile} transparent animationType="fade" statusBarTranslucent>
         <View style={styles.analyzingOverlay} pointerEvents="auto">
           <View style={styles.analyzingCard}>
-            <ActivityIndicator size="large" color="#ea580c" />
+            <ActivityIndicator size="large" color={themeColors.primary} />
             <Text style={styles.analyzingTitle}>{t("analyzing_file_title")}</Text>
             <View style={styles.analyzingSteps}>
               <Text style={styles.analyzingStep}>• {t("analyzing_file_step_pages")}</Text>
@@ -1661,14 +1661,14 @@ export default function NewOrderScreen() {
   );
 }
 
-const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTablet: boolean) => StyleSheet.create({
+const getStyles = (themeColors: ThemeColors, isDark: boolean, isCompact: boolean, isTablet: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: themeColors.screenBg,
   },
   toastSuccess: {
-    backgroundColor: "rgba(52, 211, 153, 0.1)",
-    borderColor: "rgba(52, 211, 153, 0.2)",
+    backgroundColor: themeColors.statGreenBg,
+    borderColor: themeColors.statGreenBorder,
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -1676,8 +1676,8 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     marginTop: 10,
   },
   toastError: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderColor: "rgba(239, 68, 68, 0.2)",
+    backgroundColor: themeColors.dangerSoftBg,
+    borderColor: themeColors.dangerSoftBorder,
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -1691,7 +1691,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: themeColors.overlay,
     justifyContent: "flex-end",
   },
   modalContent: {
@@ -1739,8 +1739,8 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     justifyContent: "center",
   },
   titleTabActive: {
-    borderColor: "rgba(234, 88, 12, 0.4)",
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
+    borderColor: themeColors.primarySoftBorder,
+    backgroundColor: themeColors.primarySoftBg,
   },
   titleTabText: {
     color: themeColors.textMuted,
@@ -1748,7 +1748,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     fontWeight: "bold",
   },
   titleTabTextActive: {
-    color: "#ea580c",
+    color: themeColors.primary,
   },
   inputGroup: {
     marginBottom: 16,
@@ -1756,7 +1756,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   inputLabel: {
     fontSize: 13,
     lineHeight: 20,
-    color: "#CBD5E1",
+    color: themeColors.textBody,
     fontWeight: "600",
     marginBottom: 10,
     textAlign: "right",
@@ -1780,15 +1780,15 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     minHeight: 40,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(234, 88, 12, 0.08)",
-    borderColor: "rgba(234, 88, 12, 0.15)",
+    backgroundColor: themeColors.primarySoftBg,
+    borderColor: themeColors.primarySoftBorder,
     borderWidth: 1,
     borderRadius: 12,
     marginBottom: 16,
     gap: 6,
   },
   mapToggleButtonText: {
-    color: "#ea580c",
+    color: themeColors.primary,
     fontSize: 12,
     fontWeight: "bold",
   },
@@ -1810,14 +1810,14 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     minHeight: 42,
     paddingVertical: 11,
     paddingHorizontal: 12,
-    backgroundColor: "#ea580c",
+    backgroundColor: themeColors.primary,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
   },
   buttonTextCompact: {
-    color: "#ffffff",
+    color: themeColors.onAccent,
     fontSize: 13,
     fontWeight: "bold",
   },
@@ -1837,28 +1837,28 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     lineHeight: 40,
     fontWeight: "800",
     letterSpacing: -0.4,
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     textAlign: "right",
     flexShrink: 1,
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 23,
-    color: "#94A3B8",
+    color: themeColors.textSoft,
     marginTop: 8,
     textAlign: "right",
     flexShrink: 1,
   },
   modeToggleRow: {
     flexDirection: "row-reverse",
-    backgroundColor: "#1E293B",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surface,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 20,
     padding: 6,
     marginBottom: 20,
     gap: 6,
-    shadowColor: "#000000",
+    shadowColor: themeColors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -1874,15 +1874,15 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     justifyContent: "center",
   },
   modeButtonActive: {
-    backgroundColor: "#FF5A1F",
-    shadowColor: "#FF5A1F",
+    backgroundColor: themeColors.accent,
+    shadowColor: themeColors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.22,
     shadowRadius: 8,
     elevation: 3,
   },
   modeButtonText: {
-    color: "#94A3B8",
+    color: themeColors.textSoft,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
@@ -1890,16 +1890,16 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     flexShrink: 1,
   },
   modeButtonTextActive: {
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
   },
   glassCard: {
-    backgroundColor: "#1E293B",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surface,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 20,
     padding: isCompact ? 18 : 24,
     marginBottom: 24,
-    shadowColor: "#000000",
+    shadowColor: themeColors.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
@@ -1912,7 +1912,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     fontSize: 18,
     lineHeight: 26,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     marginBottom: 8,
     textAlign: "right",
     flexShrink: 1,
@@ -1920,7 +1920,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   blockSubtitle: {
     fontSize: 13,
     lineHeight: 20,
-    color: "#94A3B8",
+    color: themeColors.textSoft,
     marginBottom: 16,
     textAlign: "right",
     flexShrink: 1,
@@ -1935,47 +1935,47 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     paddingVertical: 15,
     paddingHorizontal: 16,
     borderRadius: 16,
-    backgroundColor: "rgba(0, 136, 204, 0.15)",
+    backgroundColor: themeColors.telegramSoftBg,
     borderWidth: 1,
-    borderColor: "rgba(0, 136, 204, 0.3)",
+    borderColor: themeColors.telegramBorder,
     marginBottom: 12,
   },
   telegramBotBtnText: {
-    color: "#29b6f6",
+    color: themeColors.telegramTint,
     fontSize: 13,
     fontWeight: "700",
   },
   telegramHint: {
     width: "100%",
     textAlign: "center",
-    color: "#29b6f6",
+    color: themeColors.telegramTint,
     fontSize: 11,
     marginBottom: 10,
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 10,
-    backgroundColor: "rgba(0, 136, 204, 0.05)",
+    backgroundColor: themeColors.telegramSoftBg,
     borderWidth: 1,
-    borderColor: "rgba(0, 136, 204, 0.15)",
+    borderColor: themeColors.telegramSoftBg,
     overflow: "hidden",
   },
   telegramInput: {
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     width: "100%",
     minHeight: 56,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     fontSize: 15,
   },
   telegramCodeOk: {
     marginTop: 8,
     width: "100%",
     textAlign: "right",
-    color: "#10b981",
+    color: themeColors.success,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -1983,13 +1983,13 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     marginTop: 24,
   },
   descriptionInput: {
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     minHeight: 120,
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     fontSize: 15,
     lineHeight: 23,
     textAlignVertical: "top",
@@ -1998,7 +1998,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     fontSize: 18,
     lineHeight: 26,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     marginBottom: 20,
     textAlign: "right",
     flexShrink: 1,
@@ -2012,8 +2012,8 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     justifyContent: "space-between",
     alignItems: isCompact ? "flex-end" : "center",
     gap: 10,
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     paddingHorizontal: 18,
@@ -2021,12 +2021,12 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     minHeight: 64,
   },
   paperItemActive: {
-    borderColor: "#FF5A1F",
+    borderColor: themeColors.accent,
     borderWidth: 2,
-    backgroundColor: "rgba(255,90,31,0.1)",
+    backgroundColor: themeColors.accentSoftBg,
   },
   paperLabel: {
-    color: "#CBD5E1",
+    color: themeColors.textBody,
     fontSize: 14,
     lineHeight: 21,
     fontWeight: "700",
@@ -2034,10 +2034,10 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     textAlign: "right",
   },
   paperLabelActive: {
-    color: "#FF7A45",
+    color: themeColors.brandTint,
   },
   paperPriceText: {
-    color: "#94A3B8",
+    color: themeColors.textSoft,
     fontSize: 12,
     lineHeight: 18,
     flexShrink: 1,
@@ -2056,20 +2056,20 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   paramLabel: {
     fontSize: 14,
     lineHeight: 21,
-    color: "#CBD5E1",
+    color: themeColors.textBody,
     fontWeight: "600",
     textAlign: "right",
     flexShrink: 1,
   },
   toggleGroup: {
     flexDirection: "row-reverse",
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     minHeight: 48,
     overflow: "hidden",
     alignSelf: isCompact ? "stretch" : "auto",
-    backgroundColor: "#0F172A",
+    backgroundColor: themeColors.surfaceMuted,
     padding: 4,
     gap: 4,
   },
@@ -2083,10 +2083,10 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     borderRadius: 12,
   },
   toggleBtnActive: {
-    backgroundColor: "rgba(255,90,31,0.16)",
+    backgroundColor: themeColors.accentSoftBg,
   },
   toggleBtnText: {
-    color: "#94A3B8",
+    color: themeColors.textSoft,
     fontSize: 13,
     lineHeight: 19,
     fontWeight: "600",
@@ -2094,30 +2094,30 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     flexShrink: 1,
   },
   toggleBtnTextActive: {
-    color: "#FF7A45",
+    color: themeColors.brandTint,
     fontWeight: "800",
   },
   counterRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     minHeight: 48,
     overflow: "hidden",
-    backgroundColor: "#0F172A",
+    backgroundColor: themeColors.surfaceMuted,
   },
   counterBtn: {
     width: 48,
     minHeight: 48,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: themeColors.divider,
     alignItems: "center",
     justifyContent: "center",
   },
   counterValue: {
     minWidth: 56,
     paddingHorizontal: 16,
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     fontSize: 16,
     lineHeight: 24,
     fontWeight: "800",
@@ -2137,8 +2137,8 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   feeSelectorBox: {
     flexGrow: 1,
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
@@ -2148,8 +2148,8 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     justifyContent: "center",
   },
   feeSelectorBoxActive: {
-    borderColor: "#FF5A1F",
-    backgroundColor: "rgba(255,90,31,0.1)",
+    borderColor: themeColors.accent,
+    backgroundColor: themeColors.accentSoftBg,
   },
   feeSelectorBoxLocked: {
     opacity: 0.45,
@@ -2174,7 +2174,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     lineHeight: 16,
   },
   zoneMatchErrorText: {
-    color: "#ef4444",
+    color: themeColors.danger,
     fontSize: 12,
     textAlign: "right",
     marginBottom: 12,
@@ -2203,7 +2203,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     gap: 4,
   },
   addAddressBtnText: {
-    color: "#ea580c",
+    color: themeColors.primary,
     fontSize: 12,
     fontWeight: "bold",
   },
@@ -2217,17 +2217,17 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     gap: 12,
   },
   addressItem: {
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     alignItems: "flex-end",
   },
   addressItemActive: {
-    borderColor: "#FF5A1F",
+    borderColor: themeColors.accent,
     borderWidth: 2,
-    backgroundColor: "rgba(255,90,31,0.1)",
+    backgroundColor: themeColors.accentSoftBg,
   },
   addressItemTitle: {
     color: themeColors.text,
@@ -2250,7 +2250,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     gap: 12,
   },
   promoButton: {
-    backgroundColor: "#FF5A1F",
+    backgroundColor: themeColors.accent,
     borderRadius: 16,
     minWidth: 104,
     width: isCompact ? "100%" : 104,
@@ -2259,14 +2259,14 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#FF5A1F",
+    shadowColor: themeColors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
   },
   promoButtonText: {
-    color: "#ffffff",
+    color: themeColors.onAccent,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
@@ -2275,19 +2275,19 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   promoInput: {
     flex: 1,
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     minHeight: 52,
     width: isCompact ? "100%" : undefined,
     paddingVertical: 13,
     paddingHorizontal: 16,
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     fontSize: 15,
   },
   promoErrorText: {
-    color: "#ef4444",
+    color: themeColors.danger,
     fontSize: 11,
     marginTop: 6,
     textAlign: "right",
@@ -2299,7 +2299,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     marginTop: 8,
   },
   appliedCouponText: {
-    color: "#34d399",
+    color: themeColors.statGreen,
     fontSize: 11,
     fontWeight: "bold",
   },
@@ -2310,13 +2310,13 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     gap: 6,
   },
   billingLabel: {
-    color: "#94A3B8",
+    color: themeColors.textSoft,
     fontSize: 14,
     lineHeight: 21,
     flexShrink: 1,
   },
   billingValue: {
-    color: "#CBD5E1",
+    color: themeColors.textBody,
     fontSize: 14,
     lineHeight: 21,
     fontWeight: "600",
@@ -2324,21 +2324,21 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   billingTotalRow: {
     borderTopWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,90,31,0.1)",
+    borderColor: themeColors.borderSoft,
+    backgroundColor: themeColors.accentSoftBg,
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
   },
   billingTotalLabel: {
-    color: "#FFFFFF",
+    color: themeColors.textStrong,
     fontSize: 16,
     lineHeight: 24,
     fontWeight: "800",
     flexShrink: 1,
   },
   billingTotalValue: {
-    color: "#FF7A45",
+    color: themeColors.brandTint,
     fontSize: 22,
     lineHeight: 30,
     fontWeight: "900",
@@ -2355,8 +2355,8 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     flexBasis: isCompact ? "46%" : 0,
     minWidth: isCompact ? "46%" : undefined,
     minHeight: 104,
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 18,
     paddingVertical: 18,
@@ -2366,10 +2366,10 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     gap: 10,
   },
   paymentMethodActive: {
-    borderColor: "#FF5A1F",
+    borderColor: themeColors.accent,
     borderWidth: 2,
-    backgroundColor: "rgba(255,90,31,0.12)",
-    shadowColor: "#FF5A1F",
+    backgroundColor: themeColors.accentSoftBg,
+    shadowColor: themeColors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.14,
     shadowRadius: 8,
@@ -2378,17 +2378,17 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   paymentMethodLabel: {
     fontSize: 13,
     lineHeight: 19,
-    color: "#94A3B8",
+    color: themeColors.textSoft,
     fontWeight: "700",
     textAlign: "center",
     flexShrink: 1,
   },
   paymentMethodTextActive: {
-    color: "#FF7A45",
+    color: themeColors.brandTint,
   },
   walletDetails: {
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
@@ -2400,17 +2400,17 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   walletDetailsError: {
     fontSize: 11,
-    color: "#ef4444",
+    color: themeColors.danger,
     marginTop: 6,
   },
   walletDetailsSuccess: {
     fontSize: 11,
-    color: "#34d399",
+    color: themeColors.statGreen,
     marginTop: 6,
   },
   electronicDetails: {
-    backgroundColor: "#0F172A",
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: themeColors.surfaceMuted,
+    borderColor: themeColors.borderSoft,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
@@ -2457,7 +2457,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     width: "100%",
   },
   receiptUploadedText: {
-    color: "#34d399",
+    color: themeColors.statGreen,
     fontSize: 12,
     flex: 1,
     textAlign: "right",
@@ -2472,7 +2472,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     paddingHorizontal: 16,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: themeColors.borderSoft,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -2486,13 +2486,13 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     minHeight: 56,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    backgroundColor: "#FF5A1F",
+    backgroundColor: themeColors.accent,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
     marginBottom: 24,
-    shadowColor: "#FF5A1F",
+    shadowColor: themeColors.accent,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.28,
     shadowRadius: 14,
@@ -2506,7 +2506,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   uxModalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: themeColors.overlay,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
@@ -2514,10 +2514,10 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   uxModalCard: {
     width: "100%",
     maxWidth: 400,
-    backgroundColor: "#18181b",
+    backgroundColor: themeColors.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#27272a",
+    borderColor: themeColors.borderSoft,
     padding: 24,
     alignItems: "center",
   },
@@ -2525,7 +2525,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: "rgba(234, 88, 12, 0.12)",
+    backgroundColor: themeColors.primarySoftBg,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
@@ -2533,20 +2533,20 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   uxModalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#f4f4f5",
+    color: themeColors.textStrong,
     textAlign: "center",
     marginBottom: 10,
   },
   uxModalBody: {
     fontSize: 14,
     lineHeight: 22,
-    color: "#a1a1aa",
+    color: themeColors.textSoft,
     textAlign: "center",
     marginBottom: 10,
   },
   uxModalMeta: {
     fontSize: 12,
-    color: "#71717a",
+    color: themeColors.textFaint,
     textAlign: "center",
     marginBottom: 18,
   },
@@ -2556,13 +2556,13 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0088cc",
+    backgroundColor: themeColors.telegram,
     borderRadius: 14,
     paddingVertical: 14,
     marginBottom: 10,
   },
   uxModalPrimaryBtnText: {
-    color: "#ffffff",
+    color: themeColors.onAccent,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -2573,16 +2573,16 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#3f3f46",
+    borderColor: themeColors.borderSoft,
   },
   uxModalSecondaryBtnText: {
-    color: "#d4d4d8",
+    color: themeColors.textBody,
     fontSize: 14,
     fontWeight: "600",
   },
   analyzingOverlay: {
     flex: 1,
-    backgroundColor: "rgba(9, 9, 11, 0.88)",
+    backgroundColor: themeColors.overlay,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
@@ -2590,10 +2590,10 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   analyzingCard: {
     width: "100%",
     maxWidth: 360,
-    backgroundColor: "#18181b",
+    backgroundColor: themeColors.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#27272a",
+    borderColor: themeColors.borderSoft,
     paddingVertical: 32,
     paddingHorizontal: 24,
     alignItems: "center",
@@ -2602,7 +2602,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     marginTop: 18,
     fontSize: 17,
     fontWeight: "800",
-    color: "#f4f4f5",
+    color: themeColors.textStrong,
     textAlign: "center",
   },
   analyzingSteps: {
@@ -2612,17 +2612,17 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   analyzingStep: {
     fontSize: 13,
-    color: "#a1a1aa",
+    color: themeColors.textSoft,
     textAlign: "center",
   },
   analyzingWait: {
     marginTop: 20,
     fontSize: 12,
-    color: "#71717a",
+    color: themeColors.textFaint,
     textAlign: "center",
   },
   submitOrderButtonText: {
-    color: "#ffffff",
+    color: themeColors.onAccent,
     fontSize: 16,
     lineHeight: 24,
     fontWeight: "800",
@@ -2642,7 +2642,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   filesListContainer: {
     marginTop: 24,
     borderTopWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: themeColors.borderSoft,
     paddingTop: 20,
   },
   filesListTitle: {
@@ -2653,10 +2653,10 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     textAlign: "right",
   },
   fileListItem: {
-    backgroundColor: "#0F172A",
+    backgroundColor: themeColors.surfaceMuted,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: themeColors.borderSoft,
     padding: 16,
     marginBottom: 12,
   },
@@ -2704,7 +2704,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   readOnlyPagesBadge: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: "rgba(234, 88, 12, 0.1)",
+    backgroundColor: themeColors.primarySoftBg,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -2715,14 +2715,14 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   },
   pagesAutoNote: {
     fontSize: 10,
-    color: "#71717a",
+    color: themeColors.textFaint,
     textAlign: "right",
     maxWidth: 180,
   },
   readOnlyPagesText: {
     fontSize: 11,
     fontWeight: "bold",
-    color: "#ea580c",
+    color: themeColors.primary,
   },
   editablePagesRow: {
     flexDirection: "row-reverse",
@@ -2733,7 +2733,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     width: 20,
     height: 20,
     borderRadius: 4,
-    backgroundColor: "#ea580c",
+    backgroundColor: themeColors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2754,7 +2754,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
     alignItems: "center",
     marginTop: 4,
     borderTopWidth: 1,
-    borderColor: "rgba(39, 39, 42, 0.3)",
+    borderColor: themeColors.divider,
     paddingTop: 6,
   },
   fileSubtotalLabel: {
@@ -2764,7 +2764,7 @@ const getStyles = (themeColors: any, isDark: boolean, isCompact: boolean, isTabl
   fileSubtotalValue: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#ea580c",
+    color: themeColors.primary,
   },
   readOnlyPagesBadgeGlobal: {
     flexDirection: "row-reverse",

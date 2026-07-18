@@ -287,8 +287,8 @@ export default function LoginPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={styles.textInput}
                       textAlign="left"
-                      selectionColor="#FF5A1F"
-                      cursorColor="#FF5A1F"
+                      selectionColor={themeColors.accent}
+                      cursorColor={themeColors.accent}
                     />
                   </View>
                 </View>
@@ -306,8 +306,8 @@ export default function LoginPage() {
                       placeholderTextColor={themeColors.textMuted}
                       style={[styles.textInput, styles.passwordInput]}
                       textAlign="left"
-                      selectionColor="#FF5A1F"
-                      cursorColor="#FF5A1F"
+                      selectionColor={themeColors.accent}
+                      cursorColor={themeColors.accent}
                     />
                     <TouchableOpacity
                       onPress={() => setShowPassword(!showPassword)}
@@ -338,10 +338,10 @@ export default function LoginPage() {
                   style={styles.primaryButton}
                 >
                   {loading ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
+                    <ActivityIndicator size="small" color={themeColors.onAccent} />
                   ) : (
                     <View style={styles.buttonInner}>
-                      <Feather name="log-in" size={16} color="#ffffff" style={styles.buttonIcon} />
+                      <Feather name="log-in" size={16} color={themeColors.onAccent} style={styles.buttonIcon} />
                       <Text style={styles.buttonText}>{t("auth_login_btn")}</Text>
                     </View>
                   )}
@@ -364,10 +364,10 @@ export default function LoginPage() {
                   accessibilityLabel={t("auth_google_continue")}
                 >
                   {googleLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={themeColors.textStrong} />
                   ) : (
                     <View style={styles.googleButtonInner}>
-                      <AntDesign name="google" size={20} color="#4285F4" />
+                      <AntDesign name="google" size={20} color={themeColors.google} />
                       <Text style={styles.googleButtonText}>
                         {t("auth_google_continue")}
                       </Text>
@@ -391,7 +391,7 @@ export default function LoginPage() {
             <View style={styles.cardWrapper}>
               <View style={styles.header}>
                 <View style={styles.keyIconBadge}>
-                  <Feather name="key" size={24} color="#ffffff" />
+                  <Feather name="key" size={24} color={themeColors.onAccent} />
                 </View>
                 <Text style={styles.title}>{t("auth_reset_title")}</Text>
                 <Text style={styles.subtitle}>
@@ -465,10 +465,10 @@ export default function LoginPage() {
                   style={styles.primaryButton}
                 >
                   {verifying ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
+                    <ActivityIndicator size="small" color={themeColors.onAccent} />
                   ) : (
                     <View style={styles.buttonInner}>
-                      <MaterialCommunityIcons name="key-variant" size={16} color="#ffffff" style={styles.buttonIcon} />
+                      <MaterialCommunityIcons name="key-variant" size={16} color={themeColors.onAccent} style={styles.buttonIcon} />
                       <Text style={styles.buttonText}>{t("auth_verify_btn")}</Text>
                     </View>
                   )}
@@ -491,7 +491,7 @@ export default function LoginPage() {
           {pageState === "success" && (
             <View style={[styles.glassCard, styles.successCard]}>
               <View style={styles.successBadge}>
-                <Feather name="check-circle" size={48} color="#22c55e" />
+                <Feather name="check-circle" size={48} color={themeColors.success} />
               </View>
               <Text style={styles.successTitle}>{t("auth_reset_success")}</Text>
               <Text style={styles.successSubtitle}>{t("auth_login_subtitle")}</Text>
@@ -506,7 +506,7 @@ export default function LoginPage() {
                 style={styles.primaryButton}
               >
                 <View style={styles.buttonInner}>
-                  <Feather name="log-in" size={16} color="#ffffff" style={styles.buttonIcon} />
+                  <Feather name="log-in" size={16} color={themeColors.onAccent} style={styles.buttonIcon} />
                   <Text style={styles.buttonText}>{t("auth_login_btn")}</Text>
                 </View>
               </TouchableOpacity>
@@ -523,7 +523,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
   StyleSheet.create({
     keyboardView: {
       flex: 1,
-      backgroundColor: "#0F172A",
+      backgroundColor: themeColors.screenBg,
     },
     scrollContent: {
       flexGrow: 1,
@@ -555,9 +555,9 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderRadius: 24,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "#1E293B",
+      backgroundColor: themeColors.surface,
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.08)",
+      borderColor: themeColors.borderSoft,
       marginBottom: 20,
     },
     logo: {
@@ -565,7 +565,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       height: 64,
     },
     brandTitle: {
-      color: "#FFFFFF",
+      color: themeColors.textStrong,
       fontSize: 32,
       lineHeight: 40,
       fontWeight: "800",
@@ -574,7 +574,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexShrink: 1,
     },
     brandSubtitle: {
-      color: "#94A3B8",
+      color: themeColors.textSoft,
       fontSize: 15,
       lineHeight: 22,
       textAlign: "center",
@@ -612,7 +612,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       borderWidth: 1,
       borderRadius: 24,
       padding: 24,
-      shadowColor: "#000",
+      shadowColor: themeColors.shadow,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: isDark ? 0.3 : 0.08,
       shadowRadius: 10,
@@ -620,8 +620,8 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       width: "100%",
     },
     errorContainer: {
-      backgroundColor: "rgba(239, 68, 68, 0.1)",
-      borderColor: "rgba(239, 68, 68, 0.2)",
+      backgroundColor: themeColors.dangerSoftBg,
+      borderColor: themeColors.dangerSoftBorder,
       borderWidth: 1,
       borderRadius: 12,
       paddingHorizontal: 16,
@@ -629,7 +629,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       marginBottom: 24,
     },
     errorText: {
-      color: "#ef4444",
+      color: themeColors.danger,
       fontSize: 12,
       textAlign: "center",
       fontWeight: "600",
@@ -641,15 +641,15 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       fontSize: 13,
       lineHeight: 20,
       fontWeight: "600",
-      color: "#CBD5E1",
+      color: themeColors.textBody,
       marginBottom: 8,
       textAlign: "right",
     },
     inputWrapper: {
       flexDirection: "row-reverse",
       alignItems: "center",
-      backgroundColor: "#1E293B",
-      borderColor: "rgba(255,255,255,0.08)",
+      backgroundColor: themeColors.surface,
+      borderColor: themeColors.borderSoft,
       borderWidth: 1,
       borderRadius: 16,
       minHeight: 56,
@@ -661,7 +661,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     },
     textInput: {
       flex: 1,
-      color: "#FFFFFF",
+      color: themeColors.textStrong,
       fontSize: 16,
       lineHeight: 22,
       minHeight: 40,
@@ -681,11 +681,11 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       minHeight: 56,
       paddingVertical: 15,
       paddingHorizontal: 20,
-      backgroundColor: "#FF5A1F",
+      backgroundColor: themeColors.accent,
       borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
-      shadowColor: "#FF5A1F",
+      shadowColor: themeColors.accent,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.28,
       shadowRadius: 14,
@@ -705,7 +705,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     orText: {
       fontSize: 13,
       lineHeight: 20,
-      color: "#94A3B8",
+      color: themeColors.textSoft,
       fontWeight: "600",
     },
     buttonInner: {
@@ -719,7 +719,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       marginLeft: 4,
     },
     buttonText: {
-      color: "#ffffff",
+      color: themeColors.onAccent,
       fontSize: 16,
       lineHeight: 22,
       fontWeight: "700",
@@ -735,7 +735,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       marginBottom: 24,
     },
     forgotText: {
-      color: "#FF7A45",
+      color: themeColors.brandTint,
       fontSize: 14,
       lineHeight: 20,
       fontWeight: "600",
@@ -748,9 +748,9 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       paddingVertical: 15,
       paddingHorizontal: 20,
       borderRadius: 18,
-      backgroundColor: "#1E293B",
+      backgroundColor: themeColors.surface,
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.08)",
+      borderColor: themeColors.borderSoft,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -765,7 +765,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexWrap: "wrap",
     },
     googleButtonText: {
-      color: "#FFFFFF",
+      color: themeColors.textStrong,
       fontSize: 16,
       lineHeight: 22,
       fontWeight: "600",
@@ -781,14 +781,14 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       gap: 4,
     },
     footerText: {
-      color: "#94A3B8",
+      color: themeColors.textSoft,
       fontSize: 14,
       lineHeight: 22,
       textAlign: "center",
       flexShrink: 1,
     },
     linkText: {
-      color: "#FF7A45",
+      color: themeColors.brandTint,
       fontSize: 14,
       lineHeight: 22,
       fontWeight: "700",
@@ -797,7 +797,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       width: 56,
       height: 56,
       borderRadius: 16,
-      backgroundColor: "#ea580c",
+      backgroundColor: themeColors.primary,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 16,

@@ -57,7 +57,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { theme: currentTheme, setTheme: handleThemeToggle, themeColors } = useAppTheme();
+  const { themePreference: currentTheme, setTheme: handleThemeToggle, themeColors } = useAppTheme();
   const styles = getStyles(themeColors, isCompact, isTablet, i18n.language === "en");
   const currentLanguage = i18n.language || "ar";
 
@@ -673,6 +673,13 @@ export default function ProfileScreen() {
               >
                 <Feather name="moon" size={14} color={currentTheme === "dark" ? "#ea580c" : "#71717a"} style={styles.themeIcon} />
                 <Text style={[styles.themeBtnText, currentTheme === "dark" && styles.themeBtnTextActive]}>{t("dark")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleThemeToggle("system")}
+                style={[styles.themeBtn, currentTheme === "system" && styles.themeBtnActive]}
+              >
+                <Feather name="smartphone" size={14} color={currentTheme === "system" ? "#ea580c" : "#71717a"} style={styles.themeIcon} />
+                <Text style={[styles.themeBtnText, currentTheme === "system" && styles.themeBtnTextActive]}>{t("system")}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.prefLabels}>

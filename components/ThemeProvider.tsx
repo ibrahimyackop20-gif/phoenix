@@ -1,12 +1,35 @@
 console.log("ThemeProvider.tsx file loading...");
 
-import React, { useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { Appearance } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
 
-// Color palettes for light and dark modes
+export type ThemePreference = 'light' | 'dark' | 'system';
+export type ResolvedScheme = 'light' | 'dark';
+
+/**
+ * Centralized color tokens for light and dark modes.
+ *
+ * The original keys (background, text, primary, secondary, textMuted, cardBg,
+ * cardBorder, inputBg, inputBorder, disabledBg) are kept EXACTLY as they were so
+ * screens that already consume them are unaffected.
+ *
+ * The additional semantic tokens below power the theme migration. Their DARK
+ * values intentionally mirror the app's premium dark palette (#0F172A / #1E293B
+ * / #FF5A1F / #94A3B8 …) so migrated screens look pixel-identical in dark mode,
+ * while their LIGHT values provide a correct light counterpart.
+ */
 const lightColors = {
+  // ── Original tokens (unchanged) ──────────────────────────────
   background: '#ffffff',
   text: '#000000',
   primary: '#ea580c',
@@ -17,9 +40,62 @@ const lightColors = {
   inputBg: '#f9fafb',
   inputBorder: '#d1d5db',
   disabledBg: '#f3f4f6',
+
+  // ── Semantic tokens (light) ──────────────────────────────────
+  screenBg: '#F8FAFC',
+  surface: '#FFFFFF',
+  surfaceMuted: '#F1F5F9',
+  borderSoft: '#E2E8F0',
+  divider: '#EEF2F7',
+  textStrong: '#0F172A',
+  textSoft: '#64748B',
+  textFaint: '#94A3B8',
+  accent: '#FF5A1F',
+  accentPressed: '#E14E15',
+  accentSoftBg: 'rgba(255,90,31,0.10)',
+  accentSoftBorder: 'rgba(255,90,31,0.28)',
+  onAccent: '#FFFFFF',
+  success: '#059669',
+  successSoftBg: 'rgba(16,185,129,0.10)',
+  successSoftBorder: 'rgba(16,185,129,0.26)',
+  warning: '#D97706',
+  warningSoftBg: 'rgba(245,158,11,0.12)',
+  danger: '#DC2626',
+  dangerSoftBg: 'rgba(239,68,68,0.10)',
+  skeleton: 'rgba(15,23,42,0.06)',
+  overlay: 'rgba(15,23,42,0.45)',
+  shadow: '#0F172A',
+
+  // ── Brand / status accents (theme-agnostic: identical in light & dark
+  //    because they render on their own translucent chips/buttons) ──────
+  brandTint: '#FF7A45',
+  onAccentMuted: 'rgba(255,255,255,0.82)',
+  onAccentSoftBg: 'rgba(255,255,255,0.16)',
+  primarySoftBg: 'rgba(234,88,12,0.10)',
+  statAmber: '#FBBF24',
+  statAmberBg: 'rgba(251,191,36,0.10)',
+  statBlue: '#60A5FA',
+  statBlueBg: 'rgba(96,165,250,0.10)',
+  statGreen: '#34D399',
+  statGreenBg: 'rgba(52,211,153,0.10)',
+  statGreenBorder: 'rgba(52,211,153,0.22)',
+  statBlueBorder: 'rgba(96,165,250,0.22)',
+  blueStrong: '#3B82F6',
+  borderStrong: '#d1d5db',
+  trackColor: '#e5e7eb',
+  telegramTintBg: 'rgba(2,132,199,0.10)',
+  google: '#4285F4',
+  dangerSoftBorder: 'rgba(239,68,68,0.22)',
+  primarySoftBorder: 'rgba(234,88,12,0.25)',
+  textBody: '#475569',
+  telegram: '#0088CC',
+  telegramTint: '#0284C7',
+  telegramSoftBg: 'rgba(0,136,204,0.08)',
+  telegramBorder: 'rgba(0,136,204,0.25)',
 };
 
-const darkColors = {
+const darkColors: typeof lightColors = {
+  // ── Original tokens (unchanged) ──────────────────────────────
   background: '#111827',
   text: '#ffffff',
   primary: '#ea580c',
@@ -30,44 +106,108 @@ const darkColors = {
   inputBg: '#374151',
   inputBorder: '#4b5563',
   disabledBg: '#111827',
+
+  // ── Semantic tokens (dark = premium palette) ─────────────────
+  screenBg: '#0F172A',
+  surface: '#1E293B',
+  surfaceMuted: '#0F172A',
+  borderSoft: 'rgba(255,255,255,0.08)',
+  divider: 'rgba(255,255,255,0.06)',
+  textStrong: '#FFFFFF',
+  textSoft: '#94A3B8',
+  textFaint: '#64748B',
+  accent: '#FF5A1F',
+  accentPressed: '#E14E15',
+  accentSoftBg: 'rgba(255,90,31,0.12)',
+  accentSoftBorder: 'rgba(255,90,31,0.32)',
+  onAccent: '#FFFFFF',
+  success: '#10B981',
+  successSoftBg: 'rgba(16,185,129,0.12)',
+  successSoftBorder: 'rgba(16,185,129,0.28)',
+  warning: '#F59E0B',
+  warningSoftBg: 'rgba(245,158,11,0.15)',
+  danger: '#EF4444',
+  dangerSoftBg: 'rgba(239,68,68,0.12)',
+  skeleton: 'rgba(255,255,255,0.08)',
+  overlay: 'rgba(0,0,0,0.6)',
+  shadow: '#000000',
+
+  // ── Brand / status accents (theme-agnostic) ──────────────────
+  brandTint: '#FF7A45',
+  onAccentMuted: 'rgba(255,255,255,0.82)',
+  onAccentSoftBg: 'rgba(255,255,255,0.16)',
+  primarySoftBg: 'rgba(234,88,12,0.10)',
+  statAmber: '#FBBF24',
+  statAmberBg: 'rgba(251,191,36,0.10)',
+  statBlue: '#60A5FA',
+  statBlueBg: 'rgba(96,165,250,0.10)',
+  statGreen: '#34D399',
+  statGreenBg: 'rgba(52,211,153,0.10)',
+  statGreenBorder: 'rgba(52,211,153,0.20)',
+  statBlueBorder: 'rgba(96,165,250,0.20)',
+  blueStrong: '#3B82F6',
+  borderStrong: '#3f3f46',
+  trackColor: '#27272a',
+  telegramTintBg: 'rgba(41,182,246,0.12)',
+  google: '#4285F4',
+  dangerSoftBorder: 'rgba(239,68,68,0.20)',
+  primarySoftBorder: 'rgba(234,88,12,0.35)',
+  textBody: '#CBD5E1',
+  telegram: '#0088CC',
+  telegramTint: '#29B6F6',
+  telegramSoftBg: 'rgba(0,136,204,0.15)',
+  telegramBorder: 'rgba(0,136,204,0.30)',
 };
 
+export type ThemeColors = typeof lightColors;
+
+interface ThemeContextValue {
+  preference: ThemePreference;
+  resolvedScheme: ResolvedScheme;
+  isDark: boolean;
+  setPreference: (p: ThemePreference) => void;
+  themeColors: ThemeColors;
+}
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
 /**
- * ThemeProvider loads persisted theme and language on startup.
- * It renders nothing until both are loaded to avoid flicker.
+ * ThemeProvider loads the persisted theme preference and language on startup.
+ * It renders nothing until loading finishes to avoid a flash of the wrong theme.
+ *
+ * Supports three preferences: 'light', 'dark', and 'system'. In 'system' mode the
+ * resolved scheme follows the device appearance live (via RN Appearance), so
+ * changing the OS theme updates the app immediately — no restart, no refresh.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  console.log("Entering ThemeProvider");
   const { setColorScheme } = useColorScheme();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [preference, setPreferenceState] = useState<ThemePreference>('dark');
+  const [systemScheme, setSystemScheme] = useState<ResolvedScheme>(
+    (Appearance.getColorScheme() as ResolvedScheme) || 'dark'
+  );
 
   useEffect(() => {
     const loadSettings = async () => {
-      console.log("ThemeProvider: Starting loadSettings...");
       try {
-        // Restore theme
-        console.log("AsyncStorage.getItem('theme') - Accessing...");
         const savedTheme = await AsyncStorage.getItem('theme');
-        console.log("AsyncStorage.getItem('theme') - Result:", savedTheme);
-        if (savedTheme === 'dark' || savedTheme === 'light') {
-          setColorScheme(savedTheme);
+        if (
+          savedTheme === 'dark' ||
+          savedTheme === 'light' ||
+          savedTheme === 'system'
+        ) {
+          setPreferenceState(savedTheme);
         } else {
-          setColorScheme('dark');
+          setPreferenceState('dark');
         }
 
-        // Restore language
-        console.log("AsyncStorage.getItem('language') - Accessing...");
         const savedLang = await AsyncStorage.getItem('language');
-        console.log("AsyncStorage.getItem('language') - Result:", savedLang);
         if (savedLang === 'ar' || savedLang === 'en') {
-          console.log("i18n.changeLanguage() - Starting conversion to:", savedLang);
           await i18n.changeLanguage(savedLang);
-          console.log("i18n.changeLanguage() - Finished conversion.");
         }
       } catch (error) {
-        console.error("Startup Error:", error);
+        console.error('Startup Error:', error);
       } finally {
-        console.log("ThemeProvider: loadSettings completed.");
         setIsLoaded(true);
       }
     };
@@ -75,56 +215,80 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     loadSettings();
   }, []);
 
+  // Follow device appearance changes (used when preference === 'system').
   useEffect(() => {
-    if (isLoaded) {
-      console.log("Provider initialized: ThemeProvider");
-    }
-  }, [isLoaded]);
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystemScheme((colorScheme as ResolvedScheme) || 'dark');
+    });
+    return () => sub.remove();
+  }, []);
+
+  const resolvedScheme: ResolvedScheme =
+    preference === 'system' ? systemScheme : preference;
+
+  // Keep NativeWind's scheme in sync so any className-based `dark:` variants match.
+  useEffect(() => {
+    setColorScheme(resolvedScheme);
+  }, [resolvedScheme, setColorScheme]);
+
+  const setPreference = useCallback((p: ThemePreference) => {
+    setPreferenceState(p);
+    AsyncStorage.setItem('theme', p).catch((error) => {
+      console.error('Startup Error (setTheme):', error);
+    });
+  }, []);
+
+  const value = useMemo<ThemeContextValue>(() => {
+    const isDark = resolvedScheme === 'dark';
+    return {
+      preference,
+      resolvedScheme,
+      isDark,
+      setPreference,
+      themeColors: isDark ? darkColors : lightColors,
+    };
+  }, [preference, resolvedScheme, setPreference]);
 
   if (!isLoaded) {
-    console.log("Leaving ThemeProvider (not loaded state)");
     return null;
   }
 
-  console.log("Leaving ThemeProvider (loaded state)");
-  return <>{children}</>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export default ThemeProvider;
 
 /**
- * Hook for consuming theme state from any screen.
- * Uses NativeWind's useColorScheme under the hood.
+ * Hook for consuming theme state from any screen or component.
+ *
+ * Returns:
+ * - theme: the resolved scheme ('light' | 'dark')
+ * - themePreference: the user's stored choice ('light' | 'dark' | 'system')
+ * - isDark: convenience boolean
+ * - setTheme: update the preference (accepts 'light' | 'dark' | 'system')
+ * - themeColors: the active color token set
  */
 export function useAppTheme() {
-  try {
-    const { colorScheme, setColorScheme } = useColorScheme();
+  const ctx = useContext(ThemeContext);
 
-    const setTheme = async (newTheme: 'light' | 'dark') => {
-      try {
-        setColorScheme(newTheme);
-        await AsyncStorage.setItem('theme', newTheme);
-      } catch (error) {
-        console.error("Startup Error (setTheme):", error);
-      }
-    };
-
-    const isDark = colorScheme === 'dark';
-    const themeColors = isDark ? darkColors : lightColors;
-
+  if (!ctx) {
+    // Fallback if the provider is not mounted (keeps callers crash-safe).
     return {
-      theme: (isDark ? 'dark' : 'light') as 'dark' | 'light',
-      isDark,
-      setTheme,
-      themeColors,
-    };
-  } catch (error) {
-    console.error("Startup Error (useAppTheme):", error);
-    return {
-      theme: 'dark' as const,
+      theme: 'dark' as ResolvedScheme,
+      themePreference: 'dark' as ThemePreference,
       isDark: true,
-      setTheme: async () => {},
+      setTheme: (_p: ThemePreference) => {},
       themeColors: darkColors,
     };
   }
+
+  return {
+    theme: ctx.resolvedScheme,
+    themePreference: ctx.preference,
+    isDark: ctx.isDark,
+    setTheme: ctx.setPreference,
+    themeColors: ctx.themeColors,
+  };
 }

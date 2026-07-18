@@ -18,7 +18,7 @@ import {
 } from "../../../../lib/realtimeChannel";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { useAppTheme } from "../../../../components/ThemeProvider";
+import { useAppTheme, type ThemeColors } from "../../../../components/ThemeProvider";
 import StatusBadge from "../../../../components/StatusBadge";
 import { AnimatedCard } from "../../../components/anim/AnimatedCard";
 import { ScreenTransition } from "../../../components/anim/ScreenTransition";
@@ -47,11 +47,11 @@ const PRINT_STATUS_KEYS: Record<string, string> = {
 export default function OrdersScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const { themeColors, isDark } = useAppTheme();
+  const { themeColors } = useAppTheme();
   const { width, fontScale } = useWindowDimensions();
   const isCompact = width < 390 || fontScale >= 1.3;
   const isTablet = width >= 700;
-  const styles = getStyles(themeColors, isDark, isCompact, isTablet);
+  const styles = getStyles(themeColors, isCompact, isTablet);
   const { highlight, orderId } = useLocalSearchParams<{
     highlight?: string;
     orderId?: string;
@@ -309,7 +309,7 @@ export default function OrdersScreen() {
           onPress={() => setFilter("all")}
           style={[styles.tabButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }, filter === "all" && styles.tabButtonActive]}
         >
-          <Feather name="filter" size={12} color={filter === "all" ? "#ffffff" : themeColors.textMuted} style={styles.tabIcon} />
+          <Feather name="filter" size={12} color={filter === "all" ? themeColors.onAccent : themeColors.textMuted} style={styles.tabIcon} />
           <Text style={[styles.tabText, { color: themeColors.textMuted }, filter === "all" && styles.tabTextActive]}>
             {t("all")} ({orders.length})
           </Text>
@@ -319,7 +319,7 @@ export default function OrdersScreen() {
           onPress={() => setFilter("print")}
           style={[styles.tabButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }, filter === "print" && styles.tabButtonActivePrint]}
         >
-          <Feather name="printer" size={12} color={filter === "print" ? "#ffffff" : themeColors.textMuted} style={styles.tabIcon} />
+          <Feather name="printer" size={12} color={filter === "print" ? themeColors.onAccent : themeColors.textMuted} style={styles.tabIcon} />
           <Text style={[styles.tabText, { color: themeColors.textMuted }, filter === "print" && styles.tabTextActive]}>
             {t("printing_services")} ({printCount})
           </Text>
@@ -329,7 +329,7 @@ export default function OrdersScreen() {
           onPress={() => setFilter("library")}
           style={[styles.tabButton, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }, filter === "library" && styles.tabButtonActiveLib]}
         >
-          <Feather name="shopping-bag" size={12} color={filter === "library" ? "#ffffff" : themeColors.textMuted} style={styles.tabIcon} />
+          <Feather name="shopping-bag" size={12} color={filter === "library" ? themeColors.onAccent : themeColors.textMuted} style={styles.tabIcon} />
           <Text style={[styles.tabText, { color: themeColors.textMuted }, filter === "library" && styles.tabTextActive]}>
             {t("my_purchases")} ({libCount})
           </Text>
@@ -372,12 +372,12 @@ export default function OrdersScreen() {
                   <View style={styles.cardTopLeft}>
                     {isPrint ? (
                       <View style={styles.printTag}>
-                        <Feather name="printer" size={10} color="#60a5fa" />
+                        <Feather name="printer" size={10} color={themeColors.statBlue} />
                         <Text style={styles.printTagText}>{t("print_order")}</Text>
                       </View>
                     ) : (
                       <View style={styles.libTag}>
-                        <Feather name="shopping-bag" size={10} color="#34d399" />
+                        <Feather name="shopping-bag" size={10} color={themeColors.statGreen} />
                         <Text style={styles.libTagText}>{t("library_purchase")}</Text>
                       </View>
                     )}
@@ -406,7 +406,7 @@ export default function OrdersScreen() {
                     <Text style={[styles.metaLabel, { color: themeColors.textMuted }]}>
                       {t("order_detail_price")}
                     </Text>
-                    <Text style={[styles.metaValue, { color: "#ea580c" }]}>{getOrderPrice(item)}</Text>
+                    <Text style={[styles.metaValue, { color: themeColors.primary }]}>{getOrderPrice(item)}</Text>
                   </View>
                   <View style={styles.metaItem}>
                     <Text style={[styles.metaLabel, { color: themeColors.textMuted }]}>
@@ -454,8 +454,7 @@ export default function OrdersScreen() {
 }
 
 const getStyles = (
-  themeColors: { background: string; cardBg: string; cardBorder: string; text: string; textMuted: string },
-  isDark: boolean,
+  themeColors: ThemeColors,
   isCompact: boolean,
   isTablet: boolean
 ) =>
@@ -468,8 +467,8 @@ const getStyles = (
       justifyContent: "center",
     },
     toastSuccess: {
-      backgroundColor: "rgba(52, 211, 153, 0.1)",
-      borderColor: "rgba(52, 211, 153, 0.2)",
+      backgroundColor: themeColors.statGreenBg,
+      borderColor: themeColors.statGreenBorder,
       borderWidth: 1,
       borderRadius: 12,
       padding: 14,
@@ -519,12 +518,12 @@ const getStyles = (
       minHeight: 38,
       paddingVertical: 9,
     },
-    tabButtonActive: { backgroundColor: "#ea580c", borderColor: "#ea580c" },
-    tabButtonActivePrint: { backgroundColor: "#3b82f6", borderColor: "#3b82f6" },
-    tabButtonActiveLib: { backgroundColor: "#10b981", borderColor: "#10b981" },
+    tabButtonActive: { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
+    tabButtonActivePrint: { backgroundColor: themeColors.blueStrong, borderColor: themeColors.blueStrong },
+    tabButtonActiveLib: { backgroundColor: themeColors.success, borderColor: themeColors.success },
     tabIcon: { marginLeft: 6 },
     tabText: { fontSize: 12, fontWeight: "bold", flexShrink: 1, textAlign: "center" },
-    tabTextActive: { color: "#ffffff" },
+    tabTextActive: { color: themeColors.onAccent },
     emptyCard: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
     emptyTitle: { fontSize: 16, fontWeight: "bold", marginTop: 16, marginBottom: 8 },
     emptySubtitle: { fontSize: 13, textAlign: "center", lineHeight: 18 },
@@ -568,33 +567,33 @@ const getStyles = (
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 4,
-      backgroundColor: "rgba(96, 165, 250, 0.1)",
-      borderColor: "rgba(96, 165, 250, 0.2)",
+      backgroundColor: themeColors.statBlueBg,
+      borderColor: themeColors.statBlueBorder,
       borderWidth: 1,
       borderRadius: 8,
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
-    printTagText: { color: "#60a5fa", fontSize: 10, fontWeight: "bold" },
+    printTagText: { color: themeColors.statBlue, fontSize: 10, fontWeight: "bold" },
     libTag: {
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 4,
-      backgroundColor: "rgba(52, 211, 153, 0.1)",
-      borderColor: "rgba(52, 211, 153, 0.2)",
+      backgroundColor: themeColors.statGreenBg,
+      borderColor: themeColors.statGreenBorder,
       borderWidth: 1,
       borderRadius: 8,
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
-    libTagText: { color: "#34d399", fontSize: 10, fontWeight: "bold" },
+    libTagText: { color: themeColors.statGreen, fontSize: 10, fontWeight: "bold" },
     libStatusPill: {
-      backgroundColor: isDark ? "rgba(52,211,153,0.1)" : "rgba(52,211,153,0.08)",
+      backgroundColor: themeColors.statGreenBg,
       borderRadius: 999,
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
-    libStatusText: { color: "#34d399", fontSize: 10, fontWeight: "600" },
+    libStatusText: { color: themeColors.statGreen, fontSize: 10, fontWeight: "600" },
     orderNumber: {
       fontSize: 17,
       fontWeight: "700",
@@ -621,12 +620,12 @@ const getStyles = (
     dateLabel: { fontSize: 10, marginBottom: 2 },
     dateValue: { fontSize: 11, fontWeight: "500" },
     rejectedNotice: {
-      backgroundColor: "rgba(239, 68, 68, 0.1)",
-      borderColor: "rgba(239, 68, 68, 0.2)",
+      backgroundColor: themeColors.dangerSoftBg,
+      borderColor: themeColors.dangerSoftBorder,
       borderWidth: 1,
       borderRadius: 10,
       padding: 10,
       marginTop: 10,
     },
-    rejectedNoticeText: { color: "#ef4444", fontSize: 11, textAlign: "center" },
+    rejectedNoticeText: { color: themeColors.danger, fontSize: 11, textAlign: "center" },
   });
