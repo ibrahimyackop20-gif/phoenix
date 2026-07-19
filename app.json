@@ -10,6 +10,7 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.phoenix.printing",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
@@ -20,6 +21,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.phoenix.printing",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "POST_NOTIFICATIONS",

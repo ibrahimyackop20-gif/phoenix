@@ -1,7 +1,14 @@
 name: Android Preview
 
-# Builds a debug APK (app-debug.apk) and uploads it as a GitHub Artifact.
+# Builds a standalone release APK (app-release.apk) and uploads it as a GitHub Artifact.
 # Replaces EAS "preview" builds for Android.
+#
+# NOTE: This intentionally builds a *release* variant (not assembleDebug).
+# A debug APK does NOT embed the JS bundle — it fetches it from the Metro dev
+# server at runtime, so a debug APK installed on a real device (no Metro
+# reachable) hangs forever on the splash screen. The release variant embeds the
+# Hermes bundle and is signed with the template's debug keystore, so it installs
+# and runs standalone on any device (same behavior as an EAS "preview" build).
 on:
   push:
     branches: [main]
@@ -13,7 +20,7 @@ concurrency:
 
 jobs:
   build-preview:
-    name: Build Debug APK
+    name: Build Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -54,14 +61,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build Debug APK
+      - name: Build Release APK (standalone, embeds JS bundle)
         working-directory: android
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
