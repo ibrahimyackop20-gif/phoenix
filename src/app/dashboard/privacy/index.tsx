@@ -12,7 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "@/../lib/supabaseClient";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useAppTheme } from "@/../components/ThemeProvider";
+import { useAppTheme, type ThemeColors } from "@/../components/ThemeProvider";
+import { useResponsiveTheme } from "@/hooks/useResponsiveTheme";
 import * as ExpoPrint from "expo-print";
 import * as ExpoSharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
@@ -20,6 +21,8 @@ import { useTranslation } from "react-i18next";
 export default function PrivacyCenter() {
   const router = useRouter();
   const { themeColors } = useAppTheme();
+  const { horizontalPadding, formMaxWidth } = useResponsiveTheme();
+  const styles = useMemo(() => getStyles(themeColors, horizontalPadding, formMaxWidth), [themeColors, horizontalPadding, formMaxWidth]);
   const { t, i18n } = useTranslation();
   const [downloading, setDownloading] = useState(false);
 
@@ -30,38 +33,38 @@ export default function PrivacyCenter() {
         description: t("privacy_menu_policy_desc"),
         icon: "shield",
         route: "/dashboard/privacy/policy",
-        color: "#ea580c",
+        color: themeColors.primary,
       },
       {
         title: t("privacy_menu_terms_title"),
         description: t("privacy_menu_terms_desc"),
         icon: "file-text",
         route: "/dashboard/privacy/terms",
-        color: "#ea580c",
+        color: themeColors.primary,
       },
       {
         title: t("privacy_menu_permissions_title"),
         description: t("privacy_menu_permissions_desc"),
         icon: "key",
         route: "/dashboard/privacy/permissions",
-        color: "#ea580c",
+        color: themeColors.primary,
       },
       {
         title: t("privacy_menu_support_title"),
         description: t("privacy_menu_support_desc"),
         icon: "help-circle",
         route: "/dashboard/privacy/support",
-        color: "#ea580c",
+        color: themeColors.primary,
       },
       {
         title: t("privacy_menu_about_title"),
         description: t("privacy_menu_about_desc"),
         icon: "info",
         route: "/dashboard/privacy/about",
-        color: "#ea580c",
+        color: themeColors.primary,
       },
     ],
-    [t, i18n.language]
+    [t, i18n.language, themeColors.primary]
   );
 
   const handleDownloadData = async () => {
@@ -224,17 +227,17 @@ export default function PrivacyCenter() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.screenBg }]}>
       <View style={styles.appBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Feather name="arrow-right" size={22} color={themeColors.text} />
+          <Feather name="arrow-right" size={22} color={themeColors.textStrong} />
         </TouchableOpacity>
-        <Text style={[styles.appBarTitle, { color: themeColors.text }]}>{t("privacy_center_title")}</Text>
+        <Text style={[styles.appBarTitle, { color: themeColors.textStrong }]} maxFontSizeMultiplier={1.35}>{t("privacy_center_title")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionDesc, { color: themeColors.textMuted }]}>
+        <Text style={[styles.sectionDesc, { color: themeColors.textSoft }]} maxFontSizeMultiplier={1.35}>
           {t("privacy_center_desc")}
         </Text>
 
@@ -243,55 +246,53 @@ export default function PrivacyCenter() {
             <TouchableOpacity
               key={idx}
               onPress={() => router.push(item.route as any)}
-              style={[styles.menuCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
+              style={[styles.menuCard, { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft }]}
             >
-              <Feather name="chevron-left" size={16} color={themeColors.textMuted} />
+              <Feather name="chevron-left" size={16} color={themeColors.textSoft} />
               <View style={styles.cardContent}>
-                <Text style={[styles.cardTitle, { color: themeColors.text }]}>{item.title}</Text>
-                <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>{item.description}</Text>
+                <Text style={[styles.cardTitle, { color: themeColors.textStrong }]} maxFontSizeMultiplier={1.35}>{item.title}</Text>
+                <Text style={[styles.cardDesc, { color: themeColors.textSoft }]} maxFontSizeMultiplier={1.35}>{item.description}</Text>
               </View>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(234, 88, 12, 0.08)" }]}>
+              <View style={[styles.iconWrapper, { backgroundColor: themeColors.primarySoftBg }]}>
                 <Feather name={item.icon as any} size={18} color={item.color} />
               </View>
             </TouchableOpacity>
           ))}
 
-          {/* Download My Data Button */}
           <TouchableOpacity
             onPress={handleDownloadData}
             disabled={downloading}
-            style={[styles.menuCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
+            style={[styles.menuCard, { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft }]}
           >
             {downloading ? (
-              <ActivityIndicator size="small" color="#ea580c" />
+              <ActivityIndicator size="small" color={themeColors.primary} />
             ) : (
-              <Feather name="chevron-left" size={16} color={themeColors.textMuted} />
+              <Feather name="chevron-left" size={16} color={themeColors.textSoft} />
             )}
             <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("privacy_export_title")}</Text>
-              <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
+              <Text style={[styles.cardTitle, { color: themeColors.textStrong }]} maxFontSizeMultiplier={1.35}>{t("privacy_export_title")}</Text>
+              <Text style={[styles.cardDesc, { color: themeColors.textSoft }]} maxFontSizeMultiplier={1.35}>
                 {t("privacy_export_desc")}
               </Text>
             </View>
-            <View style={[styles.iconWrapper, { backgroundColor: "rgba(34, 197, 94, 0.08)" }]}>
-              <Feather name="download" size={18} color="#22c55e" />
+            <View style={[styles.iconWrapper, { backgroundColor: themeColors.successSoftBg }]}>
+              <Feather name="download" size={18} color={themeColors.success} />
             </View>
           </TouchableOpacity>
 
-          {/* Delete Account (Danger Zone) */}
           <TouchableOpacity
             onPress={() => router.push("/dashboard/privacy/delete-account" as any)}
-            style={[styles.menuCard, styles.dangerCard, { backgroundColor: themeColors.cardBg, borderColor: "rgba(239, 68, 68, 0.2)" }]}
+            style={[styles.menuCard, styles.dangerCard, { backgroundColor: themeColors.surface, borderColor: themeColors.dangerSoftBorder }]}
           >
-            <Feather name="chevron-left" size={16} color="#ef4444" />
+            <Feather name="chevron-left" size={16} color={themeColors.danger} />
             <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: "#ef4444" }]}>{t("privacy_delete_menu_title")}</Text>
-              <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
+              <Text style={[styles.cardTitle, { color: themeColors.danger }]} maxFontSizeMultiplier={1.35}>{t("privacy_delete_menu_title")}</Text>
+              <Text style={[styles.cardDesc, { color: themeColors.textSoft }]} maxFontSizeMultiplier={1.35}>
                 {t("privacy_delete_menu_desc")}
               </Text>
             </View>
-            <View style={[styles.iconWrapper, { backgroundColor: "rgba(239, 68, 68, 0.08)" }]}>
-              <Feather name="trash-2" size={18} color="#ef4444" />
+            <View style={[styles.iconWrapper, { backgroundColor: themeColors.dangerSoftBg }]}>
+              <Feather name="trash-2" size={18} color={themeColors.danger} />
             </View>
           </TouchableOpacity>
         </View>
@@ -300,20 +301,21 @@ export default function PrivacyCenter() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  appBar: {
-    flexDirection: "row-reverse",
-    minHeight: 56,
-    paddingVertical: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(39, 39, 42, 0.5)",
-  },
+const getStyles = (c: ThemeColors, horizontalPadding: number, formMaxWidth: number) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    appBar: {
+      flexDirection: "row-reverse",
+      minHeight: 56,
+      paddingVertical: 8,
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: horizontalPadding,
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderSoft,
+    },
   backButton: {
     width: 40,
     height: 40,
@@ -328,10 +330,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: horizontalPadding,
     paddingBottom: 40,
     width: "100%",
-    maxWidth: 720,
+    maxWidth: formMaxWidth,
     alignSelf: "center",
   },
   sectionDesc: {
@@ -351,7 +353,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dangerCard: {
-    borderColor: "rgba(239, 68, 68, 0.2)",
+    borderColor: c.dangerSoftBorder,
   },
   cardContent: {
     flex: 1,

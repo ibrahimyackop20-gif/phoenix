@@ -19,7 +19,7 @@ import { pickDocumentWithPermission } from "../../../lib/filePermissions";
 import { launchCameraWithPermission } from "../../../lib/cameraPermissions";
 import { supabase } from "../../../lib/supabaseClient";
 import { useProfile } from "../../../components/ProfileProvider";
-import { useAppTheme } from "../../../components/ThemeProvider";
+import { useAppTheme, type ThemeColors } from "../../../components/ThemeProvider";
 import LocationPickerModal from "../../../components/LocationPickerModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { ScreenTransition } from "../../components/anim/ScreenTransition";
@@ -622,7 +622,7 @@ export default function ProfileScreen() {
           ) : (
             !showAddressForm && (
               <View style={styles.emptyAddresses}>
-                <Feather name="map-pin" size={32} color="#71717a" style={styles.emptyPinIcon} />
+                <Feather name="map-pin" size={32} color={themeColors.textFaint} style={styles.emptyPinIcon} />
                 <Text style={[styles.emptyTitleText, { color: themeColors.text }]}>{t("no_saved_addresses")}</Text>
                 <Text style={[styles.emptyDescText, { color: themeColors.textMuted }]}>{t("add_address_hint")}</Text>
               </View>
@@ -633,7 +633,7 @@ export default function ProfileScreen() {
         {/* System Preferences Form */}
         <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <View style={styles.cardHeader}>
-            <Feather name="globe" size={20} color="#FF5A1F" />
+            <Feather name="globe" size={20} color={themeColors.accent} />
             <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("system_preferences")}</Text>
           </View>
 
@@ -664,21 +664,21 @@ export default function ProfileScreen() {
                 onPress={() => handleThemeToggle("light")}
                 style={[styles.themeBtn, currentTheme === "light" && styles.themeBtnActive]}
               >
-                <Feather name="sun" size={14} color={currentTheme === "light" ? "#ea580c" : "#71717a"} style={styles.themeIcon} />
+                <Feather name="sun" size={14} color={currentTheme === "light" ? themeColors.accent : themeColors.textFaint} style={styles.themeIcon} />
                 <Text style={[styles.themeBtnText, currentTheme === "light" && styles.themeBtnTextActive]}>{t("light")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleThemeToggle("dark")}
                 style={[styles.themeBtn, currentTheme === "dark" && styles.themeBtnActive]}
               >
-                <Feather name="moon" size={14} color={currentTheme === "dark" ? "#ea580c" : "#71717a"} style={styles.themeIcon} />
+                <Feather name="moon" size={14} color={currentTheme === "dark" ? themeColors.accent : themeColors.textFaint} style={styles.themeIcon} />
                 <Text style={[styles.themeBtnText, currentTheme === "dark" && styles.themeBtnTextActive]}>{t("dark")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleThemeToggle("system")}
                 style={[styles.themeBtn, currentTheme === "system" && styles.themeBtnActive]}
               >
-                <Feather name="smartphone" size={14} color={currentTheme === "system" ? "#ea580c" : "#71717a"} style={styles.themeIcon} />
+                <Feather name="smartphone" size={14} color={currentTheme === "system" ? themeColors.accent : themeColors.textFaint} style={styles.themeIcon} />
                 <Text style={[styles.themeBtnText, currentTheme === "system" && styles.themeBtnTextActive]}>{t("system")}</Text>
               </TouchableOpacity>
             </View>
@@ -732,16 +732,7 @@ export default function ProfileScreen() {
   );
 }
 
-const getStyles = (themeColors: {
-  background: string;
-  cardBg: string;
-  cardBorder: string;
-  text: string;
-  textMuted: string;
-  inputBg: string;
-  inputBorder: string;
-  disabledBg: string;
-}, isCompact: boolean, isTablet: boolean, isEnglish: boolean) =>
+const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boolean, isEnglish: boolean) =>
   StyleSheet.create({
   container: {
     flex: 1,
@@ -1282,7 +1273,7 @@ const getStyles = (themeColors: {
     borderRadius: 12,
   },
   langBtnActive: {
-    backgroundColor: "rgba(255,90,31,0.14)",
+    backgroundColor: themeColors.accentSoftBg,
   },
   langBtnText: {
     fontSize: 13,
@@ -1293,7 +1284,7 @@ const getStyles = (themeColors: {
     flexShrink: 1,
   },
   langBtnTextActive: {
-    color: "#FF5A1F",
+    color: themeColors.accent,
   },
   themeToggles: {
     flexDirection: isEnglish ? "row" : "row-reverse",
@@ -1318,7 +1309,7 @@ const getStyles = (themeColors: {
     borderRadius: 12,
   },
   themeBtnActive: {
-    backgroundColor: "rgba(255,90,31,0.14)",
+    backgroundColor: themeColors.accentSoftBg,
   },
   themeIcon: {
     marginLeft: 2,
@@ -1332,6 +1323,6 @@ const getStyles = (themeColors: {
     flexShrink: 1,
   },
   themeBtnTextActive: {
-    color: "#FF5A1F",
+    color: themeColors.accent,
   },
 });

@@ -13,6 +13,7 @@ import { markPostAuthNavigation } from "@/../lib/postAuthNavigation";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../components/ThemeProvider";
+import { useResponsiveTheme } from "../hooks/useResponsiveTheme";
 import { HeroIllustration } from "../components/landing/HeroIllustration";
 import { ScreenTransition } from "../components/anim/ScreenTransition";
 import { PressableScale } from "../components/anim/PressableScale";
@@ -21,7 +22,8 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { themeColors, isDark } = useAppTheme();
-  const styles = getStyles(themeColors, isDark);
+  const { horizontalPadding, isTablet, fontScale } = useResponsiveTheme();
+  const styles = getStyles(themeColors, isDark, horizontalPadding, isTablet, fontScale);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -62,16 +64,16 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.badgeContainer}>
-            <Ionicons name="sparkles" size={14} color="#ea580c" />
-            <Text style={styles.badgeText}>{t("land_badge")}</Text>
+            <Ionicons name="sparkles" size={14} color={themeColors.primary} />
+            <Text style={styles.badgeText} maxFontSizeMultiplier={1.35}>{t("land_badge")}</Text>
           </View>
 
-          <Text style={styles.titleText}>
+          <Text style={styles.titleText} maxFontSizeMultiplier={1.3}>
             <Text style={styles.orangeText}>{t("land_title_print")}</Text>{"\n"}
             <Text style={styles.whiteText}>{t("land_title_easy")}</Text>
           </Text>
 
-          <Text style={styles.subtitleText}>{t("land_subtitle")}</Text>
+          <Text style={styles.subtitleText} maxFontSizeMultiplier={1.35}>{t("land_subtitle")}</Text>
 
           <View style={styles.ctaContainer}>
             <PressableScale
@@ -79,7 +81,7 @@ export default function HomeScreen() {
               onPress={() => router.push("/auth/signup" as any)}
             >
               <Text style={styles.primaryButtonText}>{t("land_cta_start")}</Text>
-              <Feather name="arrow-left" size={18} color="#ffffff" style={styles.buttonIcon} />
+              <Feather name="arrow-left" size={18} color={themeColors.onAccent} style={styles.buttonIcon} />
             </PressableScale>
 
             <PressableScale
@@ -97,24 +99,24 @@ export default function HomeScreen() {
 
           <View style={styles.featuresGrid}>
             <View style={styles.featureCard}>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(234, 88, 12, 0.12)" }]}>
-                <Feather name="upload" size={24} color="#ea580c" />
+              <View style={[styles.iconWrapper, { backgroundColor: themeColors.primarySoftBg }]}>
+                <Feather name="upload" size={24} color={themeColors.primary} />
               </View>
               <Text style={styles.featureTitle}>{t("land_feature1_title")}</Text>
               <Text style={styles.featureDesc}>{t("land_feature1_desc")}</Text>
             </View>
 
             <View style={styles.featureCard}>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(249, 115, 22, 0.12)" }]}>
-                <Feather name="clipboard" size={24} color="#f97316" />
+              <View style={[styles.iconWrapper, { backgroundColor: themeColors.accentSoftBg }]}>
+                <Feather name="clipboard" size={24} color={themeColors.brandTint} />
               </View>
               <Text style={styles.featureTitle}>{t("land_feature2_title")}</Text>
               <Text style={styles.featureDesc}>{t("land_feature2_desc")}</Text>
             </View>
 
             <View style={styles.featureCard}>
-              <View style={[styles.iconWrapper, { backgroundColor: "rgba(59, 130, 246, 0.12)" }]}>
-                <Feather name="credit-card" size={24} color="#3b82f6" />
+              <View style={[styles.iconWrapper, { backgroundColor: themeColors.statBlueBg }]}>
+                <Feather name="credit-card" size={24} color={themeColors.blueStrong} />
               </View>
               <Text style={styles.featureTitle}>{t("land_feature3_title")}</Text>
               <Text style={styles.featureDesc}>{t("land_feature3_desc")}</Text>
@@ -125,7 +127,7 @@ export default function HomeScreen() {
         <View style={styles.footer}>
           <View style={styles.footerLogoRow}>
             <View style={styles.logoBadge}>
-              <Feather name="printer" size={16} color="#ffffff" />
+              <Feather name="printer" size={16} color={themeColors.onAccent} />
             </View>
             <Text style={styles.footerLogoText}>
               {t("land_footer_brand", { brand: t("brand_name") })}
@@ -144,23 +146,32 @@ export default function HomeScreen() {
   );
 }
 
-const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], isDark: boolean) =>
-  StyleSheet.create({
+const getStyles = (
+  themeColors: ReturnType<typeof useAppTheme>["themeColors"],
+  isDark: boolean,
+  horizontalPadding: number,
+  isTablet: boolean,
+  fontScale: number
+) => {
+  const titleSize = Math.min(36 * fontScale, 46);
+  const titleLineHeight = Math.min(46 * fontScale, 56);
+
+  return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: themeColors.background,
+      backgroundColor: themeColors.screenBg,
     },
     scrollContent: {
       paddingBottom: 40,
       width: "100%",
-      maxWidth: 720,
+      maxWidth: isTablet ? 1024 : 720,
       alignSelf: "center",
     },
     heroSection: {
       alignItems: "center",
       paddingTop: 20,
       paddingBottom: 52,
-      paddingHorizontal: 24,
+      paddingHorizontal: horizontalPadding,
       position: "relative",
     },
     heroVisual: {
@@ -178,7 +189,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       width: 300,
       height: 300,
       borderRadius: 150,
-      backgroundColor: "rgba(255, 90, 31, 0.12)",
+      backgroundColor: themeColors.accentSoftBg,
     },
     bgCircleLarge: {
       position: "absolute",
@@ -190,7 +201,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       height: 380,
       borderRadius: 190,
       borderWidth: 1,
-      borderColor: "rgba(255, 90, 31, 0.06)",
+      borderColor: isDark ? "rgba(255, 90, 31, 0.06)" : themeColors.accentSoftBorder,
     },
     bgCircleSmall: {
       position: "absolute",
@@ -202,15 +213,15 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       height: 230,
       borderRadius: 115,
       borderWidth: 1,
-      borderColor: "rgba(255, 90, 31, 0.10)",
+      borderColor: themeColors.accentSoftBorder,
     },
     badgeContainer: {
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 6,
-      backgroundColor: "rgba(234, 88, 12, 0.1)",
+      backgroundColor: themeColors.primarySoftBg,
       borderWidth: 1,
-      borderColor: "rgba(234, 88, 12, 0.2)",
+      borderColor: themeColors.primarySoftBorder,
       borderRadius: 9999,
       paddingVertical: 6,
       paddingHorizontal: 16,
@@ -218,57 +229,59 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       maxWidth: "100%",
     },
     badgeText: {
-      color: "#fb923c",
+      color: themeColors.brandTint,
       fontSize: 12,
       fontWeight: "600",
       textAlign: "center",
       flexShrink: 1,
     },
     titleText: {
-      fontSize: 36,
+      fontSize: titleSize,
       fontWeight: "900",
       textAlign: "center",
-      lineHeight: 46,
+      lineHeight: titleLineHeight,
       marginTop: 16,
       flexShrink: 1,
     },
     orangeText: {
-      color: "#f97316",
+      color: themeColors.brandTint,
     },
     whiteText: {
-      color: themeColors.text,
+      color: themeColors.textStrong,
     },
     subtitleText: {
       fontSize: 15,
-      color: themeColors.textMuted,
+      color: themeColors.textSoft,
       textAlign: "center",
       lineHeight: 22,
-      maxWidth: 320,
+      maxWidth: 360,
       marginTop: 12,
+      paddingHorizontal: 8,
     },
     ctaContainer: {
       flexDirection: "column",
       width: "100%",
       gap: 16,
-      paddingHorizontal: 16,
+      paddingHorizontal: horizontalPadding,
       maxWidth: 440,
       marginTop: 32,
     },
     primaryButton: {
-      backgroundColor: "#ea580c",
+      backgroundColor: themeColors.primary,
       flexDirection: "row-reverse",
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 14,
+      borderRadius: 18,
+      minHeight: 56,
       paddingVertical: 14,
-      shadowColor: "#ea580c",
+      shadowColor: themeColors.primary,
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
+      shadowOpacity: isDark ? 0.3 : 0.2,
       shadowRadius: 10,
       elevation: 6,
     },
     primaryButtonText: {
-      color: "#ffffff",
+      color: themeColors.onAccent,
       fontSize: 16,
       fontWeight: "bold",
       textAlign: "center",
@@ -278,16 +291,17 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       marginRight: 8,
     },
     secondaryButton: {
-      backgroundColor: themeColors.cardBg,
+      backgroundColor: themeColors.surface,
       borderWidth: 1,
-      borderColor: themeColors.cardBorder,
-      borderRadius: 14,
+      borderColor: themeColors.borderSoft,
+      borderRadius: 18,
+      minHeight: 56,
       paddingVertical: 14,
       alignItems: "center",
       justifyContent: "center",
     },
     secondaryButtonText: {
-      color: themeColors.text,
+      color: themeColors.textStrong,
       fontSize: 16,
       fontWeight: "bold",
       textAlign: "center",
@@ -295,36 +309,40 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     },
     featuresSection: {
       paddingVertical: 40,
-      paddingHorizontal: 24,
+      paddingHorizontal: horizontalPadding,
     },
     sectionTitle: {
       fontSize: 24,
       fontWeight: "bold",
-      color: "#f97316",
+      color: themeColors.brandTint,
       textAlign: "center",
       marginBottom: 8,
     },
     sectionSubtitle: {
       fontSize: 14,
-      color: themeColors.textMuted,
+      color: themeColors.textSoft,
       textAlign: "center",
       marginBottom: 32,
     },
     featuresGrid: {
       gap: 20,
+      flexDirection: isTablet ? "row" : "column",
+      flexWrap: isTablet ? "wrap" : "nowrap",
     },
     featureCard: {
-      backgroundColor: themeColors.cardBg,
+      backgroundColor: themeColors.surface,
       borderWidth: 1,
-      borderColor: themeColors.cardBorder,
+      borderColor: themeColors.borderSoft,
       borderRadius: 20,
       padding: 24,
       alignItems: "center",
-      shadowColor: "#000",
+      shadowColor: themeColors.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDark ? 0.2 : 0.06,
       shadowRadius: 4,
       elevation: 3,
+      flex: isTablet ? 1 : undefined,
+      minWidth: isTablet ? "30%" : undefined,
     },
     iconWrapper: {
       width: 56,
@@ -337,19 +355,19 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     featureTitle: {
       fontSize: 18,
       fontWeight: "bold",
-      color: themeColors.text,
+      color: themeColors.textStrong,
       marginBottom: 8,
       textAlign: "center",
     },
     featureDesc: {
       fontSize: 13,
-      color: themeColors.textMuted,
+      color: themeColors.textSoft,
       textAlign: "center",
       lineHeight: 18,
     },
     footer: {
       borderTopWidth: 1,
-      borderTopColor: themeColors.cardBorder,
+      borderTopColor: themeColors.borderSoft,
       paddingVertical: 32,
       alignItems: "center",
       gap: 12,
@@ -364,22 +382,23 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       width: 28,
       height: 28,
       borderRadius: 8,
-      backgroundColor: "#ea580c",
+      backgroundColor: themeColors.primary,
       alignItems: "center",
       justifyContent: "center",
     },
     footerLogoText: {
       fontSize: 15,
       fontWeight: "bold",
-      color: "#f97316",
+      color: themeColors.brandTint,
       textAlign: "center",
       flexShrink: 1,
     },
     footerCopyText: {
       fontSize: 11,
-      color: themeColors.textMuted,
+      color: themeColors.textSoft,
       textAlign: "center",
       paddingHorizontal: 20,
       flexShrink: 1,
     },
   });
+};

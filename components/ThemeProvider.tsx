@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { Appearance } from 'react-native';
+import { Appearance, AppState } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
@@ -171,9 +171,13 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+function readSystemScheme(): ResolvedScheme {
+  return (Appearance.getColorScheme() as ResolvedScheme) || 'dark';
+}
+
 /**
  * ThemeProvider loads the persisted theme preference and language on startup.
- * It renders nothing until loading finishes to avoid a flash of the wrong theme.
+ * Children render immediately using the OS scheme until AsyncStorage resolves.
  *
  * Supports three preferences: 'light', 'dark', and 'system'. In 'system' mode the
  * resolved scheme follows the device appearance live (via RN Appearance), so
@@ -181,11 +185,8 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { setColorScheme } = useColorScheme();
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [preference, setPreferenceState] = useState<ThemePreference>('dark');
-  const [systemScheme, setSystemScheme] = useState<ResolvedScheme>(
-    (Appearance.getColorScheme() as ResolvedScheme) || 'dark'
-  );
+  const [preference, setPreferenceState] = useState<ThemePreference>('system');
+  const [systemScheme, setSystemScheme] = useState<ResolvedScheme>(readSystemScheme);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -198,7 +199,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         ) {
           setPreferenceState(savedTheme);
         } else {
-          setPreferenceState('dark');
+          setPreferenceState('system');
         }
 
         const savedLang = await AsyncStorage.getItem('language');
@@ -207,8 +208,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Startup Error:', error);
-      } finally {
-        setIsLoaded(true);
       }
     };
 
@@ -216,11 +215,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Follow device appearance changes (used when preference === 'system').
+  // Also refresh on AppState resume — some Android OEMs only update uiMode then.
   useEffect(() => {
-    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+    const refresh = () => setSystemScheme(readSystemScheme());
+
+    const appearanceSub = Appearance.addChangeListener(({ colorScheme }) => {
       setSystemScheme((colorScheme as ResolvedScheme) || 'dark');
     });
-    return () => sub.remove();
+
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        refresh();
+      }
+    });
+
+    return () => {
+      appearanceSub.remove();
+      appStateSub.remove();
+    };
   }, []);
 
   const resolvedScheme: ResolvedScheme =
@@ -248,10 +260,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       themeColors: isDark ? darkColors : lightColors,
     };
   }, [preference, resolvedScheme, setPreference]);
-
-  if (!isLoaded) {
-    return null;
-  }
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

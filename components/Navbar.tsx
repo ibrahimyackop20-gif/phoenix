@@ -43,6 +43,7 @@ interface DrawerNavItemProps {
   isActive: boolean;
   inactiveTextColor: string;
   inactiveIconColor: string;
+  activeColor: string;
   onPress: () => void;
 }
 
@@ -56,6 +57,7 @@ function DrawerNavItem({
   isActive,
   inactiveTextColor,
   inactiveIconColor,
+  activeColor,
   onPress,
 }: DrawerNavItemProps) {
   const active = useSharedValue(isActive ? 1 : 0);
@@ -89,7 +91,7 @@ function DrawerNavItem({
       <Text
         style={[
           styles.drawerItemLabel,
-          isActive ? styles.activeText : { color: inactiveTextColor },
+          isActive ? { color: activeColor, fontWeight: "600" } : { color: inactiveTextColor },
         ]}
       >
         {label}
@@ -98,7 +100,7 @@ function DrawerNavItem({
         <Feather
           name={icon as any}
           size={18}
-          color={isActive ? "#ea580c" : inactiveIconColor}
+          color={isActive ? activeColor : inactiveIconColor}
         />
       </Animated.View>
     </TouchableOpacity>
@@ -112,6 +114,20 @@ interface NavbarProps {
 export default function Navbar({ role: roleProp }: NavbarProps) {
   const { t } = useTranslation();
   const { themeColors, isDark } = useAppTheme();
+  const navTheme = useMemo(
+    () => ({
+      badge: { backgroundColor: themeColors.primary },
+      badgeDanger: { backgroundColor: themeColors.danger },
+      badgeText: { color: themeColors.onAccent },
+      walletValue: { color: themeColors.primary },
+      logoutText: { color: themeColors.danger },
+      readAllText: { color: themeColors.primary },
+      iconPrimary: themeColors.primary,
+      iconDanger: themeColors.danger,
+      iconSuccess: themeColors.success,
+    }),
+    [themeColors]
+  );
   const { width } = useWindowDimensions();
   const { drawerWidth, horizontalPadding, isCompactWidth } = useLayoutMetrics();
   const router = useRouter();
@@ -295,8 +311,8 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
           >
             <Feather name="bell" size={20} color={themeColors.text} />
             {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
+              <View style={[styles.badge, navTheme.badge]}>
+                <Text style={[styles.badgeText, navTheme.badgeText]}>{unreadCount}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -309,8 +325,8 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
             >
               <Feather name="message-square" size={20} color={themeColors.text} />
               {unreadChatCount > 0 && (
-                <View style={[styles.badge, styles.badgeDanger]}>
-                  <Text style={styles.badgeText}>{unreadChatCount}</Text>
+                <View style={[styles.badge, styles.badgeDanger, navTheme.badgeDanger]}>
+                  <Text style={[styles.badgeText, navTheme.badgeText]}>{unreadChatCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -321,7 +337,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
             onPress={() => router.push("/dashboard/payment" as any)}
             style={[styles.walletContainer, { backgroundColor: themeColors.background }]}
           >
-            <Feather name="credit-card" size={12} color="#ea580c" />
+            <Feather name="credit-card" size={12} color={navTheme.iconPrimary} />
             <Text style={[styles.balanceText, { color: themeColors.text }]}>
               {balance.toLocaleString()}
             </Text>
@@ -339,7 +355,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
             exiting={FadeOutUp.duration(200).easing(Easing.in(Easing.cubic))}
             style={[styles.toastCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}
           >
-            <Feather name="info" size={16} color="#ea580c" />
+            <Feather name="info" size={16} color={navTheme.iconPrimary} />
             <Text style={[styles.toastText, { color: themeColors.text }]}>{latestToast}</Text>
             <TouchableOpacity onPress={clearToast} style={styles.toastClose}>
               <Text style={[styles.toastCloseText, { color: themeColors.textMuted }]}>×</Text>
@@ -380,7 +396,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
                   }}
                   style={styles.readAllButton}
                 >
-                  <MaterialCommunityIcons name="check-all" size={12} color="#ea580c" />
+                  <MaterialCommunityIcons name="check-all" size={12} color={navTheme.iconPrimary} />
                   <Text style={styles.readAllText}>{t("read_all")}</Text>
                 </TouchableOpacity>
                 <Text style={[styles.dropdownTitle, { color: themeColors.text }]}>{t("notifications")}</Text>
@@ -407,7 +423,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
                     loadingMore ? (
                       <ActivityIndicator
                         size="small"
-                        color="#ea580c"
+                        color={navTheme.iconPrimary}
                         style={{ marginVertical: 10 }}
                       />
                     ) : null
@@ -513,11 +529,11 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
                 style={[styles.drawerWalletCard, { backgroundColor: isDark ? "rgba(234, 88, 12, 0.08)" : "rgba(234, 88, 12, 0.05)", borderColor: isDark ? "rgba(234, 88, 12, 0.15)" : "rgba(234, 88, 12, 0.1)" }]}
               >
                 <View style={styles.drawerWalletValueRow}>
-                  <Text style={styles.walletCardValue}>{balance.toLocaleString()}</Text>
+                  <Text style={[styles.walletCardValue, navTheme.walletValue]}>{balance.toLocaleString()}</Text>
                   <Text style={[styles.walletCardCurrency, { color: themeColors.textMuted }]}>{t("currency")}</Text>
                 </View>
                 <View style={styles.walletCardLabel}>
-                  <Feather name="credit-card" size={12} color="#ea580c" />
+                  <Feather name="credit-card" size={12} color={navTheme.iconPrimary} />
                   <Text style={[styles.drawerWalletLabelText, { color: themeColors.textMuted }]}>{t("balance")}</Text>
                 </View>
               </TouchableOpacity>
@@ -565,6 +581,7 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
                       isActive={isActive}
                       inactiveTextColor={themeColors.text}
                       inactiveIconColor={themeColors.textMuted}
+                      activeColor={themeColors.primary}
                       onPress={() => {
                         setMenuOpen(false);
                         router.push(link.href as any);
@@ -580,8 +597,8 @@ export default function Navbar({ role: roleProp }: NavbarProps) {
                   onPress={handleLogout}
                   style={styles.drawerLogoutButton}
                 >
-                  <Text style={styles.logoutText}>{t("logout")}</Text>
-                  <Feather name="log-out" size={16} color="#ef4444" />
+                  <Text style={[styles.logoutText, navTheme.logoutText]}>{t("logout")}</Text>
+                  <Feather name="log-out" size={16} color={navTheme.iconDanger} />
                 </TouchableOpacity>
               </View>
             </SafeAreaView>

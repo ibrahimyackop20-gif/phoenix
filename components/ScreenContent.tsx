@@ -1,6 +1,6 @@
 import React, { type ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
+import { useResponsiveTheme } from "../src/hooks/useResponsiveTheme";
 
 type ScreenContentProps = {
   children: ReactNode;
@@ -8,10 +8,10 @@ type ScreenContentProps = {
 };
 
 export default function ScreenContent({ children, style }: ScreenContentProps) {
-  const { contentMaxWidth } = useLayoutMetrics();
+  const { contentMaxWidth, horizontalPadding } = useResponsiveTheme();
 
   return (
-    <View style={[styles.content, { maxWidth: contentMaxWidth }, style]}>
+    <View style={[styles.content, { maxWidth: contentMaxWidth, paddingHorizontal: horizontalPadding }, style]}>
       {children}
     </View>
   );
