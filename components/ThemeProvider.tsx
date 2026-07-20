@@ -8,7 +8,11 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { Appearance, AppState } from 'react-native';
+import {
+  Appearance,
+  AppState,
+  useColorScheme as useSystemColorScheme,
+} from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
@@ -185,6 +189,8 @@ function readSystemScheme(): ResolvedScheme {
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { setColorScheme } = useColorScheme();
+  // RN's useColorScheme is reactive — updates while the app is open when the OS theme changes.
+  const rnSystemScheme = useSystemColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
   const [systemScheme, setSystemScheme] = useState<ResolvedScheme>(readSystemScheme);
 
@@ -214,8 +220,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     loadSettings();
   }, []);
 
-  // Follow device appearance changes (used when preference === 'system').
-  // Also refresh on AppState resume — some Android OEMs only update uiMode then.
+  // Keep systemScheme in sync with the live OS appearance (foreground + resume).
+  useEffect(() => {
+    const fromHook = (rnSystemScheme as ResolvedScheme | null | undefined) || null;
+    if (fromHook === 'light' || fromHook === 'dark') {
+      setSystemScheme(fromHook);
+    }
+  }, [rnSystemScheme]);
+
   useEffect(() => {
     const refresh = () => setSystemScheme(readSystemScheme());
 
@@ -223,6 +235,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setSystemScheme((colorScheme as ResolvedScheme) || 'dark');
     });
 
+    // Some Android OEMs only flush uiMode when the app becomes active again.
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         refresh();
@@ -238,17 +251,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const resolvedScheme: ResolvedScheme =
     preference === 'system' ? systemScheme : preference;
 
-  // Keep NativeWind's scheme in sync so any className-based `dark:` variants match.
+  // Critical: when preference is 'system', pass 'system' to NativeWind.
+  // Passing 'light'/'dark' locks Appearance and stops live OS theme updates.
   useEffect(() => {
-    setColorScheme(resolvedScheme);
-  }, [resolvedScheme, setColorScheme]);
+    if (preference === 'system') {
+      setColorScheme('system');
+    } else {
+      setColorScheme(preference);
+    }
+  }, [preference, setColorScheme]);
 
   const setPreference = useCallback((p: ThemePreference) => {
     setPreferenceState(p);
+    // Unlock Appearance immediately when switching to System so the OS can drive it.
+    if (p === 'system') {
+      setColorScheme('system');
+      setSystemScheme(readSystemScheme());
+    } else {
+      setColorScheme(p);
+    }
     AsyncStorage.setItem('theme', p).catch((error) => {
       console.error('Startup Error (setTheme):', error);
     });
-  }, []);
+  }, [setColorScheme]);
 
   const value = useMemo<ThemeContextValue>(() => {
     const isDark = resolvedScheme === 'dark';

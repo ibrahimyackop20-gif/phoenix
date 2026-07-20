@@ -50,11 +50,11 @@ export default function DeleteAccount() {
       const { data: edgeData, error: edgeErr } = await supabase.functions.invoke("delete-account");
 
       if (edgeErr) {
-        throw new Error(edgeErr.message || t("privacy_delete_server_error"));
+        throw new Error(t("privacy_delete_server_error"));
       }
 
       if (edgeData?.error) {
-        throw new Error(edgeData.error);
+        throw new Error(t("privacy_delete_server_error"));
       }
 
       await AsyncStorage.clear();
@@ -74,7 +74,8 @@ export default function DeleteAccount() {
       );
     } catch (err: any) {
       console.error("Delete Account flow failed:", err);
-      setError(err.message || String(err));
+      // Never surface Edge Function / Supabase / RPC details to end users.
+      setError(t("privacy_delete_server_error"));
     } finally {
       setLoading(false);
     }
@@ -164,13 +165,6 @@ export default function DeleteAccount() {
               </>
             )}
           </TouchableOpacity>
-        </View>
-
-        <View style={[styles.noteCard, { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft }]}>
-          <Feather name="info" size={16} color={themeColors.primary} style={{ marginLeft: 6 }} />
-          <Text style={[styles.noteText, { color: themeColors.textSoft }]} maxFontSizeMultiplier={1.35}>
-            {t("privacy_delete_note")}
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -288,18 +282,5 @@ const getStyles = (c: ThemeColors, horizontalPadding: number, formMaxWidth: numb
       fontWeight: "bold",
       textAlign: "center",
       flexShrink: 1,
-    },
-    noteCard: {
-      flexDirection: "row-reverse",
-      padding: 14,
-      borderRadius: 12,
-      borderWidth: 1,
-      alignItems: "flex-start",
-    },
-    noteText: {
-      fontSize: 11,
-      lineHeight: 16,
-      flex: 1,
-      textAlign: "right",
     },
   });
