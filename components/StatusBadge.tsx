@@ -37,9 +37,9 @@ const statusColors: Record<
     border: "rgba(96, 165, 250, 0.2)",
   },
   Ready: {
-    color: "#22d3ee",
-    bg: "rgba(34, 211, 238, 0.1)",
-    border: "rgba(34, 211, 238, 0.2)",
+    color: "#a78bfa",
+    bg: "rgba(167, 139, 250, 0.12)",
+    border: "rgba(167, 139, 250, 0.28)",
   },
   Completed: {
     color: "#34d399",

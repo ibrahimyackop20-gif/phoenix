@@ -30,11 +30,12 @@ export interface PrintOrder {
   width_cm?: number | null;
   length_meters?: number | null;
   receipt_url?: string | null;
-  profiles?: { full_name: string } | null;
+  profiles?: { full_name: string; phone_number?: string | null } | null;
   delivery_addresses?: {
     title: string;
     area: string;
     formatted_address: string | null;
+    phone_number?: string | null;
   } | null;
 }
 
@@ -84,6 +85,19 @@ export const PRINT_TIMELINE = [
   { key: "completed", icon: "check-circle" as const },
 ] as const;
 
+/** Simplified customer-facing detail timeline (requirements). */
+export const DETAIL_PRINT_TIMELINE = [
+  { key: "pending", icon: "clock" as const, statuses: ["Pending"] },
+  { key: "accepted", icon: "check" as const, statuses: ["Accepted"] },
+  { key: "printing", icon: "printer" as const, statuses: ["Printing"] },
+  {
+    key: "ready",
+    icon: "package" as const,
+    statuses: ["Out for Delivery", "Ready"],
+  },
+  { key: "completed", icon: "check-circle" as const, statuses: ["Completed"] },
+] as const;
+
 export type PrintTimelineKey = (typeof PRINT_TIMELINE)[number]["key"];
 
 const PRINT_STATUS_TO_STEP: Record<string, number> = {
@@ -92,6 +106,15 @@ const PRINT_STATUS_TO_STEP: Record<string, number> = {
   Printing: 3,
   "Out for Delivery": 6,
   Completed: 7,
+};
+
+const DETAIL_STATUS_TO_STEP: Record<string, number> = {
+  Pending: 0,
+  Accepted: 1,
+  Printing: 2,
+  Ready: 3,
+  "Out for Delivery": 3,
+  Completed: 4,
 };
 
 export function parseOrderItems(items: OrderItem[] | string): OrderItem[] {
@@ -111,6 +134,12 @@ export function getLibraryStepIndex(status: string): number {
 export function getPrintTimelineIndex(status: string): number {
   if (status === "Rejected" || status === "Cancelled") return -1;
   return PRINT_STATUS_TO_STEP[status] ?? 0;
+}
+
+/** Index into DETAIL_PRINT_TIMELINE for the order details screen. */
+export function getDetailPrintTimelineIndex(status: string): number {
+  if (status === "Rejected" || status === "Cancelled") return -1;
+  return DETAIL_STATUS_TO_STEP[status] ?? 0;
 }
 
 export function isCancelledStatus(status: string): boolean {

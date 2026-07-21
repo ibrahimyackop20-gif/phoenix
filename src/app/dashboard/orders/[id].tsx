@@ -23,25 +23,30 @@ import {
 import { useAppTheme, type ThemeColors } from "../../../../components/ThemeProvider";
 import { ScreenTransition } from "../../../components/anim/ScreenTransition";
 import StatusBadge from "../../../../components/StatusBadge";
+import PrintOrderReceiptActions from "../../../../components/PrintOrderReceiptActions";
+import {
+  getEstimatedCompletionLabel,
+  getPaymentStatusLabel,
+} from "../../../../lib/printOrderReceipt";
 import {
   buildPrintStatusHistory,
   formatOrderDate,
   displayOrderId,
   getColorModeLabel,
   getDeliveryMethodLabel,
+  getDetailPrintTimelineIndex,
   getLibraryStatusLabel,
   getLibraryStepIndex,
   getPaperSizeLabel,
   getPaymentLabel,
   getPrintSideLabel,
   getPrintStatusLabel,
-  getPrintTimelineIndex,
   getPrintTotal,
   isCancelledStatus,
   isTelegramOrder,
   LIBRARY_STEPS,
+  DETAIL_PRINT_TIMELINE,
   parseOrderItems,
-  PRINT_TIMELINE,
   type LibraryOrder,
   type PrintOrder,
 } from "../../../../lib/ordersShared";
@@ -121,6 +126,7 @@ export default function OrderDetailScreen() {
   >([]);
   const [bwPrice, setBwPrice] = useState(0);
   const [colorPrice, setColorPrice] = useState(0);
+  const [customerEmail, setCustomerEmail] = useState<string>("");
   const [statusPulse] = useState(() => new Animated.Value(1));
   const prevStatus = useRef<string | null>(null);
 
@@ -165,11 +171,13 @@ export default function OrderDetailScreen() {
         return;
       }
 
+      setCustomerEmail(user.email || "");
+
       const isUuid = orderId.includes("-");
       let printQuery = supabase
         .from("orders")
         .select(
-          "*, profiles(full_name), delivery_addresses(title, area, formatted_address)"
+          "*, profiles(full_name, phone_number), delivery_addresses(title, area, formatted_address, phone_number)"
         )
         .eq("user_id", user.id);
 
@@ -309,7 +317,7 @@ export default function OrderDetailScreen() {
     ]).start();
   }, [currentStatus, statusPulse]);
 
-  const timelineIndex = printOrder ? getPrintTimelineIndex(printOrder.status) : -1;
+  const timelineIndex = printOrder ? getDetailPrintTimelineIndex(printOrder.status) : -1;
   const cancelled = printOrder ? isCancelledStatus(printOrder.status) : false;
 
   const openFile = (url: string) => {
@@ -327,13 +335,22 @@ export default function OrderDetailScreen() {
     if (!printOrder) return null;
 
     if (cancelled) {
+      const isRejected = printOrder.status === "Rejected";
       return (
         <View style={[styles.cancelledCard, { borderColor: themeColors.dangerSoftBorder }]}>
-          <Feather name="x-circle" size={22} color={themeColors.danger} />
+          <Feather
+            name={isRejected ? "slash" : "x-circle"}
+            size={22}
+            color={themeColors.danger}
+          />
           <View style={styles.cancelledTextWrap}>
-            <Text style={styles.cancelledTitle}>{t("timeline_cancelled")}</Text>
+            <Text style={styles.cancelledTitle}>
+              {isRejected ? t("badge_rejected") : t("timeline_cancelled")}
+            </Text>
             <Text style={[styles.cancelledDesc, { color: themeColors.textSoft }]}>
-              {t("timeline_cancelled_desc")}
+              {isRejected
+                ? t("order_detail_rejected_desc")
+                : t("timeline_cancelled_desc")}
             </Text>
           </View>
         </View>
@@ -342,11 +359,15 @@ export default function OrderDetailScreen() {
 
     return (
       <View style={styles.timeline}>
-        {PRINT_TIMELINE.map((step, idx) => {
+        {DETAIL_PRINT_TIMELINE.map((step, idx) => {
           const isCompleted = timelineIndex > idx;
           const isCurrent = timelineIndex === idx;
           const isFuture = timelineIndex < idx;
-          const dotColor = isCurrent ? themeColors.primary : isCompleted ? themeColors.statGreen : themeColors.borderStrong;
+          const dotColor = isCurrent
+            ? themeColors.primary
+            : isCompleted
+            ? themeColors.statGreen
+            : themeColors.borderStrong;
           const lineColor = isCompleted ? themeColors.statGreen : themeColors.trackColor;
           const timestamp =
             idx === 0
@@ -357,7 +378,7 @@ export default function OrderDetailScreen() {
 
           return (
             <View key={step.key} style={styles.timelineStep}>
-              {idx < PRINT_TIMELINE.length - 1 && (
+              {idx < DETAIL_PRINT_TIMELINE.length - 1 && (
                 <View
                   style={[
                     styles.timelineLine,
@@ -387,14 +408,20 @@ export default function OrderDetailScreen() {
                 <Text
                   style={[
                     styles.timelineTitle,
-                    { color: isCurrent ? themeColors.accent : isCompleted ? themeColors.textStrong : themeColors.textSoft },
+                    {
+                      color: isCurrent
+                        ? themeColors.accent
+                        : isCompleted
+                        ? themeColors.textStrong
+                        : themeColors.textSoft,
+                    },
                     isCurrent && styles.timelineTitleActive,
                   ]}
                 >
-                  {t(`timeline_${step.key}`)}
+                  {t(`detail_timeline_${step.key}`)}
                 </Text>
                 <Text style={[styles.timelineDesc, { color: themeColors.textSoft }]}>
-                  {t(`timeline_${step.key}_desc`)}
+                  {t(`detail_timeline_${step.key}_desc`)}
                 </Text>
                 {(isCompleted || isCurrent) && timestamp ? (
                   <Text style={styles.timelineTime}>{timestamp}</Text>
@@ -511,8 +538,20 @@ export default function OrderDetailScreen() {
           {orderType === "print" && printOrder ? (
             <>
               {renderInfoRow(t("order_detail_order_number"), displayOrderId(printOrder.id))}
+              {renderInfoRow(
+                t("order_list_status"),
+                getPrintStatusLabel(printOrder.status, t)
+              )}
               {printOrder.profiles?.full_name
                 ? renderInfoRow(t("order_detail_customer"), printOrder.profiles.full_name)
+                : null}
+              {printOrder.profiles?.phone_number
+                ? renderInfoRow(t("order_detail_phone"), printOrder.profiles.phone_number)
+                : printOrder.delivery_addresses?.phone_number
+                ? renderInfoRow(t("order_detail_phone"), printOrder.delivery_addresses.phone_number)
+                : null}
+              {customerEmail
+                ? renderInfoRow(t("order_detail_email"), customerEmail)
                 : null}
               {renderInfoRow(
                 t("order_detail_created"),
@@ -548,7 +587,19 @@ export default function OrderDetailScreen() {
                     getPaymentLabel(printOrder.payment_method, t)
                   )
                 : null}
+              {printOrder.payment_status
+                ? renderInfoRow(
+                    t("order_detail_payment_status"),
+                    getPaymentStatusLabel(printOrder.payment_status, t)
+                  )
+                : null}
               {renderInfoRow(t("order_detail_delivery"), getDeliveryMethodLabel(printOrder, t))}
+              {(() => {
+                const eta = getEstimatedCompletionLabel(printOrder, t, i18n.language);
+                return eta
+                  ? renderInfoRow(t("order_detail_estimated_completion"), eta)
+                  : null;
+              })()}
               {printOrder.description?.trim()
                 ? renderInfoRow(t("order_detail_notes"), printOrder.description.trim())
                 : null}
@@ -655,6 +706,36 @@ export default function OrderDetailScreen() {
             ))
           ) : null}
         </View>
+
+        {orderType === "print" && printOrder ? (
+          <>
+            <Text style={[styles.sectionTitle, { color: themeColors.textStrong }]}>
+              {t("receipt_section_title")}
+            </Text>
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: themeColors.surface, borderColor: themeColors.borderSoft },
+              ]}
+            >
+              <PrintOrderReceiptActions
+                data={{
+                  order: printOrder,
+                  customerName: printOrder.profiles?.full_name || t("order_detail_customer"),
+                  customerPhone:
+                    printOrder.profiles?.phone_number ||
+                    printOrder.delivery_addresses?.phone_number ||
+                    "—",
+                  customerEmail: customerEmail || "—",
+                  bwPrice,
+                  colorPrice,
+                  locale: i18n.language,
+                  brandName: t("brand_name"),
+                }}
+              />
+            </View>
+          </>
+        ) : null}
 
         {orderType === "print" && history.length > 0 ? (
           <>
