@@ -9,6 +9,7 @@ import {
   TextInput,
   Linking,
   Alert,
+  Modal,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -62,6 +63,8 @@ interface OrderWithProfile {
   receipt_url?: string;
   width_cm?: number;
   length_meters?: number;
+  cancelled_at?: string | null;
+  cancelled_by?: "customer" | "admin" | null;
   profiles: {
     full_name: string;
     phone_number: string | null;
@@ -97,6 +100,12 @@ export default function AdminScreen() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("orders");
+  const [adminMeta, setAdminMeta] = useState<{ id: string; name: string } | null>(null);
+  const [actionModal, setActionModal] = useState<{
+    orderId: string;
+    action: "Accepted" | "Rejected" | "Cancelled";
+  } | null>(null);
+  const [actionReason, setActionReason] = useState("");
 
   // Reply state
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -137,6 +146,20 @@ export default function AdminScreen() {
 
   const loadAll = async () => {
     setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      setAdminMeta({
+        id: user.id,
+        name: profile?.full_name || user.email || "Admin",
+      });
+    }
     await Promise.all([fetchOrders(), fetchInquiries()]);
     setLoading(false);
   };
@@ -169,24 +192,75 @@ export default function AdminScreen() {
     showToast("تم تحديث البيانات");
   };
 
-  const updateStatus = async (orderId: string, newStatus: string) => {
+  const updateStatus = async (
+    orderId: string,
+    newStatus: string,
+    reason?: string
+  ) => {
     setUpdatingId(orderId);
 
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq("id", orderId);
+    const payload: Record<string, unknown> = {
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (newStatus === "Cancelled") {
+      payload.cancelled_by = "admin";
+      payload.cancelled_at = new Date().toISOString();
+    }
+
+    if (reason?.trim() && (newStatus === "Rejected" || newStatus === "Cancelled")) {
+      payload.status_reason = reason.trim();
+    }
+
+    let { error } = await supabase.from("orders").update(payload).eq("id", orderId);
+
+    if (error && payload.status_reason && /status_reason|column/i.test(error.message)) {
+      delete payload.status_reason;
+      ({ error } = await supabase.from("orders").update(payload).eq("id", orderId));
+    }
 
     if (error) {
       console.error("❌ Status Update Error:", error.message);
       showToast(`فشل تحديث الحالة: ${error.message}`, "error");
     } else {
+      if (adminMeta?.id) {
+        const { error: histErr } = await supabase.from("order_status_history").insert({
+          order_id: orderId,
+          action: newStatus,
+          admin_id: adminMeta.id,
+          admin_name: adminMeta.name,
+          reason: reason?.trim() || null,
+        });
+        if (histErr) console.warn("[order_status_history]", histErr.message);
+      }
+
       setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                status: newStatus,
+                ...(newStatus === "Cancelled"
+                  ? { cancelled_by: "admin" as const }
+                  : {}),
+              }
+            : o
+        )
       );
       showToast("تم تحديث حالة الطلب بنجاح");
     }
     setUpdatingId(null);
+    setActionModal(null);
+    setActionReason("");
+  };
+
+  const openPendingAction = (
+    orderId: string,
+    action: "Accepted" | "Rejected" | "Cancelled"
+  ) => {
+    setActionReason("");
+    setActionModal({ orderId, action });
   };
 
   const downloadFile = (fileUrl: string | null) => {
@@ -262,10 +336,17 @@ export default function AdminScreen() {
   };
 
   const filteredOrders = orders.filter((order) => {
+    const q = searchQuery.trim().toLowerCase();
+    const orderNo = order.id.slice(0, 8).toLowerCase();
+    const phone = (order.profiles?.phone_number || "").toLowerCase();
+    const name = (order.profiles?.full_name || "").toLowerCase();
+    const file = (order.file_name || "").toLowerCase();
     const matchesSearch =
-      searchQuery === "" ||
-      order.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      q === "" ||
+      orderNo.includes(q) ||
+      name.includes(q) ||
+      phone.includes(q.replace(/\s/g, "")) ||
+      file.includes(q);
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -294,10 +375,13 @@ export default function AdminScreen() {
   const filterStatuses = [
     { key: "all", label: "الكل" },
     { key: "Pending", label: "قيد الانتظار" },
+    { key: "Accepted", label: "مقبول" },
     { key: "Printing", label: "جاري الطباعة" },
+    { key: "Ready", label: "جاهز" },
     { key: "Out for Delivery", label: "في الطريق" },
     { key: "Completed", label: "مكتمل" },
     { key: "Rejected", label: "مرفوض" },
+    { key: "Cancelled", label: "ملغي" },
   ];
 
   if (loading) {
@@ -315,6 +399,77 @@ export default function AdminScreen() {
           <Text style={styles.toastText}>{toast.message}</Text>
         </View>
       )}
+
+      <Modal
+        visible={!!actionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActionModal(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {actionModal?.action === "Accepted" && "تأكيد قبول الطلب"}
+              {actionModal?.action === "Rejected" && "تأكيد رفض الطلب"}
+              {actionModal?.action === "Cancelled" && "تأكيد إلغاء الطلب"}
+            </Text>
+            <Text style={styles.modalBody}>
+              {actionModal?.action === "Accepted" &&
+                "سيتم قبول الطلب وإيقاف عدّاد إلغاء العميل."}
+              {actionModal?.action === "Rejected" &&
+                "سيتم رفض الطلب. يمكنك كتابة سبب اختياري."}
+              {actionModal?.action === "Cancelled" &&
+                "سيتم إلغاء الطلب من قبل الإدارة. يمكنك كتابة سبب اختياري."}
+            </Text>
+            {(actionModal?.action === "Rejected" ||
+              actionModal?.action === "Cancelled") && (
+              <TextInput
+                value={actionReason}
+                onChangeText={setActionReason}
+                placeholder="السبب (اختياري)..."
+                placeholderTextColor="#71717a"
+                style={styles.reasonInput}
+                textAlign="right"
+                multiline
+              />
+            )}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setActionModal(null);
+                  setActionReason("");
+                }}
+              >
+                <Text style={styles.modalCancelText}>رجوع</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmBtn,
+                  actionModal?.action === "Accepted" && { backgroundColor: "#059669" },
+                  actionModal?.action === "Rejected" && { backgroundColor: "#dc2626" },
+                  actionModal?.action === "Cancelled" && { backgroundColor: "#475569" },
+                ]}
+                disabled={!!updatingId}
+                onPress={() => {
+                  if (!actionModal) return;
+                  updateStatus(
+                    actionModal.orderId,
+                    actionModal.action,
+                    actionModal.action === "Accepted" ? undefined : actionReason
+                  );
+                }}
+              >
+                {updatingId ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>تأكيد</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Welcome Native Header */}
       <View style={[styles.header, isTablet && styles.centeredContent]}>
@@ -384,7 +539,7 @@ export default function AdminScreen() {
                 <TextInput
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholder="بحث باسم الطالب أو اسم الملف..."
+                  placeholder="بحث برقم الطلب أو الاسم أو الهاتف..."
                   placeholderTextColor="#71717a"
                   style={styles.searchInput}
                   textAlign="right"
@@ -517,15 +672,47 @@ export default function AdminScreen() {
                         </View>
                       )}
 
+                      {order.status === "Pending" && (
+                        <View style={styles.pendingActionsRow}>
+                          <TouchableOpacity
+                            style={[styles.pendingActionBtn, styles.acceptBtn]}
+                            disabled={updatingId === order.id}
+                            onPress={() => openPendingAction(order.id, "Accepted")}
+                          >
+                            <Feather name="check-circle" size={14} color="#34d399" />
+                            <Text style={[styles.pendingActionText, { color: "#34d399" }]}>قبول</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.pendingActionBtn, styles.rejectBtn]}
+                            disabled={updatingId === order.id}
+                            onPress={() => openPendingAction(order.id, "Rejected")}
+                          >
+                            <Feather name="x-circle" size={14} color="#f87171" />
+                            <Text style={[styles.pendingActionText, { color: "#f87171" }]}>رفض</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.pendingActionBtn, styles.cancelAdminBtn]}
+                            disabled={updatingId === order.id}
+                            onPress={() => openPendingAction(order.id, "Cancelled")}
+                          >
+                            <Feather name="slash" size={14} color="#94a3b8" />
+                            <Text style={[styles.pendingActionText, { color: "#94a3b8" }]}>إلغاء</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
                       <TouchableOpacity
                         style={styles.cardSecondaryBtn}
                         onPress={() => {
                           Alert.alert("تحديث حالة الطلب", "اختر الحالة الجديدة للطلب:", [
                             { text: "قيد الانتظار", onPress: () => updateStatus(order.id, "Pending") },
+                            { text: "مقبول", onPress: () => updateStatus(order.id, "Accepted") },
                             { text: "جاري الطباعة", onPress: () => updateStatus(order.id, "Printing") },
+                            { text: "جاهز", onPress: () => updateStatus(order.id, "Ready") },
                             { text: "في الطريق", onPress: () => updateStatus(order.id, "Out for Delivery") },
                             { text: "مكتمل", onPress: () => updateStatus(order.id, "Completed") },
                             { text: "مرفوض", onPress: () => updateStatus(order.id, "Rejected") },
+                            { text: "ملغي (إدارة)", onPress: () => updateStatus(order.id, "Cancelled") },
                             { text: "إلغاء", style: "cancel" },
                           ]);
                         }}
@@ -1077,5 +1264,101 @@ const styles = StyleSheet.create({
   cancelReplyText: {
     color: "#a1a1aa",
     fontSize: 13,
+  },
+  pendingActionsRow: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 4,
+  },
+  pendingActionBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  acceptBtn: {
+    backgroundColor: "rgba(52, 211, 153, 0.12)",
+    borderColor: "rgba(52, 211, 153, 0.28)",
+  },
+  rejectBtn: {
+    backgroundColor: "rgba(248, 113, 113, 0.12)",
+    borderColor: "rgba(248, 113, 113, 0.28)",
+  },
+  cancelAdminBtn: {
+    backgroundColor: "rgba(148, 163, 184, 0.12)",
+    borderColor: "rgba(148, 163, 184, 0.28)",
+  },
+  pendingActionText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: "#18181b",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#27272a",
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#f4f4f5",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  modalBody: {
+    fontSize: 13,
+    color: "#a1a1aa",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  reasonInput: {
+    backgroundColor: "#09090b",
+    borderWidth: 1,
+    borderColor: "#27272a",
+    borderRadius: 12,
+    padding: 12,
+    color: "#f4f4f5",
+    minHeight: 80,
+    marginBottom: 14,
+    textAlignVertical: "top",
+  },
+  modalActions: {
+    flexDirection: "row-reverse",
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: "#27272a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelText: {
+    color: "#a1a1aa",
+    fontWeight: "600",
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalConfirmText: {
+    color: "#ffffff",
+    fontWeight: "700",
   },
 });

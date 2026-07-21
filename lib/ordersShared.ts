@@ -18,6 +18,8 @@ export interface PrintOrder {
   payment_status?: string | null;
   created_at: string;
   updated_at?: string;
+  cancelled_at?: string | null;
+  cancelled_by?: "customer" | "admin" | null;
   external_file_link?: string | null;
   paper_type?: string;
   a4_paper_type?: string;
@@ -86,6 +88,7 @@ export type PrintTimelineKey = (typeof PRINT_TIMELINE)[number]["key"];
 
 const PRINT_STATUS_TO_STEP: Record<string, number> = {
   Pending: 0,
+  Accepted: 1,
   Printing: 3,
   "Out for Delivery": 6,
   Completed: 7,
@@ -112,6 +115,11 @@ export function getPrintTimelineIndex(status: string): number {
 
 export function isCancelledStatus(status: string): boolean {
   return status === "Rejected" || status === "Cancelled";
+}
+
+/** Print orders in Pending status may be cancellable within the server-enforced window. */
+export function isPendingPrintOrder(status: string): boolean {
+  return status === "Pending";
 }
 
 export function formatOrderDate(
@@ -253,6 +261,7 @@ export function buildPrintStatusHistory(
 export function getPrintStatusLabel(status: string, t: TFunction): string {
   const keys: Record<string, string> = {
     Pending: "pending",
+    Accepted: "badge_accepted",
     Printing: "printing",
     Completed: "completed",
     Rejected: "status_rejected",

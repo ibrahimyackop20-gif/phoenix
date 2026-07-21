@@ -8,9 +8,12 @@ interface StatusBadgeProps {
 
 const STATUS_KEYS: Record<string, string> = {
   Pending: "badge_pending",
+  Accepted: "badge_accepted",
   Printing: "badge_printing",
+  Ready: "badge_ready",
   Completed: "badge_completed",
   Rejected: "badge_rejected",
+  Cancelled: "badge_cancelled",
   "Out for Delivery": "badge_out_delivery",
 };
 
@@ -23,10 +26,20 @@ const statusColors: Record<
     bg: "rgba(251, 191, 36, 0.1)",
     border: "rgba(251, 191, 36, 0.2)",
   },
+  Accepted: {
+    color: "#34d399",
+    bg: "rgba(52, 211, 153, 0.12)",
+    border: "rgba(52, 211, 153, 0.28)",
+  },
   Printing: {
     color: "#60a5fa",
     bg: "rgba(96, 165, 250, 0.1)",
     border: "rgba(96, 165, 250, 0.2)",
+  },
+  Ready: {
+    color: "#22d3ee",
+    bg: "rgba(34, 211, 238, 0.1)",
+    border: "rgba(34, 211, 238, 0.2)",
   },
   Completed: {
     color: "#34d399",
@@ -37,6 +50,11 @@ const statusColors: Record<
     color: "#f87171",
     bg: "rgba(248, 113, 113, 0.1)",
     border: "rgba(248, 113, 113, 0.2)",
+  },
+  Cancelled: {
+    color: "#94a3b8",
+    bg: "rgba(148, 163, 184, 0.12)",
+    border: "rgba(148, 163, 184, 0.24)",
   },
   "Out for Delivery": {
     color: "#a78bfa",

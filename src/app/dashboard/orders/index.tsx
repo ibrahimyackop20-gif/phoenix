@@ -20,6 +20,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme, type ThemeColors } from "../../../../components/ThemeProvider";
 import StatusBadge from "../../../../components/StatusBadge";
+import OrderCancelSection from "../../../../components/OrderCancelSection";
 import { AnimatedCard } from "../../../components/anim/AnimatedCard";
 import { ScreenTransition } from "../../../components/anim/ScreenTransition";
 import { SkeletonCard } from "../../../components/anim/Skeleton";
@@ -38,9 +39,11 @@ type FilterType = "all" | "print" | "library";
 
 const PRINT_STATUS_KEYS: Record<string, string> = {
   Pending: "pending",
+  Accepted: "badge_accepted",
   Printing: "printing",
   Completed: "completed",
   Rejected: "status_rejected",
+  Cancelled: "timeline_cancelled",
   "Out for Delivery": "badge_out_delivery",
 };
 
@@ -212,11 +215,13 @@ export default function OrdersScreen() {
               )
             );
             const newStatus = String(updated.status || "");
-            triggerToast(
-              t("orders_toast_print_status", {
-                status: getPrintStatusLabelLocal(newStatus),
-              })
-            );
+            if (newStatus !== "Cancelled") {
+              triggerToast(
+                t("orders_toast_print_status", {
+                  status: getPrintStatusLabelLocal(newStatus),
+                })
+              );
+            }
           } else if (payload.eventType === "INSERT") {
             fetchOrders();
           }
@@ -441,6 +446,29 @@ export default function OrdersScreen() {
                   <View style={styles.rejectedNotice}>
                     <Text style={styles.rejectedNoticeText}>{t("order_rejected_note")}</Text>
                   </View>
+                )}
+
+                {isPrint && (
+                  <OrderCancelSection
+                    orderId={item.id}
+                    createdAt={item.created_at}
+                    status={item.status}
+                    onCancelled={() => {
+                      setOrders((prev) =>
+                        prev.map((o) =>
+                          o.id === item.id && o.type === "print"
+                            ? ({
+                                ...o,
+                                status: "Cancelled",
+                                cancelled_by: "customer",
+                              } as PrintOrder)
+                            : o
+                        )
+                      );
+                      triggerToast(t("order_cancel_success"));
+                    }}
+                    onError={(message) => triggerToast(message)}
+                  />
                 )}
               </TouchableOpacity>
               </AnimatedCard>
