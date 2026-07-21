@@ -74,8 +74,28 @@ jobs:
       - name: Install dependencies (npm ci)
         run: npm ci
 
+      # Google Play requires a unique, strictly increasing versionCode per upload.
+      # app.json pins versionCode: 1 for local/dev; CI overrides via ANDROID_VERSION_CODE
+      # before `expo prebuild` so the value is baked into android/app/build.gradle.
+      # Formula: 1000 + github.run_number → always > previously uploaded 1, and unique per run.
+      - name: Compute unique Android versionCode
+        run: |
+          VERSION_CODE=$((1000 + ${{ github.run_number }}))
+          echo "ANDROID_VERSION_CODE=${VERSION_CODE}" >> "$GITHUB_ENV"
+          echo "Computed ANDROID_VERSION_CODE=${VERSION_CODE} (1000 + run_number ${{ github.run_number }})"
+
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --no-install
+
+      - name: Verify versionCode in generated Gradle project
+        run: |
+          echo "Expecting versionCode=${ANDROID_VERSION_CODE}"
+          grep -n "versionCode" android/app/build.gradle || true
+          if ! grep -qE "versionCode[[:space:]]+${ANDROID_VERSION_CODE}" android/app/build.gradle; then
+            echo "::error::Generated android/app/build.gradle does not contain versionCode ${ANDROID_VERSION_CODE}"
+            exit 1
+          fi
+          echo "Verified versionCode ${ANDROID_VERSION_CODE} in android/app/build.gradle"
 
       - name: Decode release keystore (if provided)
         run: |
@@ -103,7 +123,7 @@ jobs:
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-aab
+          name: app-release-aab-vc${{ env.ANDROID_VERSION_CODE }}
           path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30

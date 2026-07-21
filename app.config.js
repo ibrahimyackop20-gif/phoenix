@@ -1,6 +1,11 @@
 /**
  * Expo app config — embeds EXPO_PUBLIC_* into `extra` so release APKs
  * always receive credentials even when Metro inline-env misses them.
+ *
+ * Android versionCode:
+ *   Prefer ANDROID_VERSION_CODE from the environment (set by CI) so every
+ *   GitHub Actions production build gets a unique, Play Store–safe integer.
+ *   Local / default builds fall back to app.json → android.versionCode.
  */
 const appJson = require("./app.json");
 
@@ -16,6 +21,15 @@ function read(name) {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : undefined;
+}
+
+function readPositiveInt(name, fallback) {
+  const raw = process.env[name];
+  if (typeof raw === "string" && /^\d+$/.test(raw.trim())) {
+    const n = parseInt(raw.trim(), 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return fallback;
 }
 
 module.exports = () => {
@@ -39,10 +53,27 @@ module.exports = () => {
     console.log("[app.config] All required EXPO_PUBLIC_* variables are present.");
   }
 
+  const baseVersionCode =
+    typeof appJson.expo?.android?.versionCode === "number"
+      ? appJson.expo.android.versionCode
+      : 1;
+  const versionCode = readPositiveInt("ANDROID_VERSION_CODE", baseVersionCode);
+
+  console.log(
+    `[app.config] android.versionCode=${versionCode}` +
+      (process.env.ANDROID_VERSION_CODE
+        ? " (from ANDROID_VERSION_CODE)"
+        : " (from app.json fallback)")
+  );
+
   return {
     ...appJson,
     expo: {
       ...appJson.expo,
+      android: {
+        ...(appJson.expo.android || {}),
+        versionCode,
+      },
       extra: {
         ...(appJson.expo.extra || {}),
         // Public client config (safe to embed). Used as fallback by supabaseClient.
