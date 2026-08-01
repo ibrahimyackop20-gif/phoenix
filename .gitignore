@@ -38,10 +38,16 @@ supabase.env
 *.env
 !supabase/secrets.example
 
-# Firebase / local secrets (never commit)
+# Firebase / FCM (project-specific — never commit the real file)
+google-services.json
+!google-services.json.example
 .temp/
 *-firebase-adminsdk-*.json
 **/firebase-adminsdk*.json
+
+# Local crash / debug dumps
+crash.txt
+null
 
 # Supabase CLI temp / linked project metadata
 supabase/.temp/

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/ibrahimyackop20-gif/phoenix/blob/main/SECURITY.md
+    about: Please report security issues privately using the process in SECURITY.md — do not open a public issue.
+  - name: Documentation & setup questions
+    url: https://github.com/ibrahimyackop20-gif/phoenix/blob/main/README.md
+    about: Check the README for install, env vars, and build instructions before opening an issue.

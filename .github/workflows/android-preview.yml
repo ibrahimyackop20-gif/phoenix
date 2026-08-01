@@ -68,6 +68,21 @@ jobs:
       - name: Install dependencies (npm ci)
         run: npm ci
 
+      # FCM / Google Services: real google-services.json is not in git.
+      # Prefer secret GOOGLE_SERVICES_JSON_BASE64; otherwise copy the example so
+      # `expo prebuild` still succeeds (push notifications need the real file).
+      - name: Restore google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > google-services.json
+            echo "Restored google-services.json from GOOGLE_SERVICES_JSON_BASE64."
+          else
+            cp google-services.json.example google-services.json
+            echo "::warning::GOOGLE_SERVICES_JSON_BASE64 secret missing. Using google-services.json.example — Android FCM will not work until you add the secret."
+          fi
+
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --no-install
 

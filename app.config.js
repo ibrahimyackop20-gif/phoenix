@@ -6,7 +6,13 @@
  *   Prefer ANDROID_VERSION_CODE from the environment (set by CI) so every
  *   GitHub Actions production build gets a unique, Play Store–safe integer.
  *   Local / default builds fall back to app.json → android.versionCode.
+ *
+ * google-services.json:
+ *   Not committed. Set android.googleServicesFile only when the file exists
+ *   (local copy or CI-restored from GOOGLE_SERVICES_JSON_BASE64).
  */
+const fs = require("fs");
+const path = require("path");
 const appJson = require("./app.json");
 
 const REQUIRED_PUBLIC_ENV = [
@@ -66,14 +72,28 @@ module.exports = () => {
         : " (from app.json fallback)")
   );
 
+  const android = {
+    ...(appJson.expo.android || {}),
+    versionCode,
+  };
+
+  const googleServicesPath = path.join(__dirname, "google-services.json");
+  if (fs.existsSync(googleServicesPath)) {
+    android.googleServicesFile = "./google-services.json";
+    console.log("[app.config] android.googleServicesFile=./google-services.json");
+  } else {
+    delete android.googleServicesFile;
+    console.warn(
+      "[app.config] google-services.json not found — Android FCM will be unavailable. " +
+        "Copy google-services.json.example → google-services.json (or restore from CI secret)."
+    );
+  }
+
   return {
     ...appJson,
     expo: {
       ...appJson.expo,
-      android: {
-        ...(appJson.expo.android || {}),
-        versionCode,
-      },
+      android,
       extra: {
         ...(appJson.expo.extra || {}),
         // Public client config (safe to embed). Used as fallback by supabaseClient.
