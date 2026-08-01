@@ -1,56 +1,245 @@
-# Welcome to your Expo app 👋
+<div align="center">
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# 🔥 Phoenix Print
 
-## Get started
+### Modern Open-Source Mobile Printing Management Platform
 
-1. Install dependencies
+Cross-platform mobile application built with **React Native**, **Expo**, **TypeScript**, and **Supabase** for modern print shop management.
 
-   ```bash
-   npm install
-   ```
+![React Native](https://img.shields.io/badge/React%20Native-0.8+-61DAFB?logo=react)
+![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Open Source](https://img.shields.io/badge/Open%20Source-Yes-success)
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+*A complete mobile solution for managing print orders, file uploads, customer accounts, and print shop operations.*
 
-In the output, you'll find options to open the app in a
+</div>
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+# 📱 Screenshots
 
-## Get a fresh project
+<p align="center">
+<img src="./t1.png" width="230"/>
+<img src="./t2.png" width="230"/>
+<img src="./t3.png" width="230"/>
+</p>
 
-When you're ready, run:
+<p align="center">
+<img src="./t4.png" width="230"/>
+<img src="./t5.png" width="230"/>
+<img src="./t6.png" width="230"/>
+</p>
 
-```bash
-npm run reset-project
+<p align="center">
+<img src="./t7.png" width="230"/>
+<img src="./t8.png" width="230"/>
+<img src="./t9.png" width="230"/>
+</p>
+
+<p align="center">
+<img src="./t10.png" width="230"/>
+</p>
+
+---
+
+# ✨ Features
+
+## Customer
+
+- Secure Authentication
+- Create Print Orders
+- Upload PDF & Images
+- Order Tracking
+- Push Notifications
+- Profile Management
+- Multi-language Support
+- Dark Mode
+
+---
+
+## Print Shop
+
+- Admin Dashboard
+- Order Management
+- Customer Management
+- File Preview
+- Order Status Updates
+- Notification System
+- Real-time Synchronization
+
+---
+
+# 🛠 Tech Stack
+
+| Technology | Usage |
+|------------|-------|
+| React Native | Mobile App |
+| Expo | Development Framework |
+| TypeScript | Programming Language |
+| Supabase | Backend & Database |
+| PostgreSQL | Database |
+| Expo Router | Navigation |
+| NativeWind | Styling |
+| React Query | Data Fetching |
+
+---
+
+# 🏗 Architecture
+
+```
+Phoenix
+│
+├── App (React Native)
+│
+├── Authentication
+│
+├── Orders
+│
+├── File Upload
+│
+├── Notifications
+│
+├── Admin Dashboard
+│
+└── Supabase Backend
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-### Other setup steps
+# 📂 Project Structure
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```
+app/
+components/
+hooks/
+lib/
+assets/
+constants/
+supabase/
+types/
+```
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+# 🚀 Getting Started
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Clone
 
-## Join the community
+```bash
+git clone https://github.com/ibrahimyackop20-gif/phoenix.git
+```
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Install
+
+```bash
+npm install
+```
+
+---
+
+## Start
+
+```bash
+npx expo start
+```
+
+---
+
+# ⚙ Environment Variables
+
+Create a `.env` file.
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=
+
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+---
+
+# 📦 Build
+
+Android
+
+```bash
+eas build --platform android
+```
+
+iOS
+
+```bash
+eas build --platform ios
+```
+
+---
+
+# 🎯 Main Modules
+
+- Authentication
+- Print Orders
+- File Upload
+- Push Notifications
+- Order Tracking
+- Admin Dashboard
+- User Profile
+- Settings
+
+---
+
+# 🗺 Roadmap
+
+- [x] Authentication
+- [x] Order Management
+- [x] File Upload
+- [x] Push Notifications
+- [x] Admin Dashboard
+- [ ] Online Payments
+- [ ] QR Order Pickup
+- [ ] Multi-store Support
+- [ ] Analytics Dashboard
+- [ ] AI File Analysis
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome.
+
+If you'd like to improve Phoenix:
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push your branch
+5. Open a Pull Request
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+# 👨‍💻 Author
+
+**Ibrahim Yackop**
+
+Architecture Student • Mobile Developer
+
+---
+
+<div align="center">
+
+### ⭐ If you like this project, consider giving it a Star.
+
+Made with ❤️ using React Native & Supabase.
+
+</div>
