@@ -449,14 +449,14 @@ export default function ProfileScreen() {
         {/* Delivery Addresses Section */}
         <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
           <View style={styles.addressesHeader}>
-            <TouchableOpacity onPress={() => setShowAddressForm(!showAddressForm)} style={styles.addAddressBtn}>
-              <Feather name="plus" size={16} color="#FF5A1F" style={styles.buttonIcon} />
-              <Text style={styles.addAddressText}>{t("add_address")}</Text>
-            </TouchableOpacity>
             <View style={styles.titleRow}>
               <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("saved_addresses")}</Text>
               <Feather name="map-pin" size={20} color="#FF5A1F" />
             </View>
+            <TouchableOpacity onPress={() => setShowAddressForm(!showAddressForm)} style={styles.addAddressBtn}>
+              <Feather name="plus" size={16} color="#FF5A1F" style={styles.buttonIcon} />
+              <Text style={styles.addAddressText}>{t("add_address")}</Text>
+            </TouchableOpacity>
           </View>
 
           {showAddressForm && (
@@ -591,30 +591,39 @@ export default function ProfileScreen() {
             <View style={styles.addressesList}>
               {addresses.map((addr) => (
                 <View key={addr.id} style={[styles.addressCard, { backgroundColor: themeColors.inputBg, borderColor: themeColors.cardBorder }]}>
-                  <TouchableOpacity onPress={() => handleDeleteAddress(addr.id)} style={styles.trashBtn}>
-                    <Feather name="trash-2" size={18} color="#EF4444" />
-                  </TouchableOpacity>
+                  {/* Top row — delete button on one side, title+icon on the other (fixed physical positions) */}
+                  <View style={styles.addressHeaderRow}>
+                    <TouchableOpacity onPress={() => handleDeleteAddress(addr.id)} style={styles.trashBtn}>
+                      <Feather name="trash-2" size={16} color="#EF4444" />
+                    </TouchableOpacity>
 
-                  <View style={styles.addressInfo}>
-                    <Text style={[styles.addressTitle, { color: themeColors.text }]}>
-                      {addr.title === "المنزل"
-                        ? t("home")
-                        : addr.title === "العمل"
-                          ? t("work")
-                          : addr.title === "الجامعة"
-                            ? t("university")
-                            : t("other")}
-                    </Text>
-                    <Text style={[styles.addressDetailText, { color: themeColors.textMuted }]}>
-                      {addr.area} — {addr.nearby_landmark}
-                    </Text>
-                    <Text style={[styles.addressPhoneText, { color: themeColors.textMuted }]}>
-                      <Feather name="phone" size={10} color={themeColors.textMuted} /> {addr.phone_number}
-                    </Text>
+                    <View style={styles.addressTitleRow}>
+                      <Text style={[styles.addressTitle, { color: themeColors.text }]}>
+                        {addr.title === "المنزل"
+                          ? t("home")
+                          : addr.title === "العمل"
+                            ? t("work")
+                            : addr.title === "الجامعة"
+                              ? t("university")
+                              : t("other")}
+                      </Text>
+                      <View style={styles.homeIconWrapper}>
+                        <Feather name="home" size={14} color="#FF5A1F" />
+                      </View>
+                    </View>
                   </View>
 
-                  <View style={styles.homeIconWrapper}>
-                    <Feather name="home" size={20} color="#FF5A1F" />
+                  {/* Full-width address paragraph — its own row, never sharing space with an icon */}
+                  <Text style={[styles.addressDetailText, { color: themeColors.textMuted }]}>
+                    {addr.area} — {addr.nearby_landmark}
+                  </Text>
+
+                  {/* Phone row */}
+                  <View style={styles.addressPhoneRow}>
+                    <Feather name="phone" size={12} color={themeColors.textMuted} />
+                    <Text style={[styles.addressPhoneText, { color: themeColors.textMuted }]}>
+                      {addr.phone_number}
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -630,101 +639,78 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* System Preferences Form */}
-        <View style={[styles.glassCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
-          <View style={styles.cardHeader}>
-            <Feather name="globe" size={20} color={themeColors.accent} />
-            <Text style={[styles.cardTitle, { color: themeColors.text }]}>{t("system_preferences")}</Text>
+        {/* Language Settings */}
+        <View style={[styles.settingsCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+          <View style={styles.settingsHeaderRow}>
+            <Feather name="globe" size={18} color={themeColors.accent} />
+            <Text style={[styles.settingsTitle, { color: themeColors.text }]}>{t("language")}</Text>
           </View>
+          <Text style={[styles.settingsDesc, { color: themeColors.textMuted }]}>{t("language_desc")}</Text>
 
-          <View style={styles.preferenceRow}>
-            <View style={styles.langToggles}>
-              <TouchableOpacity
-                onPress={() => handleLanguageChange("ar")}
-                style={[styles.langBtn, currentLanguage === "ar" && styles.langBtnActive]}
-              >
-                <Text style={[styles.langBtnText, currentLanguage === "ar" && styles.langBtnTextActive]}>العربية</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleLanguageChange("en")}
-                style={[styles.langBtn, currentLanguage === "en" && styles.langBtnActive]}
-              >
-                <Text style={[styles.langBtnText, currentLanguage === "en" && styles.langBtnTextActive]}>English</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.prefLabels}>
-              <Text style={[styles.prefTitle, { color: themeColors.text }]}>{t("language")}</Text>
-              <Text style={[styles.prefDesc, { color: themeColors.textMuted }]}>{t("language_desc")}</Text>
-            </View>
-          </View>
-
-          <View style={[styles.preferenceRow, styles.prefRowBorder, { borderTopColor: themeColors.cardBorder }]}>
-            <View style={styles.themeToggles}>
-              <TouchableOpacity
-                onPress={() => handleThemeToggle("light")}
-                style={[styles.themeBtn, currentTheme === "light" && styles.themeBtnActive]}
-              >
-                <Feather name="sun" size={14} color={currentTheme === "light" ? themeColors.accent : themeColors.textFaint} style={styles.themeIcon} />
-                <Text style={[styles.themeBtnText, currentTheme === "light" && styles.themeBtnTextActive]}>{t("light")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleThemeToggle("dark")}
-                style={[styles.themeBtn, currentTheme === "dark" && styles.themeBtnActive]}
-              >
-                <Feather name="moon" size={14} color={currentTheme === "dark" ? themeColors.accent : themeColors.textFaint} style={styles.themeIcon} />
-                <Text style={[styles.themeBtnText, currentTheme === "dark" && styles.themeBtnTextActive]}>{t("dark")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleThemeToggle("system")}
-                style={[styles.themeBtn, currentTheme === "system" && styles.themeBtnActive]}
-              >
-                <Feather name="smartphone" size={14} color={currentTheme === "system" ? themeColors.accent : themeColors.textFaint} style={styles.themeIcon} />
-                <Text style={[styles.themeBtnText, currentTheme === "system" && styles.themeBtnTextActive]}>{t("system")}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.prefLabels}>
-              <Text style={[styles.prefTitle, { color: themeColors.text }]}>{t("theme")}</Text>
-              <Text style={[styles.prefDesc, { color: themeColors.textMuted }]}>{t("theme_desc")}</Text>
-            </View>
-          </View>
-
-          {/* Privacy & Security Link */}
-          <View style={[styles.preferenceRow, styles.prefRowBorder, { borderTopColor: themeColors.cardBorder }]}>
+          <View style={styles.segmentedControl}>
             <TouchableOpacity
-              onPress={() => router.push("/dashboard/privacy" as any)}
-              style={{
-                flexDirection: currentLanguage === "en" ? "row" : "row-reverse",
-                alignItems: "center",
-                gap: 6,
-                backgroundColor: "rgba(234, 88, 12, 0.08)",
-                borderColor: "rgba(234, 88, 12, 0.15)",
-                borderWidth: 1,
-                borderRadius: 14,
-                minHeight: 44,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                justifyContent: "center",
-              }}
+              onPress={() => handleLanguageChange("ar")}
+              style={[styles.segmentedBtn, currentLanguage === "ar" && styles.segmentedBtnActive]}
             >
-              <Feather name="shield" size={18} color="#FF5A1F" />
-              <Text
-                style={{
-                  fontSize: currentLanguage === "en" ? 12 : 13,
-                  lineHeight: 19,
-                  color: "#FF5A1F",
-                  fontWeight: "800",
-                  flexShrink: 1,
-                  textAlign: currentLanguage === "en" ? "left" : "right",
-                }}
-              >
-                {t("privacy_profile_link_cta")}
-              </Text>
+              <Text style={[styles.segmentedBtnText, currentLanguage === "ar" && styles.segmentedBtnTextActive]}>العربية</Text>
             </TouchableOpacity>
-            <View style={styles.prefLabels}>
-              <Text style={[styles.prefTitle, { color: themeColors.text }]}>{t("privacy_profile_link_title")}</Text>
-              <Text style={[styles.prefDesc, { color: themeColors.textMuted }]}>{t("privacy_profile_link_desc")}</Text>
-            </View>
+            <TouchableOpacity
+              onPress={() => handleLanguageChange("en")}
+              style={[styles.segmentedBtn, currentLanguage === "en" && styles.segmentedBtnActive]}
+            >
+              <Text style={[styles.segmentedBtnText, currentLanguage === "en" && styles.segmentedBtnTextActive]}>English</Text>
+            </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Appearance / Theme */}
+        <View style={[styles.settingsCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+          <View style={styles.settingsHeaderRow}>
+            <Feather name="sliders" size={18} color={themeColors.accent} />
+            <Text style={[styles.settingsTitle, { color: themeColors.text }]}>{t("theme")}</Text>
+          </View>
+          <Text style={[styles.settingsDesc, { color: themeColors.textMuted }]}>{t("theme_desc")}</Text>
+
+          <View style={styles.segmentedControl}>
+            <TouchableOpacity
+              onPress={() => handleThemeToggle("light")}
+              style={[styles.segmentedBtn, styles.segmentedBtnIconed, currentTheme === "light" && styles.segmentedBtnActive]}
+            >
+              <Feather name="sun" size={14} color={currentTheme === "light" ? themeColors.accent : themeColors.textFaint} />
+              <Text style={[styles.segmentedBtnText, currentTheme === "light" && styles.segmentedBtnTextActive]}>{t("light")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleThemeToggle("dark")}
+              style={[styles.segmentedBtn, styles.segmentedBtnIconed, currentTheme === "dark" && styles.segmentedBtnActive]}
+            >
+              <Feather name="moon" size={14} color={currentTheme === "dark" ? themeColors.accent : themeColors.textFaint} />
+              <Text style={[styles.segmentedBtnText, currentTheme === "dark" && styles.segmentedBtnTextActive]}>{t("dark")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleThemeToggle("system")}
+              style={[styles.segmentedBtn, styles.segmentedBtnIconed, currentTheme === "system" && styles.segmentedBtnActive]}
+            >
+              <Feather name="smartphone" size={14} color={currentTheme === "system" ? themeColors.accent : themeColors.textFaint} />
+              <Text style={[styles.segmentedBtnText, currentTheme === "system" && styles.segmentedBtnTextActive]}>{t("system")}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Privacy & Security Link */}
+        <View style={[styles.settingsCard, { backgroundColor: themeColors.cardBg, borderColor: themeColors.cardBorder }]}>
+          <View style={styles.settingsHeaderRow}>
+            <Feather name="shield" size={18} color={themeColors.accent} />
+            <Text style={[styles.settingsTitle, { color: themeColors.text }]}>{t("privacy_profile_link_title")}</Text>
+          </View>
+          <Text style={[styles.settingsDesc, { color: themeColors.textMuted }]}>{t("privacy_profile_link_desc")}</Text>
+
+          <TouchableOpacity
+            onPress={() => router.push("/dashboard/privacy" as any)}
+            style={styles.privacyLinkBtn}
+          >
+            <Feather name="chevron-left" size={16} color="#FF5A1F" />
+            <Text style={styles.privacyLinkBtnText}>{t("privacy_profile_link_cta")}</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
       </ScreenTransition>
@@ -891,6 +877,7 @@ const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boole
     color: themeColors.text,
     textAlign: isEnglish ? "left" : "right",
     flexShrink: 1,
+    minWidth: 0,
   },
   inputGroup: {
     marginBottom: 16,
@@ -963,21 +950,32 @@ const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boole
     textAlign: "center",
     flexShrink: 1,
   },
+  // Section header: title group must be allowed to shrink (RN's default
+  // flexShrink is 0, unlike web) or it overflows past the add-address button
+  // instead of wrapping — that was the cause of the clipped Arabic title.
   addressesHeader: {
-    flexDirection: isCompact ? "column-reverse" : "row",
-    justifyContent: "space-between",
-    alignItems: isCompact ? "flex-end" : "center",
+    flexDirection: isEnglish ? "row" : "row-reverse",
+    alignItems: "center",
+    width: "100%",
     gap: 12,
     marginBottom: 16,
-    flexWrap: isEnglish ? "wrap" : "nowrap",
+  },
+  titleRow: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    flexDirection: isEnglish ? "row" : "row-reverse",
+    alignItems: "center",
+    gap: 8,
   },
   addAddressBtn: {
+    flexShrink: 0,
     flexDirection: isEnglish ? "row" : "row-reverse",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
     minHeight: 44,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 14,
     backgroundColor: "rgba(255,90,31,0.1)",
@@ -994,11 +992,6 @@ const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boole
   },
   buttonIcon: {
     marginLeft: 4,
-  },
-  titleRow: {
-    flexDirection: isEnglish ? "row" : "row-reverse",
-    alignItems: "center",
-    gap: 8,
   },
   addressForm: {
     backgroundColor: themeColors.background,
@@ -1134,30 +1127,37 @@ const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boole
   addressesList: {
     gap: 14,
   },
+  // Address card: plain vertical stack — header row (delete + title/icon),
+  // then a full-width address paragraph, then a phone row. The address text
+  // is never a flex sibling of an icon, so it always gets the full card
+  // width to align and wrap in, instead of being squeezed into a column.
   addressCard: {
-    flexDirection: isCompact ? "column-reverse" : "row-reverse",
-    alignItems: isCompact ? "flex-end" : "center",
-    gap: isCompact ? 12 : 0,
-    minHeight: 96,
     padding: 16,
     backgroundColor: themeColors.background,
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 16,
+  },
+  addressHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  addressTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 1,
+    minWidth: 0,
   },
   homeIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: "rgba(255,90,31,0.12)",
     alignItems: "center",
     justifyContent: "center",
-  },
-  addressInfo: {
-    flex: 1,
-    marginRight: isCompact || isEnglish ? 0 : 16,
-    marginLeft: isCompact || !isEnglish ? 0 : 16,
-    alignItems: isEnglish ? "flex-start" : "flex-end",
+    flexShrink: 0,
   },
   addressTitle: {
     fontSize: 15,
@@ -1168,30 +1168,37 @@ const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boole
     flexShrink: 1,
   },
   addressDetailText: {
+    width: "100%",
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 21,
     color: themeColors.textMuted,
     fontWeight: "500",
-    marginTop: 4,
+    marginTop: 10,
     textAlign: isEnglish ? "left" : "right",
     flexShrink: 1,
   },
+  addressPhoneRow: {
+    flexDirection: isEnglish ? "row" : "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+  },
   addressPhoneText: {
+    flexShrink: 1,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 19,
     color: themeColors.textMuted,
     fontWeight: "500",
-    marginTop: 6,
     textAlign: isEnglish ? "left" : "right",
-    flexShrink: 1,
   },
   trashBtn: {
     width: 44,
-    minHeight: 44,
+    height: 44,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(239,68,68,0.1)",
+    flexShrink: 0,
   },
   emptyAddresses: {
     alignItems: "center",
@@ -1218,103 +1225,77 @@ const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boole
     textAlign: "center",
     flexShrink: 1,
   },
-  preferenceRow: {
-    flexDirection: isCompact ? "column-reverse" : "row",
-    justifyContent: "space-between",
-    alignItems: isCompact ? "stretch" : "center",
-    gap: isCompact ? 14 : 20,
-    paddingVertical: 14,
+  // Compact settings cards (Language / Appearance / Privacy link) —
+  // content-hugging by design: no flex:1 on labels, no variable row/column
+  // switching, so these never stretch to fill leftover screen height.
+  settingsCard: {
+    flexGrow: 0,
+    flexShrink: 1,
+    alignSelf: "stretch",
+    backgroundColor: themeColors.cardBg,
+    borderColor: themeColors.cardBorder,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  prefRowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: themeColors.cardBorder,
-    paddingTop: 16,
-    marginTop: 4,
+  settingsHeaderRow: {
+    flexGrow: 0,
+    flexDirection: isEnglish ? "row" : "row-reverse",
+    alignItems: "center",
+    gap: 8,
   },
-  prefLabels: {
-    alignItems: isEnglish ? "flex-start" : "flex-end",
-    flex: 1,
-  },
-  prefTitle: {
-    fontSize: 14,
-    lineHeight: 21,
+  settingsTitle: {
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: "700",
     color: themeColors.text,
     textAlign: isEnglish ? "left" : "right",
     flexShrink: 1,
   },
-  prefDesc: {
-    fontSize: 12,
-    lineHeight: 18,
+  settingsDesc: {
+    fontSize: 13,
+    lineHeight: 19,
     color: themeColors.textMuted,
     fontWeight: "500",
     marginTop: 4,
+    marginBottom: 14,
     textAlign: isEnglish ? "left" : "right",
     flexShrink: 1,
   },
-  langToggles: {
+  segmentedControl: {
+    flexGrow: 0,
     flexDirection: isEnglish ? "row" : "row-reverse",
     borderColor: themeColors.cardBorder,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: "hidden",
-    alignSelf: isCompact ? "stretch" : "auto",
-    backgroundColor: themeColors.background,
+    backgroundColor: themeColors.inputBg,
     padding: 4,
     gap: 4,
   },
-  langBtn: {
-    minHeight: 40,
-    paddingHorizontal: 16,
+  segmentedBtn: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    flex: isCompact ? 1 : 0,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 11,
   },
-  langBtnActive: {
-    backgroundColor: themeColors.accentSoftBg,
-  },
-  langBtnText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: themeColors.textMuted,
-    fontWeight: "700",
-    textAlign: "center",
-    flexShrink: 1,
-  },
-  langBtnTextActive: {
-    color: themeColors.accent,
-  },
-  themeToggles: {
+  segmentedBtnIconed: {
     flexDirection: isEnglish ? "row" : "row-reverse",
-    borderColor: themeColors.cardBorder,
-    borderWidth: 1,
-    borderRadius: 16,
-    overflow: "hidden",
-    alignSelf: isCompact ? "stretch" : "auto",
-    backgroundColor: themeColors.background,
-    padding: 4,
-    gap: 4,
-  },
-  themeBtn: {
-    flexDirection: isEnglish ? "row" : "row-reverse",
-    alignItems: "center",
-    minHeight: 40,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     gap: 6,
-    flex: isCompact ? 1 : 0,
-    justifyContent: "center",
-    borderRadius: 12,
   },
-  themeBtnActive: {
+  segmentedBtnActive: {
     backgroundColor: themeColors.accentSoftBg,
   },
-  themeIcon: {
-    marginLeft: 2,
-  },
-  themeBtnText: {
+  segmentedBtnText: {
     fontSize: 13,
     lineHeight: 19,
     color: themeColors.textMuted,
@@ -1322,7 +1303,29 @@ const getStyles = (themeColors: ThemeColors, isCompact: boolean, isTablet: boole
     textAlign: "center",
     flexShrink: 1,
   },
-  themeBtnTextActive: {
+  segmentedBtnTextActive: {
     color: themeColors.accent,
+  },
+  privacyLinkBtn: {
+    flexGrow: 0,
+    alignSelf: "stretch",
+    flexDirection: isEnglish ? "row" : "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(234, 88, 12, 0.08)",
+    borderColor: "rgba(234, 88, 12, 0.15)",
+    borderWidth: 1,
+  },
+  privacyLinkBtnText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#FF5A1F",
+    fontWeight: "800",
+    textAlign: "center",
+    flexShrink: 1,
   },
 });

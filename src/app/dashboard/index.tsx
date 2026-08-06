@@ -14,18 +14,27 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme, type ThemeColors } from "../../../components/ThemeProvider";
 import { ScreenTransition } from "../../components/anim/ScreenTransition";
+import StatusBadge from "../../../components/StatusBadge";
+import { displayOrderId, formatOrderDate } from "../../../lib/ordersShared";
 
 interface StatItem {
   key: string;
   labelKey: string;
   value: number;
   icon: any;
-  iconColor: string;
-  bgColor: string;
+}
+
+/** Statuses that no longer need customer attention — a "latest order" card prefers anything before this. */
+const RESOLVED_STATUSES = new Set(["Completed", "Cancelled", "Rejected"]);
+
+interface LatestOrder {
+  id: string;
+  status: string;
+  created_at: string;
 }
 
 export default function DashboardIndex() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { themeColors } = useAppTheme();
   const styles = useMemo(() => getStyles(themeColors), [themeColors]);
   const router = useRouter();
@@ -37,6 +46,7 @@ export default function DashboardIndex() {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [stats, setStats] = useState<StatItem[]>([]);
+  const [latestOrder, setLatestOrder] = useState<LatestOrder | null>(null);
 
   useEffect(() => {
     const state = navigation.getState?.();
@@ -67,11 +77,12 @@ export default function DashboardIndex() {
         setFullName(profile.full_name || "");
       }
 
-      // 2. Fetch orders status
+      // 2. Fetch orders (status + id/created_at for the latest-order preview — same query, no new call)
       const { data: orders } = await supabase
         .from("orders")
-        .select("status")
-        .eq("user_id", user.id);
+        .select("id, status, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       const totalOrders = orders?.length || 0;
       const pendingOrders = orders?.filter((o: { status: string }) => o.status === "Pending").length || 0;
@@ -79,41 +90,18 @@ export default function DashboardIndex() {
       const completedOrders = orders?.filter((o: { status: string }) => o.status === "Completed").length || 0;
 
       const statsList: StatItem[] = [
-        {
-          key: "total",
-          labelKey: "total_orders",
-          value: totalOrders,
-          icon: "package",
-          iconColor: themeColors.primary,
-          bgColor: themeColors.primarySoftBg,
-        },
-        {
-          key: "pending",
-          labelKey: "pending",
-          value: pendingOrders,
-          icon: "clock",
-          iconColor: themeColors.statAmber,
-          bgColor: themeColors.statAmberBg,
-        },
-        {
-          key: "printing",
-          labelKey: "printing",
-          value: printingOrders,
-          icon: "printer",
-          iconColor: themeColors.statBlue,
-          bgColor: themeColors.statBlueBg,
-        },
-        {
-          key: "completed",
-          labelKey: "completed",
-          value: completedOrders,
-          icon: "check-circle",
-          iconColor: themeColors.statGreen,
-          bgColor: themeColors.statGreenBg,
-        },
+        { key: "total", labelKey: "total_orders", value: totalOrders, icon: "package" },
+        { key: "pending", labelKey: "pending", value: pendingOrders, icon: "clock" },
+        { key: "printing", labelKey: "printing", value: printingOrders, icon: "printer" },
+        { key: "completed", labelKey: "completed", value: completedOrders, icon: "check-circle" },
       ];
 
       setStats(statsList);
+
+      // Prefer the most recent order that still needs attention; fall back to the latest overall.
+      const active = orders?.find((o: { status: string }) => !RESOLVED_STATUSES.has(o.status));
+      const latest = active || orders?.[0] || null;
+      setLatestOrder(latest ? { id: latest.id, status: latest.status, created_at: latest.created_at } : null);
     } catch (err) {
       console.error("Error loading dashboard metrics:", err);
     } finally {
@@ -146,61 +134,73 @@ export default function DashboardIndex() {
       {/* Greeting */}
       <View style={styles.welcomeContainer}>
         <Text style={styles.welcomeTitle}>
-          {t("welcome_title")}{" "}
-          <Text style={styles.gradientText}>{fullName || t("welcome_fallback")}</Text>
-          {" 👋"}
+          {t("welcome_title")} <Text style={styles.welcomeName}>{fullName || t("welcome_fallback")}</Text>
         </Text>
         <Text style={styles.welcomeSubtitle}>{t("welcome_dashboard")}</Text>
       </View>
 
       {/* Primary Action */}
       <Link href={"/dashboard/new-order" as any} asChild>
-        <TouchableOpacity style={styles.primaryAction}>
-          <View style={[styles.primaryActionInner, isCompact && styles.actionInnerCompact]}>
+        <TouchableOpacity style={styles.primaryAction} activeOpacity={0.9}>
+          <View style={styles.primaryActionInner}>
             <View style={styles.primaryActionIcon}>
-              <Feather name="printer" size={30} color={themeColors.onAccent} />
+              <Feather name="printer" size={26} color={themeColors.onAccent} />
             </View>
             <View style={styles.primaryActionTexts}>
               <Text style={styles.primaryActionTitle}>{t("new_print_order")}</Text>
               <Text style={styles.primaryActionSubtitle}>{t("new_print_order_desc")}</Text>
             </View>
-            <View style={styles.primaryActionArrow}>
-              <Feather name="arrow-left" size={22} color={themeColors.onAccent} />
-            </View>
+            <Feather name="arrow-left" size={20} color={themeColors.onAccentMuted} />
           </View>
         </TouchableOpacity>
       </Link>
 
-      {/* Statistics */}
-      <View style={styles.gridContainer}>
-        {stats.map((stat) => (
-          <View
-            key={stat.key}
-            style={styles.statCard}
-          >
-            <View style={[styles.iconWrapper, { backgroundColor: stat.bgColor }]}>
-              <Feather name={stat.icon} size={26} color={stat.iconColor} />
+      {/* Latest order preview — only when the customer has one */}
+      {latestOrder ? (
+        <Link href={`/dashboard/orders/${latestOrder.id}` as any} asChild>
+          <TouchableOpacity style={styles.latestCard} activeOpacity={0.85}>
+            <View style={styles.latestCardRow}>
+              <Feather name="chevron-left" size={18} color={themeColors.textFaint} />
+              <View style={styles.latestCardTexts}>
+                <View style={styles.latestCardTop}>
+                  <StatusBadge status={latestOrder.status} />
+                  <Text style={styles.latestCardId}>{displayOrderId(latestOrder.id)}</Text>
+                </View>
+                <Text style={styles.latestCardMeta}>
+                  {t("latest_order_title")} · {formatOrderDate(latestOrder.created_at, i18n.language)}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.statValue}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{t(stat.labelKey)}</Text>
-          </View>
+          </TouchableOpacity>
+        </Link>
+      ) : null}
+
+      {/* Compact order stats */}
+      <View style={styles.statsStrip}>
+        {stats.map((stat, idx) => (
+          <React.Fragment key={stat.key}>
+            {idx > 0 ? <View style={styles.statDivider} /> : null}
+            <View style={styles.statCell}>
+              <Feather name={stat.icon} size={15} color={themeColors.textFaint} style={styles.statIcon} />
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>
+                {t(stat.labelKey)}
+              </Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
 
       {/* My Orders */}
       <Link href={"/dashboard/orders" as any} asChild>
-        <TouchableOpacity style={styles.ordersCard}>
-          <View style={[styles.ordersCardInner, isCompact && styles.actionInnerCompact]}>
-            <View style={styles.ordersIcon}>
-              <Feather name="clipboard" size={26} color={themeColors.brandTint} />
-            </View>
-            <View style={styles.ordersTexts}>
-              <Text style={styles.ordersTitle}>{t("my_orders")}</Text>
-              <Text style={styles.ordersSubtitle}>{t("my_orders_desc")}</Text>
-            </View>
-            <View style={styles.ordersArrow}>
-              <Feather name="chevron-left" size={22} color={themeColors.textSoft} />
-            </View>
+        <TouchableOpacity style={styles.ordersRow} activeOpacity={0.7}>
+          <Feather name="chevron-left" size={18} color={themeColors.textFaint} />
+          <View style={styles.ordersRowTexts}>
+            <Text style={styles.ordersTitle}>{t("my_orders")}</Text>
+            <Text style={styles.ordersSubtitle}>{t("my_orders_desc")}</Text>
+          </View>
+          <View style={styles.ordersIcon}>
+            <Feather name="clipboard" size={18} color={themeColors.textSoft} />
           </View>
         </TouchableOpacity>
       </Link>
@@ -215,69 +215,70 @@ const getStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.screenBg,
   },
   scrollContent: {
-    padding: 24,
-    paddingBottom: 48,
+    padding: 20,
+    paddingBottom: 40,
     width: "100%",
   },
   tabletContent: {
-    maxWidth: 960,
+    maxWidth: 720,
     alignSelf: "center",
   },
   compactContent: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+
+  // Greeting
   welcomeContainer: {
-    marginBottom: 32,
+    marginBottom: 20,
     alignItems: "flex-end",
   },
   welcomeTitle: {
     color: c.textStrong,
-    fontSize: 30,
-    lineHeight: 40,
+    fontSize: 24,
+    lineHeight: 34,
     fontWeight: "800",
-    letterSpacing: -0.4,
     textAlign: "right",
     flexShrink: 1,
   },
-  gradientText: {
-    color: c.brandTint,
+  welcomeName: {
+    color: c.accent,
   },
   welcomeSubtitle: {
     color: c.textSoft,
-    fontSize: 15,
-    lineHeight: 23,
-    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 4,
     textAlign: "right",
     flexShrink: 1,
   },
+
+  // Primary CTA
   primaryAction: {
     width: "100%",
-    minHeight: 128,
-    padding: 24,
+    padding: 18,
     backgroundColor: c.accent,
-    borderRadius: 20,
-    marginBottom: 32,
+    borderRadius: 16,
+    marginBottom: 14,
     shadowColor: c.accent,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.24,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 3,
   },
   primaryActionInner: {
-    flex: 1,
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 16,
+    gap: 14,
   },
   primaryActionIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: c.onAccentSoftBg,
     alignItems: "center",
     justifyContent: "center",
@@ -290,134 +291,145 @@ const getStyles = (c: ThemeColors) => StyleSheet.create({
   },
   primaryActionTitle: {
     color: c.onAccent,
-    fontSize: 21,
-    lineHeight: 29,
+    fontSize: 18,
+    lineHeight: 26,
     fontWeight: "800",
     textAlign: "right",
     flexShrink: 1,
   },
   primaryActionSubtitle: {
     color: c.onAccentMuted,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 20,
     fontWeight: "500",
-    marginTop: 5,
+    marginTop: 3,
     textAlign: "right",
     flexShrink: 1,
   },
-  primaryActionArrow: {
-    width: 40,
-    minHeight: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  gridContainer: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    alignItems: "stretch",
-    gap: 16,
-    marginBottom: 32,
-  },
-  statCard: {
-    flexBasis: "46%",
-    flexGrow: 1,
-    minWidth: 140,
-    minHeight: 152,
+
+  // Latest order preview
+  latestCard: {
+    width: "100%",
     backgroundColor: c.surface,
     borderColor: c.borderSoft,
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 18,
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    shadowColor: c.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 3,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
   },
-  iconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
+  latestCardRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+  },
+  latestCardTexts: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  latestCardTop: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+  },
+  latestCardId: {
+    color: c.textStrong,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "700",
+    fontFamily: "monospace",
+  },
+  latestCardMeta: {
+    color: c.textFaint,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "500",
+    textAlign: "right",
+  },
+
+  // Compact stats strip
+  statsStrip: {
+    flexDirection: "row-reverse",
+    alignItems: "stretch",
+    backgroundColor: c.surface,
+    borderColor: c.borderSoft,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginBottom: 14,
+  },
+  statCell: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    gap: 4,
+    paddingHorizontal: 4,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: c.borderSoft,
+    marginVertical: 2,
+  },
+  statIcon: {
+    marginBottom: 2,
   },
   statValue: {
     color: c.textStrong,
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: "800",
-    textAlign: "right",
   },
   statLabel: {
-    color: c.textSoft,
-    fontSize: 13,
-    lineHeight: 20,
+    color: c.textFaint,
+    fontSize: 11,
+    lineHeight: 16,
     fontWeight: "600",
-    textAlign: "right",
-    flexShrink: 1,
+    textAlign: "center",
   },
-  ordersCard: {
+
+  // My Orders (secondary)
+  ordersRow: {
     width: "100%",
-    minHeight: 112,
+    minHeight: 64,
     backgroundColor: c.surface,
     borderColor: c.borderSoft,
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: c.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  ordersCardInner: {
-    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 16,
-  },
-  actionInnerCompact: {
     gap: 12,
   },
   ordersIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: c.accentSoftBg,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: c.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  ordersTexts: {
+  ordersRowTexts: {
     flex: 1,
     minWidth: 0,
     alignItems: "flex-end",
   },
   ordersTitle: {
     color: c.textStrong,
-    fontSize: 18,
-    lineHeight: 26,
-    fontWeight: "700",
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "600",
     textAlign: "right",
     flexShrink: 1,
   },
   ordersSubtitle: {
     color: c.textSoft,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 2,
     flexShrink: 1,
     textAlign: "right",
-  },
-  ordersArrow: {
-    width: 36,
-    minHeight: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
   },
 });

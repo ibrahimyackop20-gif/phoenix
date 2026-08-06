@@ -5,8 +5,8 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from "react-native";
-import { AntDesign } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "./ThemeProvider";
 
@@ -17,17 +17,22 @@ type Props = {
 };
 
 /**
- * Google Sign-In button — white surface, dark text, Google mark.
+ * Google Sign-In button — white surface, dark text, multicolor Google "G" mark.
  * Matches Google branding guidelines and Phoenix Print card layout.
+ *
+ * Layout: the label is centered across the FULL button width independent of
+ * the icon (icon is absolutely positioned on the RTL/LTR leading edge), so
+ * the text never visually shifts off-center to make room for the icon.
  */
 export default function GoogleSignInButton({
   onPress,
   loading = false,
   disabled = false,
 }: Props) {
-  const { t } = useTranslation();
-  const { isDark } = useAppTheme();
-  const styles = getStyles(isDark);
+  const { t, i18n } = useTranslation();
+  const isEnglish = i18n.language === "en";
+  const { isDark, themeColors } = useAppTheme();
+  const styles = getStyles(isDark, themeColors.borderSoft, isEnglish);
   const isDisabled = disabled || loading;
 
   return (
@@ -41,45 +46,67 @@ export default function GoogleSignInButton({
       {loading ? (
         <ActivityIndicator size="small" color="#1F1F1F" />
       ) : (
-        <View style={styles.inner}>
-          <AntDesign name="google" size={18} color="#4285F4" />
+        <>
+          <View style={styles.iconSlot} pointerEvents="none">
+            <Image
+              source={require("../assets/images/google-g.png")}
+              style={styles.icon}
+              resizeMode="contain"
+            />
+          </View>
           <Text style={styles.label}>{t("auth_google_continue")}</Text>
-        </View>
+        </>
       )}
     </TouchableOpacity>
   );
 }
 
-const getStyles = (isDark: boolean) =>
+const getStyles = (isDark: boolean, lightBorderColor: string, isEnglish: boolean) =>
   StyleSheet.create({
     button: {
-      minHeight: 48,
-      borderRadius: 12,
+      position: "relative",
+      minHeight: 54,
+      borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "#FFFFFF",
       borderWidth: 1,
-      borderColor: isDark ? "rgba(255,255,255,0.18)" : "#747775",
-      marginTop: 12,
-      paddingHorizontal: 16,
+      // Button surface stays white regardless of app theme (Google branding
+      // requirement), so the border needs its own light-mode-appropriate
+      // color rather than the current theme's (possibly dark-surface) token.
+      borderColor: isDark ? "rgba(255,255,255,0.18)" : lightBorderColor,
+      paddingHorizontal: 44,
       paddingVertical: 12,
+      // Minimal neutral shadow — no visible glow.
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0 : 0.04,
+      shadowRadius: 3,
+      elevation: isDark ? 0 : 1,
     },
     buttonDisabled: {
       opacity: 0.65,
     },
-    inner: {
-      flexDirection: "row",
+    iconSlot: {
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      // Leading edge: right in Arabic (RTL), left in English (LTR).
+      ...(isEnglish ? { left: 20 } : { right: 20 }),
+      width: 22,
       alignItems: "center",
-      gap: 10,
       justifyContent: "center",
-      flexWrap: "wrap",
+    },
+    icon: {
+      width: 20,
+      height: 20,
     },
     label: {
+      width: "100%",
       color: "#1F1F1F",
       fontSize: 14,
       fontWeight: "600",
       letterSpacing: 0.1,
-      flexShrink: 1,
       textAlign: "center",
     },
   });

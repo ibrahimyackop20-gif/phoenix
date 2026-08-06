@@ -19,7 +19,7 @@ export function useLayoutMetrics() {
       horizontalPadding: isTablet ? 24 : isCompactWidth ? 12 : 16,
       contentMaxWidth: 1024,
       formMaxWidth: 720,
-      drawerWidth: Math.min(isTablet ? 360 : 280, width * 0.86),
+      drawerWidth: Math.min(isTablet ? 380 : 340, width * 0.84),
     };
   }, [fontScale, height, width]);
 }

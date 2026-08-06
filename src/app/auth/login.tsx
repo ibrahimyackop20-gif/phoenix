@@ -19,10 +19,11 @@ import {
   signInWithGoogle,
 } from "@/lib/googleAuth";
 import { markPostAuthNavigation } from "@/lib/postAuthNavigation";
-import { AntDesign, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../components/ThemeProvider";
 import { ScreenTransition } from "../../components/anim/ScreenTransition";
+import GoogleSignInButton from "../../../components/GoogleSignInButton";
 
 type PageState = "login" | "otp" | "success";
 
@@ -274,63 +275,65 @@ export default function LoginPage() {
                   </View>
                 ) : null}
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t("auth_email")}</Text>
-                  <View style={styles.inputWrapper}>
-                    <Feather name="mail" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      placeholder={t("auth_email_placeholder")}
-                      placeholderTextColor={themeColors.textMuted}
-                      style={styles.textInput}
-                      textAlign="left"
-                      selectionColor={themeColors.accent}
-                      cursorColor={themeColors.accent}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t("auth_password")}</Text>
-                  <View style={styles.inputWrapper}>
-                    <Feather name="lock" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      value={password}
-                      onChangeText={setPassword}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      placeholder={t("auth_password_placeholder")}
-                      placeholderTextColor={themeColors.textMuted}
-                      style={[styles.textInput, styles.passwordInput]}
-                      textAlign="left"
-                      selectionColor={themeColors.accent}
-                      cursorColor={themeColors.accent}
-                    />
-                    <TouchableOpacity
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeIcon}
-                    >
-                      <Feather
-                        name={showPassword ? "eye-off" : "eye"}
-                        size={16}
-                        color={themeColors.textMuted}
+                <View style={styles.credentialsCard}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>{t("auth_email")}</Text>
+                    <View style={styles.inputWrapper}>
+                      <Feather name="mail" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
+                      <TextInput
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        placeholder={t("auth_email_placeholder")}
+                        placeholderTextColor={themeColors.textMuted}
+                        style={styles.textInput}
+                        textAlign="left"
+                        selectionColor={themeColors.accent}
+                        cursorColor={themeColors.accent}
                       />
-                    </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
 
-                <TouchableOpacity
-                  onPress={handleForgotPassword}
-                  disabled={sendingReset || loading || googleLoading}
-                  style={styles.forgotButton}
-                >
-                  <Text style={styles.forgotText}>
-                    {sendingReset ? t("auth_reset_send") : t("auth_forgot_password")}
-                  </Text>
-                </TouchableOpacity>
+                  <View style={styles.lastInputGroup}>
+                    <Text style={styles.inputLabel}>{t("auth_password")}</Text>
+                    <View style={styles.inputWrapper}>
+                      <Feather name="lock" size={16} color={themeColors.textMuted} style={styles.inputIcon} />
+                      <TextInput
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        placeholder={t("auth_password_placeholder")}
+                        placeholderTextColor={themeColors.textMuted}
+                        style={[styles.textInput, styles.passwordInput]}
+                        textAlign="left"
+                        selectionColor={themeColors.accent}
+                        cursorColor={themeColors.accent}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowPassword(!showPassword)}
+                        style={styles.eyeIcon}
+                      >
+                        <Feather
+                          name={showPassword ? "eye-off" : "eye"}
+                          size={16}
+                          color={themeColors.textMuted}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={handleForgotPassword}
+                    disabled={sendingReset || loading || googleLoading}
+                    style={styles.forgotButton}
+                  >
+                    <Text style={styles.forgotText}>
+                      {sendingReset ? t("auth_reset_send") : t("auth_forgot_password")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity
                   onPress={handleLogin}
@@ -353,27 +356,11 @@ export default function LoginPage() {
                   <View style={styles.orLine} />
                 </View>
 
-                <TouchableOpacity
+                <GoogleSignInButton
                   onPress={handleGoogleSignIn}
-                  disabled={loading || googleLoading}
-                  style={[
-                    styles.googleButton,
-                    (loading || googleLoading) && styles.disabledButton,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("auth_google_continue")}
-                >
-                  {googleLoading ? (
-                    <ActivityIndicator size="small" color={themeColors.textStrong} />
-                  ) : (
-                    <View style={styles.googleButtonInner}>
-                      <AntDesign name="google" size={20} color={themeColors.google} />
-                      <Text style={styles.googleButtonText}>
-                        {t("auth_google_continue")}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                  loading={googleLoading}
+                  disabled={loading}
+                />
               </View>
 
               <View style={styles.footerRow}>
@@ -550,15 +537,18 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       marginBottom: 40,
     },
     logoSurface: {
-      width: 80,
-      height: 80,
-      borderRadius: 24,
+      width: 84,
+      height: 84,
+      borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: themeColors.surface,
-      borderWidth: 1,
-      borderColor: themeColors.borderSoft,
       marginBottom: 20,
+      shadowColor: themeColors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.32 : 0.1,
+      shadowRadius: 16,
+      elevation: 6,
     },
     logo: {
       width: 64,
@@ -566,23 +556,35 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     },
     brandTitle: {
       color: themeColors.textStrong,
-      fontSize: 32,
-      lineHeight: 40,
+      fontSize: 24,
+      lineHeight: 32,
       fontWeight: "800",
-      letterSpacing: -0.5,
+      letterSpacing: -0.2,
       textAlign: "center",
       flexShrink: 1,
     },
     brandSubtitle: {
       color: themeColors.textSoft,
-      fontSize: 15,
-      lineHeight: 22,
+      fontSize: 14,
+      lineHeight: 21,
       textAlign: "center",
-      marginTop: 8,
+      marginTop: 6,
       flexShrink: 1,
     },
     loginForm: {
       width: "100%",
+    },
+    credentialsCard: {
+      width: "100%",
+      backgroundColor: themeColors.cardBg,
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 20,
+      shadowColor: themeColors.shadow,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: isDark ? 0.24 : 0.06,
+      shadowRadius: 16,
+      elevation: 4,
     },
     cardWrapper: {
       width: "100%",
@@ -635,7 +637,10 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       fontWeight: "600",
     },
     inputGroup: {
-      marginBottom: 20,
+      marginBottom: 14,
+    },
+    lastInputGroup: {
+      marginBottom: 0,
     },
     inputLabel: {
       fontSize: 13,
@@ -648,10 +653,10 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     inputWrapper: {
       flexDirection: "row-reverse",
       alignItems: "center",
-      backgroundColor: themeColors.surface,
+      backgroundColor: themeColors.screenBg,
       borderColor: themeColors.borderSoft,
       borderWidth: 1,
-      borderRadius: 16,
+      borderRadius: 14,
       minHeight: 56,
       paddingHorizontal: 16,
       paddingVertical: 8,
@@ -662,7 +667,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
     textInput: {
       flex: 1,
       color: themeColors.textStrong,
-      fontSize: 16,
+      fontSize: 15,
       lineHeight: 22,
       minHeight: 40,
       paddingVertical: 8,
@@ -678,23 +683,24 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       flexShrink: 0,
     },
     primaryButton: {
-      minHeight: 56,
+      minHeight: 54,
       paddingVertical: 15,
       paddingHorizontal: 20,
       backgroundColor: themeColors.accent,
-      borderRadius: 18,
+      borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",
-      shadowColor: themeColors.accent,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.28,
-      shadowRadius: 14,
-      elevation: 8,
+      // Neutral, minimal elevation only — no colored glow/halo.
+      shadowColor: themeColors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.14,
+      shadowRadius: 4,
+      elevation: 2,
     },
     orRow: {
       flexDirection: "row",
       alignItems: "center",
-      marginVertical: 24,
+      marginVertical: 20,
       gap: 16,
     },
     orLine: {
@@ -731,8 +737,7 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       alignSelf: "stretch",
       paddingVertical: 4,
       paddingHorizontal: 2,
-      marginTop: -8,
-      marginBottom: 24,
+      marginTop: 6,
     },
     forgotText: {
       color: themeColors.brandTint,
@@ -740,36 +745,6 @@ const getStyles = (themeColors: ReturnType<typeof useAppTheme>["themeColors"], i
       lineHeight: 20,
       fontWeight: "600",
       textAlign: "right",
-      flexShrink: 1,
-    },
-    googleButton: {
-      width: "100%",
-      minHeight: 56,
-      paddingVertical: 15,
-      paddingHorizontal: 20,
-      borderRadius: 18,
-      backgroundColor: themeColors.surface,
-      borderWidth: 1,
-      borderColor: themeColors.borderSoft,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    disabledButton: {
-      opacity: 0.6,
-    },
-    googleButtonInner: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 12,
-      flexWrap: "wrap",
-    },
-    googleButtonText: {
-      color: themeColors.textStrong,
-      fontSize: 16,
-      lineHeight: 22,
-      fontWeight: "600",
-      textAlign: "center",
       flexShrink: 1,
     },
     footerRow: {

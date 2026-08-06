@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   TextInput,
@@ -8,6 +8,7 @@ import {
   TextInputKeyPressEventData,
 } from "react-native";
 import { useLayoutMetrics } from "../src/hooks/useLayoutMetrics";
+import { useAppTheme, type ThemeColors } from "./ThemeProvider";
 
 interface OtpInputProps {
   length?: number;
@@ -22,6 +23,8 @@ export default function OtpInput({
   disabled = false,
   error = false,
 }: OtpInputProps) {
+  const { themeColors } = useAppTheme();
+  const styles = useMemo(() => getStyles(themeColors), [themeColors]);
   const [values, setValues] = useState<string[]>(Array(length).fill(""));
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>([]);
@@ -162,7 +165,7 @@ export default function OtpInput({
             onChangeText={(text) => handleChangeText(i, text)}
             onKeyPress={(e) => handleKeyPress(i, e)}
             editable={!disabled}
-            placeholderTextColor="#71717a"
+            placeholderTextColor={themeColors.textFaint}
             onFocus={() => setFocusedIndex(i)}
             onBlur={() => setFocusedIndex(null)}
             selectTextOnFocus
@@ -176,47 +179,48 @@ export default function OtpInput({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-    flexWrap: "wrap",
-  },
-  input: {
-    borderRadius: 12,
-    borderWidth: 2,
-    backgroundColor: "rgba(24, 24, 27, 0.65)",
-    color: "#ffffff",
-    fontWeight: "bold",
-    textAlign: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-  inputDefault: {
-    borderColor: "#3f3f46", // border-border
-  },
-  inputFilled: {
-    borderColor: "#ea580c", // border-primary
-    color: "#ea580c", // text-primary
-    shadowColor: "#ea580c",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-  },
-  inputFocused: {
-    borderColor: "#ea580c", // focus:border-primary
-    shadowColor: "#ea580c",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-  },
-  inputError: {
-    borderColor: "#ef4444", // border-danger
-    color: "#ef4444", // text-danger
-  },
-  inputDisabled: {
-    opacity: 0.4,
-  },
-});
+const getStyles = (themeColors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "center",
+      flexWrap: "wrap",
+    },
+    input: {
+      borderRadius: 12,
+      borderWidth: 2,
+      backgroundColor: themeColors.inputBg,
+      color: themeColors.text,
+      fontWeight: "bold",
+      textAlign: "center",
+      paddingHorizontal: 4,
+      paddingVertical: 8,
+    },
+    inputDefault: {
+      borderColor: themeColors.cardBorder,
+    },
+    inputFilled: {
+      borderColor: themeColors.accent,
+      color: themeColors.accent,
+      shadowColor: themeColors.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.15,
+      shadowRadius: 15,
+    },
+    inputFocused: {
+      borderColor: themeColors.accent,
+      shadowColor: themeColors.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.2,
+      shadowRadius: 20,
+    },
+    inputError: {
+      borderColor: themeColors.danger,
+      color: themeColors.danger,
+    },
+    inputDisabled: {
+      opacity: 0.4,
+    },
+  });
